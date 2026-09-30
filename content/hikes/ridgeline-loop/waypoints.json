@@ -1,0 +1,132 @@
+{
+  "waypoints": [
+    {
+      "id": "trailhead",
+      "order": 10,
+      "type": "start",
+      "label": "Trailhead",
+      "title": "Start at the gravel lot",
+      "lat": 47.48,
+      "lng": -121.52,
+      "heading": 38,
+      "headingSource": "exif",
+      "step": true,
+      "photo": {
+        "key": "ridgeline-loop/01-img-2041",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-08-14T22:05:00.000Z",
+      "caption": "Park at the end of Cedar Creek Road. The trail leaves from the far corner of the lot, past the map board.",
+      "mile": 0
+    },
+    {
+      "id": "creek-junction",
+      "order": 20,
+      "type": "turn",
+      "label": "Creek junction",
+      "title": "Left at the creek junction",
+      "lat": 47.486653,
+      "lng": -121.511739,
+      "heading": 330,
+      "headingSource": "exif",
+      "step": true,
+      "photo": {
+        "key": "ridgeline-loop/02-img-2047",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-08-14T22:19:00.000Z",
+      "caption": "Cross the creek on the flat rocks, then turn left at the cedar with the split trunk.",
+      "mile": 0.6
+    },
+    {
+      "id": "spring",
+      "order": 30,
+      "type": "water",
+      "label": "Spring",
+      "title": "Seasonal spring",
+      "lat": 47.490994,
+      "lng": -121.500611,
+      "heading": 15,
+      "headingSource": "inferred",
+      "step": false,
+      "photo": {
+        "key": "ridgeline-loop/03-img-2052",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-08-14T22:34:00.000Z",
+      "caption": "A pipe spring just off the trail on the right. Reliable until about mid-July.",
+      "note": "seasonal, filter water",
+      "mile": 1.2
+    },
+    {
+      "id": "ridge-junction",
+      "order": 40,
+      "type": "turn",
+      "label": "Ridge junction",
+      "title": "Stay left toward the ridge",
+      "lat": 47.499381,
+      "lng": -121.497283,
+      "heading": 5,
+      "headingSource": "exif",
+      "step": true,
+      "photo": {
+        "key": "ridgeline-loop/04-img-2060",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-08-14T22:52:00.000Z",
+      "caption": "At this junction, stay left toward the ridge. The right fork drops back to the road.",
+      "mile": 1.8
+    },
+    {
+      "id": "overlook",
+      "order": 50,
+      "type": "viewpoint",
+      "label": "Overlook",
+      "title": "Overlook, take a breather",
+      "lat": 47.504825,
+      "lng": -121.475136,
+      "heading": 70,
+      "headingSource": "exif",
+      "step": true,
+      "photo": {
+        "key": "ridgeline-loop/05-pano-2071",
+        "kind": "pano",
+        "width": 4096,
+        "height": 2048
+      },
+      "takenAt": "2026-08-14T23:23:00.000Z",
+      "caption": "Open rock with views east over the valley. Good lunch spot.",
+      "mile": 2.9
+    },
+    {
+      "id": "saddle-exit",
+      "order": 60,
+      "type": "bailout",
+      "label": "Saddle road exit",
+      "title": "Saddle road exit",
+      "lat": 47.503814,
+      "lng": -121.458064,
+      "heading": 95,
+      "headingSource": "manual",
+      "step": true,
+      "photo": {
+        "key": "ridgeline-loop/06-img-2080",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-08-14T23:46:00.000Z",
+      "caption": "A forest road crosses the saddle here. Follow it downhill 1.5 miles to the paved road if you need to cut the loop short.",
+      "note": "leads to paved road",
+      "mile": 3.7
+    }
+  ]
+}

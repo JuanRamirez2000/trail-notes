@@ -1,0 +1,91 @@
+"use client";
+
+import { createContext, useContext, useState, type ReactNode } from "react";
+import { createStore, useStore, type StoreApi } from "zustand";
+import type { HikeWaypoint } from "./hike";
+
+/**
+ * Per-page store shared by every map, step list and photo on a hike guide.
+ * One store per <HikeProvider> (not a global singleton) so the editor preview
+ * and the real page never share selection state.
+ */
+export type HikeState = {
+  slug: string;
+  waypoints: HikeWaypoint[];
+  steps: HikeWaypoint[];
+  activeId: string | null;
+  /** Live look direction from an open 360° viewer, keyed to the waypoint it belongs to. */
+  view: { waypointId: string; heading: number } | null;
+  /** Bumped to ask the owning component to scroll a waypoint's card into view. */
+  reveal: { id: string; nonce: number } | null;
+
+  select: (id: string | null, opts?: { reveal?: boolean }) => void;
+  stepBy: (delta: 1 | -1) => void;
+  setView: (view: HikeState["view"]) => void;
+};
+
+function createHikeStore(slug: string, waypoints: HikeWaypoint[]) {
+  const steps = waypoints.filter((w) => w.stepIndex !== null);
+  return createStore<HikeState>()((set, get) => ({
+    slug,
+    waypoints,
+    steps,
+    activeId: steps[0]?.id ?? null,
+    view: null,
+    reveal: null,
+
+    select: (id, opts) =>
+      set((s) => ({
+        activeId: id,
+        reveal: id && opts?.reveal ? { id, nonce: (s.reveal?.nonce ?? 0) + 1 } : s.reveal,
+      })),
+
+    stepBy: (delta) => {
+      const { steps, activeId } = get();
+      if (!steps.length) return;
+      const i = steps.findIndex((s) => s.id === activeId);
+      const next = i === -1 ? 0 : Math.min(steps.length - 1, Math.max(0, i + delta));
+      set({ activeId: steps[next].id });
+    },
+
+    setView: (view) => set({ view }),
+  }));
+}
+
+const HikeStoreContext = createContext<StoreApi<HikeState> | null>(null);
+
+export function HikeProvider({
+  slug,
+  waypoints,
+  children,
+}: {
+  slug: string;
+  waypoints: HikeWaypoint[];
+  children: ReactNode;
+}) {
+  // Lazy init keeps one store per mount even across re-renders.
+  const [store] = useState(() => createHikeStore(slug, waypoints));
+  return <HikeStoreContext.Provider value={store}>{children}</HikeStoreContext.Provider>;
+}
+
+export function useHike<T>(selector: (s: HikeState) => T): T {
+  const store = useContext(HikeStoreContext);
+  if (!store) throw new Error("useHike must be used inside <HikeProvider>");
+  return useStore(store, selector);
+}
+
+export function useWaypoint(id: string | undefined) {
+  return useHike((s) => (id ? s.waypoints.find((w) => w.id === id) : undefined));
+}
+
+export function useActiveWaypoint() {
+  return useHike((s) => s.waypoints.find((w) => w.id === s.activeId));
+}
+
+/** Heading to draw for a waypoint: live 360° look direction if it's being viewed, else its photo heading. */
+export function useEffectiveHeading(wp: HikeWaypoint | undefined): number | null {
+  const view = useHike((s) => s.view);
+  if (!wp) return null;
+  if (view && view.waypointId === wp.id) return view.heading;
+  return wp.heading;
+}

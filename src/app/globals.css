@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Trailnotes design tokens (from Claude Design: "Trailnotes Brand" + "Trail Guide Branded").
+ * Components use these via Tailwind utilities (bg-paper, text-bark, font-display…)
+ * or var(--color-*) in inline styles. Never hardcode hex values in components.
+ */
+@theme {
+  /* Brand palette */
+  --color-forest: #2f4a36; /* Primary · Forest Ink */
+  --color-bark: #6b4a32; /* Secondary · Bark */
+  --color-ochre: #d9a441; /* Accent · Ochre */
+  --color-paper: #f4ede0; /* Background · Paper */
+  --color-graphite: #2a2118; /* Text · Graphite */
+
+  /* Surfaces & lines */
+  --color-card: #fbf7ee;
+  --color-paper-deep: #f8f1e1;
+  --color-frame: #efe6d3; /* component frame header */
+  --color-chrome: #e4d8be;
+  --color-stripe: #ede3cb; /* placeholder stripes */
+  --color-highlight: #f1e5c6; /* selected row / active filter */
+  --color-line: #d8cdb7;
+  --color-line-strong: #c9bb9b;
+
+  /* Map pins — navigation pins are flat, safety pins get a double halo */
+  --color-pin-start: #2f4a36;
+  --color-pin-turn: #d9731f;
+  --color-pin-viewpoint: #7b4fa8;
+  --color-pin-water: #1f78b4;
+  --color-pin-bailout: #c23b2e;
+  --color-pin-ink: #ffffff;
+
+  /* Type */
+  --font-display: var(--font-zilla-slab), Georgia, serif;
+  --font-sans: var(--font-source-sans), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --text-h1: 42px;
+  --text-h1--line-height: 46px;
+  --text-h2: 28px;
+  --text-h2--line-height: 34px;
+  --text-body: 17px;
+  --text-body--line-height: 27px;
+  --text-caption: 13px;
+  --text-caption--line-height: 18px;
+  --text-label: 12px;
+  --text-label--line-height: 14px;
+
+  --shadow-sketch: 3px 3px 0 rgb(0 0 0 / 0.15);
+  --shadow-pin: 0 0 0 1.5px var(--color-graphite);
+  --shadow-pin-halo: 0 0 0 2px #fff, 0 0 0 4px var(--color-graphite);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-graphite);
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size: 16px;
+  }
+  a {
+    color: var(--color-forest);
+  }
+  a:hover {
+    color: var(--color-bark);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Signature motif: pencil contour rings */
+  .bg-contour {
+    background:
+      repeating-radial-gradient(ellipse at 10% 90%, transparent 0 26px, var(--color-line) 26px 27px),
+      repeating-radial-gradient(ellipse at 60% 40%, var(--color-frame) 0 18px, var(--color-line) 18px 19px);
+  }
+  /* Placeholder / loading stripes */
+  .bg-stripes {
+    background: repeating-linear-gradient(135deg, var(--color-chrome) 0 8px, var(--color-stripe) 8px 16px);
+  }
+}
+
+/* Mapbox controls tuned to the paper theme */
+.mapboxgl-ctrl-group {
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-line);
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+.mapboxgl-popup-content {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sketch);
+  padding: 0;
+  overflow: hidden;
+}
+.mapboxgl-popup-tip {
+  display: none;
+}
+
+/* Direction markers inside the 360° viewer (HTML injected by Photo Sphere Viewer) */
+.pano-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: var(--color-card);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 999px;
+  font: 700 var(--text-label) / 1 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-graphite);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pano-marker-pin {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  box-sizing: border-box;
+  color: var(--color-pin-ink);
+  font: 600 10px var(--font-mono);
 }
