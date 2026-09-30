@@ -25,6 +25,7 @@ export default function MapboxTrailMap({
   terrain,
   fit = "route",
   className,
+  onLoad,
 }: TrailMapProps) {
   const mapRef = useRef<MapRef>(null);
   const forest = useCssColor("--color-forest");
@@ -59,6 +60,7 @@ export default function MapboxTrailMap({
         logoPosition="bottom-left"
         terrain={terrain ? { source: "mapbox-dem", exaggeration: 1.4 } : undefined}
         style={{ position: "absolute", inset: 0 }}
+        onLoad={onLoad}
       >
         {terrain && (
           <Source id="mapbox-dem" type="raster-dem" url="mapbox://mapbox.mapbox-terrain-dem-v1" tileSize={512} maxzoom={14} />

@@ -17,4 +17,6 @@ export type TrailMapProps = {
   /** Pin size in px (sketch only); thumbnails use small pins. */
   pinSize?: number;
   className?: string;
+  /** Fired once the real map has rendered (used to drop the sketch placeholder). */
+  onLoad?: () => void;
 };

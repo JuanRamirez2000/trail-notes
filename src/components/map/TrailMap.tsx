@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/cn";
 import dynamic from "next/dynamic";
+import { useState } from "react";
 import { hasMapbox } from "./config";
 import { SketchMap } from "./SketchMap";
 import type { TrailMapProps } from "./types";
@@ -16,10 +17,12 @@ const MapboxTrailMap = dynamic(() => import("./MapboxTrailMap"), { ssr: false })
  */
 export function TrailMap({ className, ...props }: TrailMapProps) {
   const [ref, inView] = useInViewOnce<HTMLDivElement>();
+  const [loaded, setLoaded] = useState(false);
   return (
     <div ref={ref} className={cn("relative overflow-hidden", className)}>
-      <SketchMap {...props} className="absolute inset-0" />
-      {hasMapbox && inView && <MapboxTrailMap {...props} className="absolute inset-0" />}
+      {/* Keep the sketch until Mapbox has painted, then drop it so its pins don't double up. */}
+      {!loaded && <SketchMap {...props} className="absolute inset-0" />}
+      {hasMapbox && inView && <MapboxTrailMap {...props} onLoad={() => setLoaded(true)} className="absolute inset-0" />}
     </div>
   );
 }
