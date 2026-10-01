@@ -17,9 +17,10 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import exifr from "exifr";
 import sharp from "sharp";
-import { bearing, cumulativeMiles, distanceMi } from "../src/lib/geo";
+import { cumulativeMiles } from "../src/lib/geo";
 import { formatIssues, waypointsFileSchema, type Waypoint } from "../src/lib/schemas";
 import { photoObjectPath, type PhotoVariant } from "../src/lib/storage";
+import { inferHeadings, kebab, round } from "./lib/ingest";
 
 try {
   process.loadEnvFile(".env.local");
@@ -32,8 +33,6 @@ const SIZES: Record<PhotoVariant, { flat: number; pano: number }> = {
   full: { flat: 2400, pano: 6144 },
   thumb: { flat: 480, pano: 960 },
 };
-/** Photos closer than this are treated as the same spot when inferring a heading. */
-const SAME_SPOT_MI = 0.005; // ~8 m
 
 type Scanned = {
   file: string;
@@ -66,9 +65,6 @@ if (!dir || !slug || !/^[a-z0-9-]+$/.test(slug) || !["local", "supabase"].includ
   process.exit(1);
 }
 
-const round = (n: number, dp = 6) => Math.round(n * 10 ** dp) / 10 ** dp;
-const kebab = (s: string) => s.toLowerCase().replace(/\.[^.]+$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
 async function scan(file: string): Promise<Scanned | { file: string; skip: string }> {
   const meta = await exifr.parse(file, { gps: true, xmp: true, tiff: true, exif: true }).catch(() => null);
   if (!meta || typeof meta.latitude !== "number" || typeof meta.longitude !== "number") {
@@ -93,15 +89,6 @@ async function scan(file: string): Promise<Scanned | { file: string; skip: strin
     width,
     height,
   };
-}
-
-function inferHeadings(photos: Scanned[]) {
-  return photos.map((p, i) => {
-    if (p.heading !== null) return { heading: round(p.heading, 1), source: "exif" as const };
-    const next = photos.slice(i + 1).find((q) => distanceMi(p, q) > SAME_SPOT_MI);
-    if (next) return { heading: round(bearing(p, next), 1), source: "inferred" as const };
-    return { heading: null, source: null };
-  });
 }
 
 type Uploader = (objectPath: string, body: Buffer) => Promise<void>;
@@ -209,8 +196,7 @@ async function main() {
       title: "TODO describe this step",
       lat: round(p.lat),
       lng: round(p.lng),
-      heading: headings[i].heading,
-      headingSource: headings[i].source,
+      ...headings[i],
       photo: {
         key: photoKey,
         kind: p.pano ? "pano" : "flat",
@@ -245,6 +231,9 @@ ${dryRun ? "[dry run] " : ""}${waypoints.length} waypoints → content/hikes/${s
   if (skipped.length) {
     console.warn(`  skipped ${skipped.length}:`);
     for (const s of skipped) console.warn(`    - ${path.basename(s.file)}: ${s.skip}`);
+  }
+  if (storage === "local" && !dryRun) {
+    console.log("  photos were written to public/photos (dev only, not committed). Run `pnpm photos push` before deploying.");
   }
   if (target === "waypoints.draft.json") {
     console.log("  waypoints.json already existed, so the new draft was written alongside it. Merge by hand or re-run with --force.");

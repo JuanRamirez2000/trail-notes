@@ -47,3 +47,6 @@ next-env.d.ts
 
 # ingest drafts & originals
 /fixtures/originals
+
+# photos live in Supabase Storage; this is the dev-only local backend (`pnpm photos pull`)
+/public/photos/

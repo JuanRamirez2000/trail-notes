@@ -11,7 +11,10 @@
     "content": "velite build --strict",
     "ingest": "tsx scripts/ingest-photos.ts",
     "sample:photos": "tsx scripts/make-sample-photos.ts",
-    "gpx": "tsx scripts/import-gpx.ts"
+    "gpx": "tsx scripts/import-gpx.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "photos": "tsx scripts/photos.ts"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
@@ -47,7 +50,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/mdast": "^4.0.4",
     "@types/mdx": "^2.0.14",
-    "@types/node": "^20",
+    "@types/node": "^24.19.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
@@ -59,7 +62,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vfile": "^6.0.3"
+    "vfile": "^6.0.3",
+    "vitest": "^5.0.2"
   },
   "packageManager": "pnpm@11.5.0"
 }

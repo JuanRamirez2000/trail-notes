@@ -12,14 +12,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import turfLength from "@turf/length";
-import { lineString } from "@turf/helpers";
-import turfSimplify from "@turf/simplify";
-import { formatIssues, trackSchema } from "../src/lib/schemas";
-
-const M_TO_FT = 3.28084;
-/** Moving-average window for elevation before summing gain; raw GPS altitude is noisy. */
-const SMOOTH = 5;
+import { formatIssues } from "../src/lib/schemas";
+import { buildTrack, parseGpx } from "./lib/gpx";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -32,52 +26,9 @@ if (!file || !/^[a-z0-9-]+$/.test(slug)) {
   process.exit(1);
 }
 
-function parseGpx(xml: string): [number, number, number][] {
-  // GPX is simple enough that a targeted regex beats pulling in an XML parser.
-  const out: [number, number, number][] = [];
-  const re = /<trkpt\b[^>]*?\blat="([-\d.]+)"[^>]*?\blon="([-\d.]+)"[^>]*>([\s\S]*?)<\/trkpt>/g;
-  for (const m of xml.matchAll(re)) {
-    const ele = /<ele>([-\d.]+)<\/ele>/.exec(m[3]);
-    out.push([Number(m[2]), Number(m[1]), ele ? Number(ele[1]) : NaN]);
-  }
-  return out;
-}
-
-function elevationStats(eles: number[]) {
-  const valid = eles.filter((e) => Number.isFinite(e));
-  if (!valid.length) return { gainFt: 0, maxFt: 0, minFt: 0 };
-  const smooth = valid.map((_, i) => {
-    const w = valid.slice(Math.max(0, i - SMOOTH), i + SMOOTH + 1);
-    return w.reduce((a, b) => a + b, 0) / w.length;
-  });
-  let gain = 0;
-  for (let i = 1; i < smooth.length; i++) gain += Math.max(0, smooth[i] - smooth[i - 1]);
-  return { gainFt: gain * M_TO_FT, maxFt: Math.max(...valid) * M_TO_FT, minFt: Math.min(...valid) * M_TO_FT };
-}
-
 async function main() {
   const raw = parseGpx(await readFile(file, "utf8"));
-  if (raw.length < 2) throw new Error("No track points (<trkpt>) found in the GPX file.");
-
-  const full = lineString(raw.map(([lng, lat]) => [lng, lat]));
-  const distanceMi = turfLength(full, { units: "miles" });
-  const { gainFt, maxFt, minFt } = elevationStats(raw.map((p) => p[2]));
-
-  // Simplify on [lng, lat, ele]; turf keeps the 3rd coordinate on retained vertices.
-  const simplified = turfSimplify(lineString(raw.map(([lng, lat, ele]) => [lng, lat, Number.isFinite(ele) ? ele : 0])), {
-    tolerance: Number(values.tolerance),
-    highQuality: true,
-  });
-  const round = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
-  const points = simplified.geometry.coordinates.map(([lng, lat, ele]) => [round(lng, 6), round(lat, 6), round(ele ?? 0, 1)] as [number, number, number]);
-
-  const track = trackSchema.safeParse({
-    points,
-    distanceMi: round(distanceMi, 2),
-    elevationGainFt: Math.round(gainFt),
-    maxElevationFt: Math.round(maxFt),
-    minElevationFt: Math.round(minFt),
-  });
+  const track = buildTrack(raw, Number(values.tolerance));
   if (!track.success) throw new Error(formatIssues(track.error).join("\n"));
 
   const dir = path.join(process.cwd(), "content/hikes", slug);

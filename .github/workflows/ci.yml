@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Public values (they're inlined into the site's JS anyway). No secrets are needed to build.
+  NEXT_PUBLIC_PHOTO_STORAGE: supabase
+  NEXT_PUBLIC_SUPABASE_URL: https://fstcgdirhssuaevgxptv.supabase.co
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # version comes from package.json "packageManager"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Content (Velite, strict)
+        run: pnpm content
+      - run: pnpm lint
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+      - run: pnpm test
+      - name: Photos referenced by content exist in Supabase
+        run: pnpm photos check
+      - run: pnpm build

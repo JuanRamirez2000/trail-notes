@@ -54,9 +54,9 @@ const waypoints = defineCollection({
 });
 
 /**
- * Waypoints for the post being compiled, read from its sibling waypoints.json. In `next dev`,
- * editing only waypoints.json doesn't recompile the post, so new required waypoints get their
- * stub section once index.mdx is next saved (the /editor saves both).
+ * Waypoints for the post being compiled, read from its sibling waypoints.json. Velite doesn't know
+ * about that dependency, so in `next dev` next.config.ts touches index.mdx whenever waypoints.json
+ * or track.json changes to get the post recompiled.
  */
 function siblingWaypoints(file: { path: string }) {
   const p = path.join(path.dirname(file.path), "waypoints.json");

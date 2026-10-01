@@ -5,9 +5,11 @@
  *   <key>.full.webp  (2400px long edge, 6144px for panos)
  *   <key>.thumb.webp (480px long edge)
  *
- * Backend is picked with NEXT_PUBLIC_PHOTO_STORAGE:
- *   local    → /public/photos (default; handy offline and for the sample hike)
- *   supabase → public bucket on NEXT_PUBLIC_SUPABASE_URL
+ * Supabase Storage is the source of truth. Backend is picked with NEXT_PUBLIC_PHOTO_STORAGE:
+ *   supabase → public bucket on NEXT_PUBLIC_SUPABASE_URL (required for production builds,
+ *              enforced in next.config.ts)
+ *   local    → /public/photos, dev only, for working offline. Not committed: fill it with
+ *              `pnpm photos pull`, and upload local ingests with `pnpm photos push`.
  */
 
 export type PhotoVariant = "full" | "thumb";

@@ -10,7 +10,16 @@ cp .env.example .env.local   # add your Mapbox token
 pnpm dev                     # http://localhost:3000
 ```
 
-Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set, so everything works offline too.
+Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set. Photos come from Supabase; to work offline, run `pnpm photos pull` once and set `NEXT_PUBLIC_PHOTO_STORAGE=local` (dev only).
+
+```bash
+pnpm test        # unit tests (Vitest)
+pnpm lint
+pnpm typecheck   # velite build --strict + tsc
+pnpm build
+```
+
+CI (`.github/workflows/ci.yml`) runs the content build, lint, typecheck, tests, `pnpm photos check` and `pnpm build` on every push and PR.
 
 ---
 
@@ -21,7 +30,7 @@ Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set, so e
    │  pnpm ingest <folder> --slug <slug>
    ▼
 exifr (GPS · time · heading) → sort by time → fill headings (EXIF → bearing to next photo → blank)
-   → sharp: webp 2400px + 480px thumb, all metadata stripped → /public/photos or Supabase
+   → sharp: webp 2400px + 480px thumb, all metadata stripped → Supabase (or /public/photos in dev)
    → content/hikes/<slug>/waypoints.json (draft) + index.mdx stub
    │  you review and edit (by hand or in /editor)
    ▼
@@ -37,6 +46,9 @@ content/hikes/<slug>/
   waypoints.json       one entry per photo / pin
 scripts/
   ingest-photos.ts     EXIF → waypoints draft + web images
+  import-gpx.ts        GPX → track.json
+  photos.ts            check / push / pull photos between Supabase and public/photos
+  lib/                 pure helpers shared by the scripts (unit-tested)
   make-sample-photos.ts  placeholder JPEGs with real EXIF, for trying the pipeline
 src/
   app/(site)/          gallery (/) and hike guide (/hikes/[slug])
@@ -48,7 +60,7 @@ src/
   components/editor/   CodeMirror + live MDX preview
   lib/schemas.ts       single source of truth for content shape
   lib/hike-store.tsx   per-page Zustand store (active step, 360° look direction)
-  lib/storage.ts       photo key → URL (local or Supabase)
+  lib/storage.ts       photo key → URL (Supabase, or local in dev)
   app/globals.css      design tokens (Tailwind @theme) from the Claude Design handoff
 ```
 
@@ -63,7 +75,7 @@ src/
    pnpm ingest ~/Pictures/granite-lakes --slug granite-lakes
    ```
 
-   This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (`draft: true`), and writes web-sized photos. Useful flags: `--storage supabase`, `--dry-run` (read EXIF, write nothing) and `--force` (overwrite an existing `waypoints.json`; without it the script writes `waypoints.draft.json` next to it instead).
+   This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (`draft: true`), and uploads web-sized photos to Supabase. Useful flags: `--storage local` (write to `public/photos` instead; run `pnpm photos push` before deploying), `--dry-run` (read EXIF, write nothing) and `--force` (overwrite an existing `waypoints.json`; without it the script writes `waypoints.draft.json` next to it instead).
 3. **Review `waypoints.json`.** For each waypoint:
    - `id`: rename `wp-03` to something readable like `ridge-junction` (this is what MDX refers to)
    - `type`: `start | turn | note | viewpoint | landmark | water | ranger | bailout` (see *Guide sections* below)
@@ -93,7 +105,7 @@ Your notes for this part of the trail. The step number, pin, mileage, photo and 
 </Step>
 ```
 
-A `<Step>` pointing at an unknown waypoint id, or two `<Step>` blocks for the same waypoint, fails the build. The stub generator lives in `src/lib/mdx/remark-step-sections.ts`. One dev-only gotcha: if you edit only `waypoints.json` while `pnpm dev` is running, new required pins get their stub once `index.mdx` is saved next (the editor saves both).
+A `<Step>` pointing at an unknown waypoint id, or two `<Step>` blocks for the same waypoint, fails the build. The stub generator lives in `src/lib/mdx/remark-step-sections.ts`. Under `pnpm dev`, editing `waypoints.json` or `track.json` recompiles the hike's `index.mdx` too (`next.config.ts` touches it), so stub sections stay in sync.
 
 Water, ranger stations and bail-outs are the **safety** pins (larger, double halo). They make up the Safety points list and the `<SafetyPins />` map.
 
@@ -162,11 +174,13 @@ pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop --force
 
 `granite-saddle` is the detailed example: 18 pins covering every type, a full "Before you go" card, and a written section for each.
 
-Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it you get a `waypoints.draft.json` next to it. `strawberry-peak` is a real recorded route (GPX), with no photos or trail notes yet. Delete the two placeholder samples when you add real hikes.
+Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it you get a `waypoints.draft.json` next to it. Both samples are `draft: true`: they show in `pnpm dev` (and serve as reference content) but not in production. `strawberry-peak` is a real recorded route (GPX).
 
 ---
 
 ## Photo storage: Supabase
+
+Supabase Storage is the source of truth for photos. `public/photos` is gitignored and only used by the dev-only `local` backend; production builds refuse to run without `NEXT_PUBLIC_PHOTO_STORAGE=supabase`.
 
 1. Create a Supabase project. Nothing else is needed; the ingest script creates a public `hikes` bucket on first run.
 2. In `.env.local`:
@@ -179,6 +193,12 @@ Re-running with `--force` overwrites the hand-edited `waypoints.json`; without i
 
 3. `pnpm ingest <folder> --slug <slug>` now uploads to `hikes/<slug>/...`.
 
+```bash
+pnpm photos check         # every photo the content references is in the bucket (no key needed; CI runs it)
+pnpm photos push [slug]   # upload public/photos → bucket (skips existing files)
+pnpm photos pull [slug]   # download bucket → public/photos, for offline dev
+```
+
 Only the two web-sized, metadata-free webp copies are uploaded. Your originals (with exact GPS) never leave your machine. The site builds public URLs from the photo key, so moving storage later is a one-file change in `src/lib/storage.ts`.
 
 ---
@@ -188,7 +208,7 @@ Only the two web-sized, metadata-free webp copies are uploaded. Your originals (
 1. Push the repo to GitHub, then **Add New → Project** on Vercel and import it. The framework preset is detected, and `pnpm build` (runs `velite build --strict && next build`) is the build command.
 2. Add environment variables (Production + Preview):
    - `NEXT_PUBLIC_MAPBOX_TOKEN`
-   - `NEXT_PUBLIC_PHOTO_STORAGE`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_BUCKET` (if using Supabase)
+   - `NEXT_PUBLIC_PHOTO_STORAGE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_BUCKET` (required: the build fails without them)
    - **Don't** add `SUPABASE_SERVICE_ROLE_KEY`, because the site never uploads.
 3. In your Mapbox account, add the Vercel domain(s) to the token's URL restrictions.
 4. Deploy. Every hike page is statically generated; adding a hike means committing its folder and pushing.
