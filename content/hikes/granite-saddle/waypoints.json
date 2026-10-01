@@ -1,0 +1,363 @@
+{
+  "waypoints": [
+    {
+      "id": "trailhead",
+      "order": 10,
+      "type": "start",
+      "label": "Trailhead",
+      "title": "Start at the Granite Creek trailhead",
+      "lat": 47.41,
+      "lng": -121.38,
+      "heading": 15,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/01-img-3101",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T20:40:00.000Z",
+      "caption": "Gravel lot at the end of FR 4410 with a vault toilet and a map kiosk. The trail leaves from the north end, past the gate.",
+      "mile": 0.0
+    },
+    {
+      "id": "ranger-station",
+      "order": 20,
+      "type": "ranger",
+      "label": "Ranger station",
+      "title": "Check in at the Granite Creek guard station",
+      "lat": 47.411425,
+      "lng": -121.380372,
+      "heading": 340,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/02-img-3103",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T20:44:00.000Z",
+      "caption": "Small log guard station 200 yards up the trail. Fill out the free wilderness permit at the box on the porch.",
+      "mile": 0.1,
+      "note": "staffed Fri\u2013Sun, Jun\u2013Sep"
+    },
+    {
+      "id": "loop-junction",
+      "order": 30,
+      "type": "turn",
+      "label": "Loop junction",
+      "title": "Bear left at the loop junction",
+      "lat": 47.421281,
+      "lng": -121.370375,
+      "heading": 300,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/03-img-3110",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T21:02:00.000Z",
+      "caption": "Signed four-way junction under big hemlocks. Take the left fork toward First Pass so the steep climb is on fresh legs; you'll come back down the right fork.",
+      "mile": 0.9
+    },
+    {
+      "id": "granite-creek-ford",
+      "order": 40,
+      "type": "water",
+      "label": "Granite Creek ford",
+      "title": "Ford Granite Creek",
+      "lat": 47.428372,
+      "lng": -121.377447,
+      "heading": 344.5,
+      "headingSource": "inferred",
+      "photo": {
+        "key": "granite-saddle/04-img-3116",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T21:18:00.000Z",
+      "caption": "Knee-deep in June, ankle-deep by August. A log jam 30 yards upstream is drier when the water is low.",
+      "mile": 1.6,
+      "note": "reliable all season, filter"
+    },
+    {
+      "id": "miners-cabin",
+      "order": 50,
+      "type": "landmark",
+      "label": "Miners' cabin",
+      "title": "Pass the old miners' cabin",
+      "lat": 47.434014,
+      "lng": -121.379764,
+      "heading": 10,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/05-img-3121",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T21:35:00.000Z",
+      "caption": "A collapsed 1920s cabin on the right, with a rusted stove still inside. Don't climb on it; the roof beams are loose.",
+      "mile": 2.3
+    },
+    {
+      "id": "switchbacks",
+      "order": 60,
+      "type": "note",
+      "label": "Switchbacks",
+      "title": "Settle in for 34 switchbacks",
+      "lat": 47.439089,
+      "lng": -121.379964,
+      "heading": 12,
+      "headingSource": "inferred",
+      "photo": {
+        "key": "granite-saddle/06-img-3125",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T21:46:00.000Z",
+      "caption": "The climb to First Pass starts here: 1,400 ft in 1.8 mi on a well-graded tread. Most people take 75\u201390 minutes. There's shade until the last ten turns.",
+      "mile": 2.8
+    },
+    {
+      "id": "cedar-view",
+      "order": 70,
+      "type": "viewpoint",
+      "label": "Cedar Range view",
+      "title": "Look back at the Cedar Range",
+      "lat": 47.444439,
+      "lng": -121.378286,
+      "heading": 255,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/07-img-3132",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T22:12:00.000Z",
+      "caption": "A rock bench on the outside of switchback 22 with a view west over the whole Cedar Range.",
+      "mile": 3.6
+    },
+    {
+      "id": "upper-basin-trail",
+      "order": 80,
+      "type": "bailout",
+      "label": "Upper Basin trail",
+      "title": "Upper Basin trail: last easy way down",
+      "lat": 47.447667,
+      "lng": -121.376211,
+      "heading": 290,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/08-img-3135",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T22:21:00.000Z",
+      "caption": "Unsigned trail dropping right (east) to the Upper Basin road, 2.1 mi of steady downhill. If you're behind schedule or the sky looks bad, turn back here: past First Pass there's no shortcut for 5 miles.",
+      "mile": 3.9,
+      "note": "2.1 mi to FR 4415"
+    },
+    {
+      "id": "first-pass",
+      "order": 90,
+      "type": "turn",
+      "label": "First Pass",
+      "title": "Cross First Pass and stay left",
+      "lat": 47.452147,
+      "lng": -121.371575,
+      "heading": 40,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/09-img-3141",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T22:40:00.000Z",
+      "caption": "Broad rocky notch with a cairn. A climbers' path goes straight up the ridge; stay left on the main trail, which drops slightly toward Tarn Lake.",
+      "mile": 4.4
+    },
+    {
+      "id": "tarn-lake",
+      "order": 100,
+      "type": "water",
+      "label": "Tarn Lake",
+      "title": "Tarn Lake",
+      "lat": 47.456164,
+      "lng": -121.364503,
+      "heading": 80,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/10-img-3147",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T22:58:00.000Z",
+      "caption": "Small, cold lake in a granite bowl. The outlet stream on the south shore is the best place to filter. Camping only at the posted sites.",
+      "mile": 5.0,
+      "note": "last water until Hidden Meadow"
+    },
+    {
+      "id": "scree-traverse",
+      "order": 110,
+      "type": "note",
+      "label": "Scree traverse",
+      "title": "Cross the scree field slowly",
+      "lat": 47.458219,
+      "lng": -121.358269,
+      "heading": 77.5,
+      "headingSource": "inferred",
+      "photo": {
+        "key": "granite-saddle/11-img-3150",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T23:12:00.000Z",
+      "caption": "About 300 yards of loose talus with a faint path marked by cairns. Test each step; rocks shift. Poles help. Late in the day, rockfall from the cliff above is more common.",
+      "mile": 5.4
+    },
+    {
+      "id": "granite-saddle",
+      "order": 120,
+      "type": "viewpoint",
+      "label": "Granite Saddle",
+      "title": "Top out on Granite Saddle",
+      "lat": 47.459489,
+      "lng": -121.349814,
+      "heading": 95,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/12-img-3158",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T23:31:00.000Z",
+      "caption": "The high point at 7,240 ft: wide granite slabs, big views both ways, and wind. Lunch spot, but bring a layer.",
+      "mile": 5.9
+    },
+    {
+      "id": "saddle-junction",
+      "order": 130,
+      "type": "turn",
+      "label": "Saddle junction",
+      "title": "Turn right onto the Ridge Return trail",
+      "lat": 47.459356,
+      "lng": -121.342303,
+      "heading": 110,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/13-img-3163",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-18T23:50:00.000Z",
+      "caption": "Signed junction just past the saddle. Straight on goes to Crater Lakes (6 mi, no return loop). Turn right and start down.",
+      "mile": 6.3
+    },
+    {
+      "id": "north-snowfield",
+      "order": 140,
+      "type": "note",
+      "label": "North snowfield",
+      "title": "Expect snow on the north slope",
+      "lat": 47.456567,
+      "lng": -121.330333,
+      "heading": 130,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/14-img-3169",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-19T00:12:00.000Z",
+      "caption": "This shaded slope holds snow into mid-July. Early season, it's a firm, steep traverse: microspikes and an early start (before it softens) make it much safer.",
+      "mile": 7.1
+    },
+    {
+      "id": "hidden-meadow-spring",
+      "order": 150,
+      "type": "water",
+      "label": "Hidden Meadow spring",
+      "title": "Hidden Meadow spring",
+      "lat": 47.449025,
+      "lng": -121.318789,
+      "heading": 161.5,
+      "headingSource": "inferred",
+      "photo": {
+        "key": "granite-saddle/15-img-3174",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-19T00:36:00.000Z",
+      "caption": "A spring piped through a wooden trough at the top of the meadow.",
+      "mile": 8.0,
+      "note": "seasonal, dry after mid-Aug"
+    },
+    {
+      "id": "fire-road-exit",
+      "order": 160,
+      "type": "bailout",
+      "label": "Fire road",
+      "title": "Fire road crossing",
+      "lat": 47.439089,
+      "lng": -121.313881,
+      "heading": 190,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/16-img-3180",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-19T00:58:00.000Z",
+      "caption": "An old fire road crosses the trail here. Turning right follows it 3.2 mi down to the trailhead road: longer than the trail, but gentler on sore knees and easy to follow in the dark.",
+      "mile": 8.8,
+      "note": "3.2 mi road walk to FR 4410"
+    },
+    {
+      "id": "lookout-ruins",
+      "order": 170,
+      "type": "landmark",
+      "label": "Lookout ruins",
+      "title": "Pass the lookout ruins",
+      "lat": 47.426606,
+      "lng": -121.317644,
+      "heading": 250,
+      "headingSource": "exif",
+      "photo": {
+        "key": "granite-saddle/17-img-3186",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
+      },
+      "takenAt": "2026-07-19T01:24:00.000Z",
+      "caption": "Concrete footings from a 1930s fire lookout on a knoll left of the trail. A 2-minute side trip gives the last big view of the day.",
+      "mile": 9.6
+    },
+    {
+      "id": "return-junction",
+      "order": 180,
+      "type": "turn",
+      "label": "Return junction",
+      "title": "Back at the loop junction: turn left for the trailhead",
+      "caption": "You're back at the four-way junction from the morning, coming in from the east. Turn left (south) and retrace the 0.9 mi stem to the car.",
+      "lat": 47.418762,
+      "lng": -121.365938,
+      "heading": 205.0,
+      "headingSource": "manual",
+      "mile": 10.7
+    }
+  ]
+}

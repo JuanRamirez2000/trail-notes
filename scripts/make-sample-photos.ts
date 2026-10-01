@@ -2,16 +2,14 @@
  * Generates placeholder JPEGs with real EXIF (GPS, capture time, heading) so the ingest
  * pipeline can be exercised end-to-end without real hike photos.
  *
- *   pnpm sample:photos   → fixtures/sample-photos/ridgeline-loop/*.jpg
- *   pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop
+ *   pnpm sample:photos [slug]   → fixtures/sample-photos/<slug>/*.jpg (all samples if no slug)
+ *   pnpm ingest fixtures/sample-photos/<slug> --slug <slug>
  *
  * Some photos deliberately omit the EXIF heading so the "inferred" path is exercised too.
  * Pass `pano: true` on a shot to render a 2:1 equirectangular test image for the 360° viewer.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import turfDestination from "@turf/destination";
-import { point } from "@turf/helpers";
 // @ts-expect-error — piexifjs ships no types
 import piexif from "piexifjs";
 import sharp from "sharp";
@@ -19,19 +17,46 @@ import sharp from "sharp";
 // Brand palette, duplicated here only because this script renders raster images outside the app.
 const C = { paper: "#F4EDE0", chrome: "#E4D8BE", stripe: "#EDE3CB", bark: "#6B4A32", forest: "#2F4A36", ochre: "#D9A441", sky: "#CFDCE3" };
 
-const OUT = path.join(process.cwd(), "fixtures/sample-photos/ridgeline-loop");
-const TRAILHEAD = { lat: 47.48, lng: -121.52 };
+type Shot = { name: string; label: string; lat: number; lng: number; heading: number | null; pano?: boolean; minute: number };
+type Sample = { start: string; shots: Shot[] };
 
-type Shot = { name: string; label: string; legMi: number; legBearing: number; heading: number | null; pano?: boolean; minute: number };
-
-const SHOTS: Shot[] = [
-  { name: "IMG_2041.jpg", label: "Trailhead", legMi: 0, legBearing: 0, heading: 38, minute: 0 },
-  { name: "IMG_2047.jpg", label: "Creek junction", legMi: 0.6, legBearing: 40, heading: 330, minute: 14 },
-  { name: "IMG_2052.jpg", label: "Spring", legMi: 0.6, legBearing: 60, heading: null, minute: 29 },
-  { name: "IMG_2060.jpg", label: "Ridge junction", legMi: 0.6, legBearing: 15, heading: 5, minute: 47 },
-  { name: "IMG_2071.jpg", label: "Overlook", legMi: 1.1, legBearing: 70, heading: 70, minute: 78 },
-  { name: "IMG_2080.jpg", label: "Saddle road exit", legMi: 0.8, legBearing: 95, heading: null, minute: 101 },
-];
+// Coordinates are fixed (not random) so re-running reproduces the same waypoints.
+const SAMPLES: Record<string, Sample> = {
+  "ridgeline-loop": {
+    start: "2026-08-14T15:05:00Z",
+    shots: [
+      { name: "IMG_2041.jpg", label: "Trailhead", lat: 47.48, lng: -121.52, heading: 38, minute: 0 },
+      { name: "IMG_2047.jpg", label: "Creek junction", lat: 47.486653, lng: -121.511739, heading: 330, minute: 14 },
+      { name: "IMG_2052.jpg", label: "Spring", lat: 47.490994, lng: -121.500611, heading: null, minute: 29 },
+      { name: "IMG_2060.jpg", label: "Ridge junction", lat: 47.499381, lng: -121.497283, heading: 5, minute: 47 },
+      { name: "IMG_2071.jpg", label: "Overlook", lat: 47.504825, lng: -121.475136, heading: 70, minute: 78 },
+      { name: "IMG_2080.jpg", label: "Saddle road exit", lat: 47.503814, lng: -121.458064, heading: null, minute: 101 },
+    ],
+  },
+  // Lollipop loop: stem to a junction, then clockwise over First Pass and Granite Saddle.
+  "granite-saddle": {
+    start: "2026-07-18T13:40:00Z",
+    shots: [
+      { name: "IMG_3101.jpg", label: "Granite Creek trailhead", lat: 47.41, lng: -121.38, heading: 15, minute: 0 },
+      { name: "IMG_3103.jpg", label: "Ranger station", lat: 47.411425, lng: -121.380371, heading: 340, minute: 4 },
+      { name: "IMG_3110.jpg", label: "Loop junction", lat: 47.42128, lng: -121.370374, heading: 300, minute: 22 },
+      { name: "IMG_3116.jpg", label: "Granite Creek ford", lat: 47.428371, lng: -121.377446, heading: null, minute: 38 },
+      { name: "IMG_3121.jpg", label: "Miners' cabin", lat: 47.434013, lng: -121.379763, heading: 10, minute: 55 },
+      { name: "IMG_3125.jpg", label: "Switchbacks", lat: 47.43909, lng: -121.379963, heading: null, minute: 66 },
+      { name: "IMG_3132.jpg", label: "Cedar Range view", lat: 47.444439, lng: -121.378285, heading: 255, minute: 92 },
+      { name: "IMG_3135.jpg", label: "Upper Basin trail", lat: 47.447668, lng: -121.376211, heading: 290, minute: 101 },
+      { name: "IMG_3141.jpg", label: "First Pass", lat: 47.452148, lng: -121.371576, heading: 40, minute: 120 },
+      { name: "IMG_3147.jpg", label: "Tarn Lake", lat: 47.456163, lng: -121.364503, heading: 80, minute: 138 },
+      { name: "IMG_3150.jpg", label: "Scree traverse", lat: 47.45822, lng: -121.35827, heading: null, minute: 152 },
+      { name: "IMG_3158.jpg", label: "Granite Saddle", lat: 47.459488, lng: -121.349814, heading: 95, minute: 171 },
+      { name: "IMG_3163.jpg", label: "Saddle junction", lat: 47.459355, lng: -121.342304, heading: 110, minute: 190 },
+      { name: "IMG_3169.jpg", label: "North snowfield", lat: 47.456567, lng: -121.330333, heading: 130, minute: 212 },
+      { name: "IMG_3174.jpg", label: "Hidden Meadow spring", lat: 47.449024, lng: -121.31879, heading: null, minute: 236 },
+      { name: "IMG_3180.jpg", label: "Fire road", lat: 47.43909, lng: -121.313881, heading: 190, minute: 258 },
+      { name: "IMG_3186.jpg", label: "Lookout ruins", lat: 47.426605, lng: -121.317644, heading: 250, minute: 284 },
+    ],
+  },
+};
 
 function flatSvg(label: string, w: number, h: number) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
@@ -86,23 +111,25 @@ function exifBytes(lat: number, lng: number, takenAt: Date, heading: number | nu
 }
 
 async function main() {
-  await mkdir(OUT, { recursive: true });
-  const start = new Date("2026-08-14T15:05:00Z");
-  let here = point([TRAILHEAD.lng, TRAILHEAD.lat]);
-
-  for (const s of SHOTS) {
-    if (s.legMi > 0) here = turfDestination(here, s.legMi, s.legBearing, { units: "miles" });
-    const [lng, lat] = here.geometry.coordinates;
-    const [w, h] = s.pano ? [4096, 2048] : [2400, 1600];
-    const jpeg = await sharp(Buffer.from(s.pano ? panoSvg(s.heading!, w, h) : flatSvg(s.label, w, h)))
-      .jpeg({ quality: 80 })
-      .toBuffer();
-    const takenAt = new Date(start.getTime() + s.minute * 60_000);
-    const withExif = piexif.insert(exifBytes(lat, lng, takenAt, s.heading), jpeg.toString("binary"));
-    await writeFile(path.join(OUT, s.name), Buffer.from(withExif, "binary"));
-    console.log(`  ✓ ${s.name}  ${lat.toFixed(5)}, ${lng.toFixed(5)}  heading ${s.heading ?? "—"}`);
+  const only = process.argv[2];
+  const slugs = only ? [only] : Object.keys(SAMPLES);
+  for (const slug of slugs) {
+    const sample = SAMPLES[slug];
+    if (!sample) throw new Error(`No sample named "${slug}". Options: ${Object.keys(SAMPLES).join(", ")}`);
+    const out = path.join(process.cwd(), "fixtures/sample-photos", slug);
+    await mkdir(out, { recursive: true });
+    const start = new Date(sample.start);
+    for (const s of sample.shots) {
+      const [w, h] = s.pano ? [4096, 2048] : [2400, 1600];
+      const jpeg = await sharp(Buffer.from(s.pano ? panoSvg(s.heading!, w, h) : flatSvg(s.label, w, h)))
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      const takenAt = new Date(start.getTime() + s.minute * 60_000);
+      const withExif = piexif.insert(exifBytes(s.lat, s.lng, takenAt, s.heading), jpeg.toString("binary"));
+      await writeFile(path.join(out, s.name), Buffer.from(withExif, "binary"));
+    }
+    console.log(`  ✓ ${slug}: ${sample.shots.length} photos → ${path.relative(process.cwd(), out)}`);
   }
-  console.log(`\nWrote ${SHOTS.length} photos to ${path.relative(process.cwd(), OUT)}`);
 }
 
 main().catch((e) => {

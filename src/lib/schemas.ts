@@ -11,7 +11,7 @@ export const DIFFICULTIES = ["easy", "moderate", "hard", "strenuous"] as const;
 export const difficultySchema = z.enum(DIFFICULTIES);
 export type Difficulty = z.infer<typeof difficultySchema>;
 
-export const WAYPOINT_TYPES = ["start", "turn", "note", "viewpoint", "water", "bailout"] as const;
+export const WAYPOINT_TYPES = ["start", "turn", "note", "viewpoint", "landmark", "water", "ranger", "bailout"] as const;
 export const waypointTypeSchema = z.enum(WAYPOINT_TYPES);
 export type WaypointType = z.infer<typeof waypointTypeSchema>;
 
@@ -72,6 +72,18 @@ export const waypointsFileSchema = z
   });
 export type WaypointsFile = z.infer<typeof waypointsFileSchema>;
 
+/** Practical info shown in the guide's "Before you go" card. Every field is optional. */
+export const essentialsSchema = z.object({
+  permit: z.string().optional(),
+  parking: z.string().optional(),
+  facilities: z.string().optional(),
+  water: z.string().optional(),
+  dogs: z.string().optional(),
+  cellSignal: z.string().optional(),
+  hazards: z.array(z.string()).optional(),
+});
+export type Essentials = z.infer<typeof essentialsSchema>;
+
 export const frontmatterSchema = z.object({
   title: z.string().min(1),
   slug: z.string().regex(/^[a-z0-9-]+$/),
@@ -87,6 +99,7 @@ export const frontmatterSchema = z.object({
   trailhead: lngLatSchema,
   date: z.iso.date(),
   draft: z.boolean().default(false),
+  essentials: essentialsSchema.optional(),
 });
 export type Frontmatter = z.infer<typeof frontmatterSchema>;
 

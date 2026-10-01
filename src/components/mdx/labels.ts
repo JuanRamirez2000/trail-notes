@@ -6,6 +6,8 @@ const KIND: Record<HikeWaypoint["type"], string> = {
   note: "Note",
   viewpoint: "Viewpoint",
   water: "Water",
+  landmark: "Landmark",
+  ranger: "Ranger station",
   bailout: "Bail-out",
 };
 

@@ -9,7 +9,7 @@ import type { WaypointType } from "./schemas";
 export type SectionKind = "required" | "optional";
 
 /**
- * Pin language from the brand sheet. Navigation pins are flat; safety pins (water/bail-out)
+ * Pin language from the brand sheet. Navigation pins are flat; safety pins (water/ranger/bail-out)
  * are larger with a double halo, and that style is never reused for other pins.
  */
 export type PinStyle = {
@@ -28,9 +28,15 @@ export const PIN_STYLES: Record<WaypointType, PinStyle> = {
   note: { label: "Note", glyph: "✎", color: "var(--color-pin-note)", radius: "50%", safety: false, section: "required" },
   bailout: { label: "Bail-out", glyph: "!", color: "var(--color-pin-bailout)", radius: "4px", safety: true, section: "required" },
   viewpoint: { label: "Viewpoint", glyph: "◎", color: "var(--color-pin-viewpoint)", radius: "5px", safety: false, section: "optional" },
+  // Cabins, signposts, ruins: things you'll pass that help you know where you are.
+  landmark: { label: "Landmark", glyph: "◆", color: "var(--color-pin-landmark)", radius: "5px", safety: false, section: "optional" },
   water: { label: "Water", glyph: "W", color: "var(--color-pin-water)", radius: "50%", safety: true, section: "optional" },
+  // Staffed stations / emergency contact points. A safety resource, so it gets the halo.
+  ranger: { label: "Ranger station", glyph: "R", color: "var(--color-pin-ranger)", radius: "50%", safety: true, section: "optional" },
 };
 
-export const LEGEND_ORDER: WaypointType[] = ["start", "turn", "note", "viewpoint", "water", "bailout"];
+export const LEGEND_ORDER: WaypointType[] = ["start", "turn", "note", "viewpoint", "landmark", "water", "ranger", "bailout"];
+
+export const isSafetyType = (type: WaypointType) => PIN_STYLES[type].safety;
 
 export const requiresSection = (type: WaypointType) => PIN_STYLES[type].section === "required";

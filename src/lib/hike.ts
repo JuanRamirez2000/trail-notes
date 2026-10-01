@@ -1,5 +1,5 @@
 import { cumulativeMiles } from "./geo";
-import { requiresSection } from "./pins";
+import { isSafetyType, requiresSection } from "./pins";
 import type { Waypoint } from "./schemas";
 
 /** Waypoint enriched with values derived from its neighbours. Safe to send to the client. */
@@ -21,7 +21,8 @@ export function deriveWaypoints(waypoints: Waypoint[]): HikeWaypoint[] {
   }));
 }
 
-export const isSafety = (wp: Pick<Waypoint, "type">) => wp.type === "water" || wp.type === "bailout";
+/** Water, bail-outs and ranger stations: the pins that make up the Safety points layer. */
+export const isSafety = (wp: Pick<Waypoint, "type">) => isSafetyType(wp.type);
 
 /** DOM id of a waypoint's guide section (used for scroll links and scrollspy). */
 export const sectionId = (waypointId: string) => `step-${waypointId}`;

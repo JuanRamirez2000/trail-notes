@@ -1,6 +1,6 @@
 # Trailnotes
 
-Photo-by-photo hiking guides. Each hike is an MDX post with embedded map components; the route, turning points and view directions come from the EXIF data in your photos (GPS, timestamp, compass heading).
+Photo-by-photo trail guides. Each hike is an MDX guide with embedded map components; the route, turning points and view directions come from the EXIF data in your photos (GPS, timestamp, compass heading).
 
 **Stack:** Next.js 16 (App Router) · Tailwind CSS v4 · Velite · Mapbox GL JS (via react-map-gl) · Photo Sphere Viewer · Turf · Zod · Zustand · Supabase Storage
 
@@ -66,7 +66,7 @@ src/
    This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (`draft: true`), and writes web-sized photos. Useful flags: `--storage supabase`, `--dry-run` (read EXIF, write nothing) and `--force` (overwrite an existing `waypoints.json`; without it the script writes `waypoints.draft.json` next to it instead).
 3. **Review `waypoints.json`.** For each waypoint:
    - `id`: rename `wp-03` to something readable like `ridge-junction` (this is what MDX refers to)
-   - `type`: `start | turn | note | viewpoint | water | bailout` (see *Guide sections* below)
+   - `type`: `start | turn | note | viewpoint | landmark | water | ranger | bailout` (see *Guide sections* below)
    - `label` (short map label), `title` (step instruction), `caption`, `note` (for safety pins)
    - `heading`: check any with `"headingSource": "inferred"`, and fill the ones left `null` (then set `"headingSource": "manual"`)
    - `mile`: optional real trail mileage. Without it, mileage is estimated from straight lines between photos, which reads low.
@@ -83,7 +83,7 @@ Every pin type declares how it relates to the written guide (`src/lib/pins.ts`):
 | Pin | Section | Sidebar step list |
 | --- | --- | --- |
 | Trailhead `S`, Turn `↰`, Note `✎`, Bail-out `!` | **Required.** Write `<Step waypoint="id">…</Step>` for it; if you don't, a stub section (title, photo, caption) is generated in route order | Numbered |
-| Viewpoint `◎`, Water `W` | **Optional.** Only appears if you write a `<Step>` for it | Not listed. Clicking the pin jumps to the nearest section before it |
+| Viewpoint `◎`, Landmark `◆`, Water `W`, Ranger station `R` | **Optional.** Only appears if you write a `<Step>` for it | Not listed. Clicking the pin jumps to the nearest section before it |
 
 `note` is the flex type: a required section for anything that isn't a turn (a slick slab, a confusing fork, no cell signal). To give it its own look later, change its entry in `PIN_STYLES`.
 
@@ -95,7 +95,25 @@ Your notes for this part of the trail. The step number, pin, mileage, photo and 
 
 A `<Step>` pointing at an unknown waypoint id, or two `<Step>` blocks for the same waypoint, fails the build. The stub generator lives in `src/lib/mdx/remark-step-sections.ts`. One dev-only gotcha: if you edit only `waypoints.json` while `pnpm dev` is running, new required pins get their stub once `index.mdx` is saved next (the editor saves both).
 
-**Sidebar:** on desktop, the guide has a sticky rail with the minimap and the step list. Clicking a step scrolls to its section, and as you scroll, the active step follows what you're reading. On mobile, the same list lives in the pinned minimap bar. To add more cards to the rail, append to `src/components/sidebar/registry.tsx`.
+Water, ranger stations and bail-outs are the **safety** pins (larger, double halo). They make up the Safety points list and the `<SafetyPins />` map.
+
+**Sidebar:** on desktop, the guide has a sticky rail: **Minimap → Safety points → Steps**. Clicking a step scrolls to its section, and as you scroll, the active step follows what you're reading. On mobile, the same list lives in the pinned minimap bar. To add more cards to the rail, append to `src/components/sidebar/registry.tsx`.
+
+### Before you go
+
+Optional `essentials` in the frontmatter render as a "Before you go" card at the top of the guide:
+
+```yaml
+essentials:
+  permit: Free self-issue permit at the guard station.
+  parking: Gravel lot, ~25 cars. Full by 8 am on weekends.
+  facilities: Vault toilet at the trailhead.
+  water: Granite Creek (1.6 mi), Tarn Lake (5.0 mi).
+  dogs: On leash.
+  cellSignal: None until First Pass.
+  hazards:
+    - Loose rock on the scree traverse (mile 5.4).
+```
 
 ### Components you can use in MDX
 
@@ -128,11 +146,13 @@ It's disabled in production: the pages and the save API return 404 unless `NODE_
 The sample hike (`ridgeline-loop`) was generated this way:
 
 ```bash
-pnpm sample:photos       # placeholder JPEGs with GPS/time/heading EXIF → fixtures/
+pnpm sample:photos [slug]   # placeholder JPEGs with GPS/time/heading EXIF → fixtures/<slug>/
 pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop --force
 ```
 
-Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it you get a `waypoints.draft.json` next to it. `creekside-falls` and `granite-saddle` are frontmatter-only stubs so the gallery filters have something to filter. Delete all three when you add real hikes.
+`granite-saddle` is the detailed example: 18 pins covering every type, a full "Before you go" card, and a written section for each.
+
+Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it you get a `waypoints.draft.json` next to it. `creekside-falls` is a frontmatter-only stub so the gallery filters have something to filter. Delete the samples when you add real hikes.
 
 ---
 

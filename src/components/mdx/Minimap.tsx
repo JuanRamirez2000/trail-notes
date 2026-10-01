@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SketchMap } from "@/components/map/SketchMap";
 import { TrailMap } from "@/components/map/TrailMap";
+import { SafetyList } from "@/components/sidebar/SafetyList";
 import { StepList } from "@/components/sidebar/StepList";
 import { Frame } from "@/components/ui/Frame";
 import { cn } from "@/lib/cn";
@@ -71,7 +72,13 @@ export function MinimapBar() {
               className="size-full"
             />
           </div>
-          <StepList bare onPick={() => setOpen(false)} className="max-h-[40dvh] border-t border-line" />
+          {/* Same stack as the desktop rail: map, safety points, steps. */}
+          <div className="max-h-[50dvh] overflow-y-auto border-t border-line">
+            <BarHeading>Safety points</BarHeading>
+            <SafetyList bare onPick={() => setOpen(false)} />
+            <BarHeading>Steps</BarHeading>
+            <StepList bare onPick={() => setOpen(false)} />
+          </div>
         </>
       )}
       <button
@@ -82,7 +89,7 @@ export function MinimapBar() {
       >
         {!open && <SketchMap waypoints={waypoints} activeId={active?.id} pinSize={10} className="h-11 w-14 flex-none rounded-md border border-line" />}
         <span className="flex-1 leading-tight">
-          {open ? "Close map" : "Minimap & steps"}
+          {open ? "Close" : "Map, safety & steps"}
           <br />
           <span className="text-caption text-bark">
             {stepNo ? `Step ${stepNo} of ${steps.length} · ` : ""}
@@ -95,4 +102,8 @@ export function MinimapBar() {
       </button>
     </div>
   );
+}
+
+function BarHeading({ children }: { children: React.ReactNode }) {
+  return <div className="sticky top-0 z-10 border-b border-line bg-frame px-3 py-1 text-caption font-semibold tracking-[.06em] text-bark uppercase">{children}</div>;
 }
