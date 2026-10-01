@@ -16,6 +16,7 @@ export type RouteMapProps = {
 
 export function RouteMap({ height = 320, labels = true, terrain = true }: RouteMapProps) {
   const waypoints = useHike((s) => s.waypoints);
+  const route = useHike((s) => s.route);
   const activeId = useHike((s) => s.activeId);
   const select = useHike((s) => s.select);
   const present = new Set(waypoints.map((w) => w.type));
@@ -36,6 +37,7 @@ export function RouteMap({ height = 320, labels = true, terrain = true }: RouteM
     >
       <div data-map style={{ height }}>
         <TrailMap
+          route={route}
           waypoints={waypoints}
           activeId={activeId}
           labels={labels}

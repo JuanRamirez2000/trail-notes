@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { createStore, useStore, type StoreApi } from "zustand";
-import type { HikeWaypoint } from "./hike";
+import { routeCoords, type HikeWaypoint, type RouteCoords } from "./hike";
 
 /**
  * Per-page store shared by every map, step list and photo on a hike guide.
@@ -12,6 +12,8 @@ import type { HikeWaypoint } from "./hike";
 export type HikeState = {
   slug: string;
   waypoints: HikeWaypoint[];
+  /** Line drawn on every map: the GPX track if the hike has one. */
+  route: RouteCoords;
   steps: HikeWaypoint[];
   activeId: string | null;
   /** Live look direction from an open 360° viewer, keyed to the waypoint it belongs to. */
@@ -25,11 +27,12 @@ export type HikeState = {
   setView: (view: HikeState["view"]) => void;
 };
 
-function createHikeStore(slug: string, waypoints: HikeWaypoint[]) {
+function createHikeStore(slug: string, waypoints: HikeWaypoint[], route?: RouteCoords) {
   const steps = waypoints.filter((w) => w.stepIndex !== null);
   return createStore<HikeState>()((set, get) => ({
     slug,
     waypoints,
+    route: route ?? routeCoords(waypoints),
     steps,
     activeId: steps[0]?.id ?? null,
     view: null,
@@ -58,14 +61,16 @@ const HikeStoreContext = createContext<StoreApi<HikeState> | null>(null);
 export function HikeProvider({
   slug,
   waypoints,
+  route,
   children,
 }: {
   slug: string;
   waypoints: HikeWaypoint[];
+  route?: RouteCoords;
   children: ReactNode;
 }) {
   // Lazy init keeps one store per mount even across re-renders.
-  const [store] = useState(() => createHikeStore(slug, waypoints));
+  const [store] = useState(() => createHikeStore(slug, waypoints, route));
   return <HikeStoreContext.Provider value={store}>{children}</HikeStoreContext.Provider>;
 }
 

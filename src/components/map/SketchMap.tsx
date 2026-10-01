@@ -25,9 +25,10 @@ export function project(box: Box, p: { lat: number; lng: number }) {
  * Hand-drawn stand-in for the Mapbox map, matching the design's contour sketch.
  * Used while the real map lazy-loads, for tiny thumbnails, and when no token is set.
  */
-export function SketchMap({ waypoints, activeId, heading, labels, safety, onSelect, fit = "route", pinSize = 22, className }: TrailMapProps) {
+export function SketchMap({ waypoints, route, activeId, heading, labels, safety, onSelect, fit = "route", pinSize = 22, className }: TrailMapProps) {
   const active = waypoints.find((w) => w.id === activeId);
-  const focus = fit === "active" && active ? [active] : waypoints;
+  const line = route ?? waypoints.map((w) => [w.lng, w.lat] as [number, number]);
+  const focus = fit === "active" && active ? [active] : [...waypoints, ...line.map(([lng, lat]) => ({ lat, lng }))];
   if (!focus.length) return <div className={cn("bg-contour", className)} />;
   const box = boxOf(fit === "active" && active ? [{ lat: active.lat + 0.002, lng: active.lng + 0.002 }, { lat: active.lat - 0.002, lng: active.lng - 0.002 }] : focus);
   const pts = waypoints.map((w) => ({ w, ...project(box, w) }));
@@ -36,7 +37,10 @@ export function SketchMap({ waypoints, activeId, heading, labels, safety, onSele
     <div className={cn("bg-contour relative overflow-hidden", className)} role="img" aria-label="Route sketch">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full">
         <polyline
-          points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
+          points={line
+            .map(([lng, lat]) => project(box, { lat, lng }))
+            .map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`)
+            .join(" ")}
           fill="none"
           stroke="var(--color-forest)"
           strokeWidth={3}

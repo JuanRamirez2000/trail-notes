@@ -1,0 +1,28 @@
+{
+  "waypoints": [
+    {
+      "id": "trailhead",
+      "order": 10,
+      "type": "start",
+      "label": "Red Box",
+      "title": "Start at Red Box on the Angeles Crest Highway",
+      "caption": "The recording starts at the Red Box parking area at about 4,670 ft.",
+      "lat": 34.259122,
+      "lng": -118.104093,
+      "heading": null,
+      "headingSource": null
+    },
+    {
+      "id": "high-point",
+      "order": 20,
+      "type": "note",
+      "label": "High point",
+      "title": "Reach the high point and turn around",
+      "caption": "The highest point on the recording, about 6,140 ft, 3.6 mi from the start. The route returns the same way.",
+      "lat": 34.283509,
+      "lng": -118.120474,
+      "heading": null,
+      "headingSource": null
+    }
+  ]
+}

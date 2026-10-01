@@ -11,7 +11,7 @@ import { canCreateWebGL2 } from "@/components/map/webgl";
 import { Frame } from "@/components/ui/Frame";
 import { Photo } from "@/components/ui/Photo";
 import { bearing, compassLabel, distanceMi, normalizeHeading } from "@/lib/geo";
-import type { HikeWaypoint } from "@/lib/hike";
+import type { HikeWaypoint, RouteCoords } from "@/lib/hike";
 import { useHike, useWaypoint } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
 import { photoUrl } from "@/lib/storage";
@@ -50,6 +50,7 @@ function markersFor(wp: HikeWaypoint, all: HikeWaypoint[], radiusMi: number): Ma
 
 export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
   const waypoints = useHike((s) => s.waypoints);
+  const route = useHike((s) => s.route);
   const select = useHike((s) => s.select);
   const setView = useHike((s) => s.setView);
   const isActive = useHike((s) => s.activeId === waypoint);
@@ -149,7 +150,7 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
   }, [current, waypoints, markerRadiusMi, select]);
 
   if (!current) return <MissingWaypoint component="PanoViewer" id={waypoint} />;
-  if (current.photo?.kind !== "pano") return <PanoPlaceholder wp={current} waypoints={waypoints} />;
+  if (current.photo?.kind !== "pano") return <PanoPlaceholder wp={current} waypoints={waypoints} route={route} />;
 
   const idx = panos.findIndex((p) => p.id === current.id);
   const go = (d: number) => panos[idx + d] && setCurrentId(panos[idx + d].id);
@@ -192,7 +193,7 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
           </div>
           <div className="absolute bottom-2 right-2 z-10 size-[84px] overflow-hidden rounded-lg border-2 border-forest sm:bottom-3.5 sm:right-3.5 sm:size-[130px]">
             {/* Sketch rather than Mapbox: a live map here would cost another WebGL context. */}
-            <SketchMap waypoints={waypoints} activeId={current.id} heading={heading} fit="active" pinSize={16} className="size-full" />
+            <SketchMap waypoints={waypoints} route={route} activeId={current.id} heading={heading} fit="active" pinSize={16} className="size-full" />
           </div>
         </div>
       </Frame>
@@ -201,7 +202,7 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
 }
 
 /** Stand-in until the waypoint has a 360° photo: same frame and inset map, no viewer. */
-function PanoPlaceholder({ wp, waypoints }: { wp: HikeWaypoint; waypoints: HikeWaypoint[] }) {
+function PanoPlaceholder({ wp, waypoints, route }: { wp: HikeWaypoint; waypoints: HikeWaypoint[]; route: RouteCoords }) {
   return (
     <div data-waypoint-card={wp.id}>
       <Frame title={`360° view · ${wp.label}`} footer={<span className="text-bark">No 360° photo for this spot yet.</span>}>
@@ -211,7 +212,7 @@ function PanoPlaceholder({ wp, waypoints }: { wp: HikeWaypoint; waypoints: HikeW
             <div className="text-[15px]">Coming soon</div>
           </div>
           <div className="absolute right-2 bottom-2 size-[84px] overflow-hidden rounded-lg border-2 border-forest sm:right-3.5 sm:bottom-3.5 sm:size-[130px]">
-            <SketchMap waypoints={waypoints} activeId={wp.id} heading={wp.heading} fit="active" pinSize={16} className="size-full" />
+            <SketchMap waypoints={waypoints} route={route} activeId={wp.id} heading={wp.heading} fit="active" pinSize={16} className="size-full" />
           </div>
         </div>
       </Frame>

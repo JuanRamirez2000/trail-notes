@@ -7,7 +7,7 @@ import { GuideScrollSync } from "@/components/hike/GuideScrollSync";
 import { MinimapBar } from "@/components/mdx/Minimap";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { Photo } from "@/components/ui/Photo";
-import { getHike, getHikes, getWaypoints } from "@/lib/content";
+import { getHike, getHikes, getRoute, getWaypoints } from "@/lib/content";
 import { DIFFICULTY_LABEL, formatFeet, formatMiles } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { HikeProvider } from "@/lib/hike-store";
@@ -38,7 +38,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   ].filter((s): s is { k: string; v: string } => Boolean(s));
 
   return (
-    <HikeProvider slug={slug} waypoints={waypoints}>
+    <HikeProvider slug={slug} waypoints={waypoints} route={getRoute(slug)}>
       <GuideScrollSync />
       <article>
         {/* Hero */}

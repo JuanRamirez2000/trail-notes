@@ -94,14 +94,28 @@ export const frontmatterSchema = z.object({
   difficulty: difficultySchema,
   estTime: z.string().optional(),
   bestSeason: z.string().optional(),
-  /** Photo key for the cover image. */
-  cover: photoKey,
+  /** Photo key for the cover image. Optional: hikes without photos show a contour placeholder. */
+  cover: photoKey.optional(),
   trailhead: lngLatSchema,
   date: z.iso.date(),
   draft: z.boolean().default(false),
   essentials: essentialsSchema.optional(),
 });
 export type Frontmatter = z.infer<typeof frontmatterSchema>;
+
+/**
+ * Recorded route from a GPX file (scripts/import-gpx.ts). Only position + elevation are kept:
+ * timestamps, heart rate etc. never leave the original file.
+ */
+export const trackSchema = z.object({
+  /** [lng, lat, elevationMeters] in route order. */
+  points: z.array(z.tuple([z.number(), z.number(), z.number()])).min(2),
+  distanceMi: z.number().positive(),
+  elevationGainFt: z.number().nonnegative(),
+  maxElevationFt: z.number(),
+  minElevationFt: z.number(),
+});
+export type Track = z.infer<typeof trackSchema>;
 
 /** Formats zod issues as `path: message` lines for CLI / editor output. */
 export function formatIssues(error: z.ZodError): string[] {

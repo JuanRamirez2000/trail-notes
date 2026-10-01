@@ -14,6 +14,7 @@ export type SafetyPinsProps = { height?: number };
 /** Water and bail-out layer: safety pins emphasised, everything else faded back. */
 export function SafetyPins({ height = 240 }: SafetyPinsProps) {
   const waypoints = useHike((s) => s.waypoints);
+  const route = useHike((s) => s.route);
   const activeId = useHike((s) => s.activeId);
   const select = useHike((s) => s.select);
   const safety = waypoints.filter(isSafety);
@@ -22,7 +23,7 @@ export function SafetyPins({ height = 240 }: SafetyPinsProps) {
     <Frame title="Safety points" footer="Larger pins with a double halo mark water and bail-outs.">
       <div className="grid sm:grid-cols-[230px_minmax(0,1fr)]">
         <div className="border-b border-line sm:border-r sm:border-b-0" style={{ height }}>
-          <TrailMap waypoints={waypoints} activeId={activeId} safety labels onSelect={(id) => select(id)} className="size-full" />
+          <TrailMap waypoints={waypoints} route={route} activeId={activeId} safety labels onSelect={(id) => select(id)} className="size-full" />
         </div>
         <ul className="flex flex-col gap-3 p-3.5">
           {safety.length === 0 && <li className="text-bark">No water or bail-out points recorded for this hike.</li>}

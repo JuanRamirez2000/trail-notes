@@ -13,18 +13,19 @@ export type MinimapProps = { height?: number };
 
 function useMinimapState() {
   const waypoints = useHike((s) => s.waypoints);
+  const route = useHike((s) => s.route);
   const steps = useHike((s) => s.steps);
   const select = useHike((s) => s.select);
   const stepBy = useHike((s) => s.stepBy);
   const active = useActiveWaypoint();
   const heading = useEffectiveHeading(active);
   const stepNo = active?.stepIndex != null ? active.stepIndex + 1 : null;
-  return { waypoints, steps, select, stepBy, active, heading, stepNo };
+  return { waypoints, route, steps, select, stepBy, active, heading, stepNo };
 }
 
 /** Small map that follows the current step. Pins and prev/next jump the guide to that section. */
 export function Minimap({ height = 300 }: MinimapProps) {
-  const { waypoints, steps, select, stepBy, active, heading, stepNo } = useMinimapState();
+  const { waypoints, route, steps, select, stepBy, active, heading, stepNo } = useMinimapState();
   return (
     <Frame
       title="Minimap"
@@ -41,6 +42,7 @@ export function Minimap({ height = 300 }: MinimapProps) {
     >
       <div style={{ height }}>
         <TrailMap
+          route={route}
           waypoints={waypoints}
           activeId={active?.id}
           heading={heading}
@@ -54,7 +56,7 @@ export function Minimap({ height = 300 }: MinimapProps) {
 
 /** Mobile/tablet: collapsed bar pinned to the top; expands to the map plus the step list. */
 export function MinimapBar() {
-  const { waypoints, steps, select, active, heading, stepNo } = useMinimapState();
+  const { waypoints, route, steps, select, active, heading, stepNo } = useMinimapState();
   const [open, setOpen] = useState(false);
   return (
     <div className="sticky top-0 z-30 border-b border-line bg-card lg:hidden">
@@ -62,6 +64,7 @@ export function MinimapBar() {
         <>
           <div className="relative h-[210px]">
             <TrailMap
+          route={route}
               waypoints={waypoints}
               activeId={active?.id}
               heading={heading}
@@ -87,7 +90,7 @@ export function MinimapBar() {
         aria-expanded={open}
         className="flex min-h-11 w-full cursor-pointer items-center gap-2.5 border-t border-line px-4 py-1.5 text-left first:border-t-0"
       >
-        {!open && <SketchMap waypoints={waypoints} activeId={active?.id} pinSize={10} className="h-11 w-14 flex-none rounded-md border border-line" />}
+        {!open && <SketchMap waypoints={waypoints} route={route} activeId={active?.id} pinSize={10} className="h-11 w-14 flex-none rounded-md border border-line" />}
         <span className="flex-1 leading-tight">
           {open ? "Close" : "Map, safety & steps"}
           <br />

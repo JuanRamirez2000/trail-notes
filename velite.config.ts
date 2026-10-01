@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineCollection, defineConfig, s, z as vz } from "velite";
 import { remarkStepSections } from "./src/lib/mdx/remark-step-sections";
-import { frontmatterSchema, formatIssues, waypointsFileSchema } from "./src/lib/schemas";
+import { frontmatterSchema, formatIssues, trackSchema, waypointsFileSchema } from "./src/lib/schemas";
 
 /**
  * Velite ships its own (zod v3) `s`, but our domain schemas live in zod v4 so the
@@ -65,6 +65,22 @@ function siblingWaypoints(file: { path: string }) {
   return parsed.success ? parsed.data.waypoints : null; // invalid files are reported by the waypoints collection
 }
 
+const tracks = defineCollection({
+  name: "Track",
+  pattern: "hikes/*/track.json",
+  schema: s
+    .object({ path: s.path() })
+    .passthrough()
+    .transform(({ path, ...data }, { addIssue }) => {
+      const parsed = trackSchema.safeParse(data);
+      if (!parsed.success) {
+        for (const msg of formatIssues(parsed.error)) addIssue({ code: "custom", message: msg });
+        return vz.NEVER;
+      }
+      return { hike: slugFromPath(path.replace(/\/track$/, "/waypoints")), ...parsed.data };
+    }),
+});
+
 export default defineConfig({
   root: "content",
   output: {
@@ -73,7 +89,7 @@ export default defineConfig({
     base: "/static/",
     clean: true,
   },
-  collections: { hikes, waypoints },
+  collections: { hikes, waypoints, tracks },
   mdx: {
     remarkPlugins: [[remarkStepSections, { getWaypoints: siblingWaypoints }]],
   },

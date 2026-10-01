@@ -133,6 +133,16 @@ Build the component inside `<Frame>` and read or write shared state with `useHik
 
 ---
 
+## Recorded routes (GPX)
+
+If you recorded the hike (Garmin, Strava, Gaia…), import the GPX so the maps draw the real route instead of straight lines between photos:
+
+```bash
+pnpm gpx ~/Downloads/activity.gpx --slug strawberry-peak
+```
+
+This writes `content/hikes/<slug>/track.json` and prints the distance, gain and trailhead to use in the frontmatter. Waypoint mileages are then measured along the recorded track (an out-and-back resolves by waypoint `order`). Only latitude, longitude and elevation are kept: timestamps, heart rate, cadence and device data are dropped, so the track is safe to publish. A hike can have a track and no photos; `cover` is optional and falls back to a contour placeholder.
+
 ## The editor (`/editor`)
 
 `pnpm dev`, then open http://localhost:3000/editor. It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
@@ -152,7 +162,7 @@ pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop --force
 
 `granite-saddle` is the detailed example: 18 pins covering every type, a full "Before you go" card, and a written section for each.
 
-Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it you get a `waypoints.draft.json` next to it. `creekside-falls` is a frontmatter-only stub so the gallery filters have something to filter. Delete the samples when you add real hikes.
+Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it you get a `waypoints.draft.json` next to it. `strawberry-peak` is a real recorded route (GPX), with no photos or trail notes yet. Delete the two placeholder samples when you add real hikes.
 
 ---
 

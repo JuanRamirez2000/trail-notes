@@ -1,6 +1,6 @@
 import "server-only";
-import { hikes, waypoints } from "#site/content";
-import { deriveWaypoints } from "./hike";
+import { hikes, tracks, waypoints } from "#site/content";
+import { deriveWaypoints, routeCoords } from "./hike";
 
 export type HikeDoc = (typeof hikes)[number];
 
@@ -14,8 +14,17 @@ export function getHike(slug: string): HikeDoc | undefined {
   return getHikes().find((h) => h.slug === slug);
 }
 
+export function getTrack(slug: string) {
+  return tracks.find((t) => t.hike === slug) ?? null;
+}
+
 export function getWaypoints(slug: string) {
-  return deriveWaypoints(waypoints.find((w) => w.hike === slug)?.waypoints ?? []);
+  return deriveWaypoints(waypoints.find((w) => w.hike === slug)?.waypoints ?? [], getTrack(slug));
+}
+
+/** Line drawn on the maps: the recorded GPX track when present, else straight segments. */
+export function getRoute(slug: string) {
+  return routeCoords(getWaypoints(slug), getTrack(slug));
 }
 
 /** Lightweight shape for the gallery (no MDX body). */

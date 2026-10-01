@@ -5,7 +5,8 @@ import { cn } from "@/lib/cn";
 import { useEffect, useMemo, useRef } from "react";
 import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 import { Pin } from "@/components/ui/Pin";
-import { bounds, routeLine } from "@/lib/geo";
+import { bounds } from "@/lib/geo";
+import { routeCoords } from "@/lib/hike";
 import { isSafety } from "@/lib/hike";
 import { MAPBOX_STYLE, MAPBOX_TOKEN, useCssColor } from "./config";
 import { Cone } from "./Cone";
@@ -16,6 +17,7 @@ const ACTIVE_ZOOM = 15.5;
 
 export default function MapboxTrailMap({
   waypoints,
+  route,
   activeId,
   heading,
   labels,
@@ -31,8 +33,16 @@ export default function MapboxTrailMap({
   const mapRef = useRef<MapRef>(null);
   const forest = useCssColor("--color-forest");
   const active = waypoints.find((w) => w.id === activeId);
-  const line = useMemo(() => routeLine(waypoints), [waypoints]);
-  const routeBounds = useMemo(() => (waypoints.length ? bounds(waypoints) : undefined), [waypoints]);
+  const coords = useMemo(() => route ?? routeCoords(waypoints), [route, waypoints]);
+  const line = useMemo(
+    () => (coords.length >= 2 ? { type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: coords } } : null),
+    [coords],
+  );
+  // Fit the whole route (track can extend beyond the pins), plus the pins themselves.
+  const routeBounds = useMemo(() => {
+    const pts = [...coords.map(([lng, lat]) => ({ lat, lng })), ...waypoints];
+    return pts.length ? bounds(pts) : undefined;
+  }, [coords, waypoints]);
 
   // Keep the active pin in view: the 360° inset recentres, route maps only pan if it's off-screen.
   useEffect(() => {

@@ -1,7 +1,7 @@
 import turfBbox from "@turf/bbox";
 import turfBearing from "@turf/bearing";
 import turfDistance from "@turf/distance";
-import { featureCollection, lineString, point } from "@turf/helpers";
+import { featureCollection, point } from "@turf/helpers";
 import type { LngLat } from "./schemas";
 
 type Pt = Pick<LngLat, "lat" | "lng">;
@@ -36,10 +36,6 @@ export function bounds(points: Pt[]): [[number, number], [number, number]] {
     [w, s],
     [e, n],
   ];
-}
-
-export function routeLine(points: Pt[]) {
-  return points.length >= 2 ? lineString(points.map((p) => [p.lng, p.lat])) : null;
 }
 
 const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;

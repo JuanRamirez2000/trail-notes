@@ -10,7 +10,8 @@
     "typecheck": "velite build --strict && tsc --noEmit",
     "content": "velite build --strict",
     "ingest": "tsx scripts/ingest-photos.ts",
-    "sample:photos": "tsx scripts/make-sample-photos.ts"
+    "sample:photos": "tsx scripts/make-sample-photos.ts",
+    "gpx": "tsx scripts/import-gpx.ts"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
@@ -26,6 +27,7 @@
     "@turf/distance": "^7.4.0",
     "@turf/helpers": "^7.4.0",
     "@turf/length": "^7.4.0",
+    "@turf/simplify": "^7.4.0",
     "@uiw/react-codemirror": "^4.25.12",
     "clsx": "^2.1.1",
     "mapbox-gl": "^3.31.0",

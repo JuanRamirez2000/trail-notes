@@ -1,7 +1,9 @@
-import type { HikeWaypoint } from "@/lib/hike";
+import type { HikeWaypoint, RouteCoords } from "@/lib/hike";
 
 export type TrailMapProps = {
   waypoints: HikeWaypoint[];
+  /** Line to draw (recorded GPX track); defaults to straight segments between waypoints. */
+  route?: RouteCoords;
   activeId?: string | null;
   /** Draw the view cone at the active waypoint. */
   heading?: number | null;
