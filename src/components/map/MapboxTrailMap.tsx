@@ -2,7 +2,7 @@
 
 import "mapbox-gl/dist/mapbox-gl.css";
 import { cn } from "@/lib/cn";
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 import { Pin } from "@/components/ui/Pin";
 import { bounds } from "@/lib/geo";
@@ -12,6 +12,7 @@ import { MAPBOX_STYLE, MAPBOX_TOKEN, useCssColor } from "./config";
 import { Cone } from "./Cone";
 import { MapLabel } from "./SketchMap";
 import type { TrailMapProps } from "./types";
+import type { HikeWaypoint } from "@/lib/hike";
 
 const ACTIVE_ZOOM = 15.5;
 
@@ -52,6 +53,14 @@ export default function MapboxTrailMap({
     if (fit === "active") map.easeTo({ center, duration: 600 });
     else if (!map.getBounds()?.contains(center)) map.easeTo({ center, duration: 600 });
   }, [active, fit]);
+
+  // Stable click handler, so a new onSelect prop from the parent doesn't re-render every marker.
+  const onSelectRef = useRef(onSelect);
+  useLayoutEffect(() => {
+    onSelectRef.current = onSelect;
+  });
+  const pick = useCallback((id: string) => onSelectRef.current?.(id), []);
+  const clickable = !!onSelect;
 
   const initialViewState =
     fit === "active" && active
@@ -102,30 +111,41 @@ export default function MapboxTrailMap({
           </Marker>
         )}
 
-        {waypoints.map((w) => {
-          const dim = safety && !isSafety(w);
-          const on = w.id === activeId;
-          return (
-            <Marker
-              key={w.id}
-              longitude={w.lng}
-              latitude={w.lat}
-              style={{ zIndex: on ? 6 : isSafety(w) ? 3 : 2 }}
-              onClick={(e) => {
-                e.originalEvent.stopPropagation();
-                onSelect?.(w.id);
-              }}
-            >
-              <span className={cn("relative block", onSelect && "cursor-pointer")} title={w.label}>
-                <Pin type={w.type} active={on} dimmed={dim} />
-                {labels && !dim && <MapLabel>{w.label}</MapLabel>}
-              </span>
-            </Marker>
-          );
-        })}
+        {waypoints.map((w) => (
+          <WaypointMarker
+            key={w.id}
+            wp={w}
+            on={w.id === activeId}
+            dim={!!safety && !isSafety(w)}
+            labels={!!labels}
+            onPick={clickable ? pick : undefined}
+          />
+        ))}
 
         {interactive && <NavigationControl position="top-right" showCompass={!!terrain} />}
       </Map>
     </div>
   );
 }
+
+type WaypointMarkerProps = { wp: HikeWaypoint; on: boolean; dim: boolean; labels: boolean; onPick?: (id: string) => void };
+
+/** Memoised so a step change re-renders only the two pins whose `on` flips, not every pin on every map. */
+const WaypointMarker = memo(function WaypointMarker({ wp, on, dim, labels, onPick }: WaypointMarkerProps) {
+  return (
+    <Marker
+      longitude={wp.lng}
+      latitude={wp.lat}
+      style={{ zIndex: on ? 6 : isSafety(wp) ? 3 : 2 }}
+      onClick={(e) => {
+        e.originalEvent.stopPropagation();
+        onPick?.(wp.id);
+      }}
+    >
+      <span className={cn("relative block", onPick && "cursor-pointer")} title={wp.label}>
+        <Pin type={wp.type} active={on} dimmed={dim} />
+        {labels && !dim && <MapLabel>{wp.label}</MapLabel>}
+      </span>
+    </Marker>
+  );
+});
