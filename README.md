@@ -75,7 +75,9 @@ src/
    pnpm ingest ~/Pictures/granite-lakes --slug granite-lakes
    ```
 
-   This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (`draft: true`), and uploads web-sized photos to Supabase. Useful flags: `--storage local` (write to `public/photos` instead; run `pnpm photos push` before deploying), `--dry-run` (read EXIF, write nothing) and `--force` (overwrite an existing `waypoints.json`; without it the script writes `waypoints.draft.json` next to it instead).
+   This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (`draft: true`), and uploads web-sized photos to Supabase. Useful flags: `--storage local` (write to `public/photos` instead; run `pnpm photos push` before deploying), `--dry-run` (read EXIF, write nothing) and `--force` (replace an existing `waypoints.json` instead of merging into it).
+
+   **Adding photos to a hike that already has waypoints** (or a recorded track) merges them in: existing pins keep their ids and text, photos that were ingested before are skipped, and new ones get the next free `wp-NN` id. If the hike has a `track.json`, each photo is snapped onto the track (when it's within ~80 m) and slotted in by trail mileage, so an out-and-back resolves by capture time. Photos far from the track keep their GPS position and are listed, with a hint when one looks out of order rather than off-trail. It's fine to import the GPX first and add photos later.
 3. **Review `waypoints.json`.** For each waypoint:
    - `id`: rename `wp-03` to something readable like `ridge-junction` (this is what MDX refers to)
    - `type`: `start | turn | note | viewpoint | landmark | water | ranger | bailout` (see *Guide sections* below)
@@ -153,7 +155,7 @@ If you recorded the hike (Garmin, Strava, Gaia…), import the GPX so the maps d
 pnpm gpx ~/Downloads/activity.gpx --slug strawberry-peak
 ```
 
-This writes `content/hikes/<slug>/track.json` and prints the distance, gain and trailhead to use in the frontmatter. Waypoint mileages are then measured along the recorded track (an out-and-back resolves by waypoint `order`). Only latitude, longitude and elevation are kept: timestamps, heart rate, cadence and device data are dropped, so the track is safe to publish. A hike can have a track and no photos; `cover` is optional and falls back to a contour placeholder.
+This writes `content/hikes/<slug>/track.json` and prints the distance, gain and trailhead to use in the frontmatter. Waypoint mileages are then measured along the recorded track, projected onto the nearest segment (an out-and-back resolves by waypoint `order`). Only latitude, longitude and elevation are kept: timestamps, heart rate, cadence and device data are dropped, so the track is safe to publish. A hike can have a track and no photos; `cover` is optional and falls back to a contour placeholder.
 
 ## The editor (`/editor`)
 
@@ -174,7 +176,7 @@ pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop --force
 
 `granite-saddle` is the detailed example: 18 pins covering every type, a full "Before you go" card, and a written section for each.
 
-Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it you get a `waypoints.draft.json` next to it. Both samples are `draft: true`: they show in `pnpm dev` (and serve as reference content) but not in production. `strawberry-peak` is a real recorded route (GPX).
+Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it, already-ingested photos are skipped. Both samples are `draft: true`: they show in `pnpm dev` (and serve as reference content) but not in production. `strawberry-peak` is a real recorded route (GPX).
 
 ---
 
