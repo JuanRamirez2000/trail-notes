@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { proseComponents } from "@/components/mdx/prose";
 import { mdxComponents } from "@/components/mdx/registry";
 import { HikeProvider } from "@/lib/hike-store";
@@ -9,17 +9,19 @@ import { compilePreview, parseWaypoints, type CompiledPreview } from "./compile"
 export function Preview({ slug, mdx, waypoints }: { slug: string; mdx: string; waypoints: string }) {
   const deferredMdx = useDeferredValue(mdx);
   const [compiled, setCompiled] = useState<CompiledPreview | null>(null);
+  const wp = useMemo(() => parseWaypoints(waypoints), [waypoints]);
 
   useEffect(() => {
     let cancelled = false;
-    const t = setTimeout(() => compilePreview(deferredMdx).then((r) => !cancelled && setCompiled(r)), 250);
+    const t = setTimeout(
+      () => compilePreview(deferredMdx, wp.ok ? wp.waypoints : null).then((r) => !cancelled && setCompiled(r)),
+      250,
+    );
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [deferredMdx]);
-
-  const wp = parseWaypoints(waypoints);
+  }, [deferredMdx, wp]);
 
   if (!compiled) return <p className="p-6 text-bark">Compiling…</p>;
   return (

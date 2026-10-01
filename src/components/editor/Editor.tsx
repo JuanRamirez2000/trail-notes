@@ -83,10 +83,13 @@ export function Editor({ slug, initialMdx, initialWaypoints }: Props) {
   const insertComponent = (name: RegisteredComponent) => {
     const wps = parseWaypoints(waypoints);
     const list = wps.ok ? wps.waypoints : [];
+    const written = new Set([...mdx.matchAll(/<Step\s+waypoint="([^"]+)"/g)].map((m) => m[1]));
     const pick =
-      name === "PanoViewer"
-        ? list.find((w) => w.photo?.kind === "pano")
-        : list.find((w) => w.photo?.kind === "flat" && w.type !== "start") ?? list[0];
+      name === "Step"
+        ? list.find((w) => w.stepIndex !== null && !written.has(w.id)) ?? list.find((w) => !written.has(w.id))
+        : name === "PanoViewer"
+          ? list.find((w) => w.photo?.kind === "pano") ?? list.find((w) => w.type === "viewpoint")
+          : list.find((w) => w.photo?.kind === "flat" && w.type !== "start") ?? list[0];
     const snippet = registry[name].snippet.replace("{{waypoint}}", pick?.id ?? "waypoint-id");
     if (tab !== "mdx") setTab("mdx");
     // Wait a tick if we just switched tabs so the MDX editor is mounted.

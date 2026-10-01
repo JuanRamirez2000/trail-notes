@@ -7,7 +7,6 @@ import { useHike, useWaypoint } from "@/lib/hike-store";
 import { waypointHeading } from "./labels";
 import { MissingWaypoint } from "./MissingWaypoint";
 import { PanoViewer } from "./PanoViewer";
-import { useReveal } from "./useReveal";
 
 export type PhotoCardProps = {
   /** Waypoint id from waypoints.json. */
@@ -21,14 +20,13 @@ export function PhotoCard({ waypoint, caption }: PhotoCardProps) {
   const wp = useWaypoint(waypoint);
   const select = useHike((s) => s.select);
   const isActive = useHike((s) => s.activeId === waypoint);
-  const ref = useReveal<HTMLDivElement>(waypoint);
 
   if (!wp) return <MissingWaypoint component="PhotoCard" id={waypoint} />;
   if (wp.photo?.kind === "pano") return <PanoViewer waypoint={waypoint} />;
 
   const text = caption ?? wp.caption ?? wp.title;
   return (
-    <div ref={ref}>
+    <div data-waypoint-card={wp.id}>
       <Frame
         title={waypointHeading(wp)}
         active={isActive}

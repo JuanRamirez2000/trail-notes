@@ -10,7 +10,6 @@
       "lng": -121.52,
       "heading": 38,
       "headingSource": "exif",
-      "step": true,
       "photo": {
         "key": "ridgeline-loop/01-img-2041",
         "kind": "flat",
@@ -31,7 +30,6 @@
       "lng": -121.511739,
       "heading": 330,
       "headingSource": "exif",
-      "step": true,
       "photo": {
         "key": "ridgeline-loop/02-img-2047",
         "kind": "flat",
@@ -52,7 +50,6 @@
       "lng": -121.500611,
       "heading": 15,
       "headingSource": "inferred",
-      "step": false,
       "photo": {
         "key": "ridgeline-loop/03-img-2052",
         "kind": "flat",
@@ -74,7 +71,6 @@
       "lng": -121.497283,
       "heading": 5,
       "headingSource": "exif",
-      "step": true,
       "photo": {
         "key": "ridgeline-loop/04-img-2060",
         "kind": "flat",
@@ -86,6 +82,19 @@
       "mile": 1.8
     },
     {
+      "id": "slick-slab",
+      "order": 45,
+      "type": "note",
+      "label": "Slick slab",
+      "title": "Watch your footing on the slab",
+      "caption": "A short stretch of bare granite just below the overlook. It stays wet into the afternoon after rain; stay on the left edge where the moss is thin.",
+      "lat": 47.502375,
+      "lng": -121.485102,
+      "heading": null,
+      "headingSource": null,
+      "mile": 2.4
+    },
+    {
       "id": "overlook",
       "order": 50,
       "type": "viewpoint",
@@ -95,12 +104,11 @@
       "lng": -121.475136,
       "heading": 70,
       "headingSource": "exif",
-      "step": true,
       "photo": {
-        "key": "ridgeline-loop/05-pano-2071",
-        "kind": "pano",
-        "width": 4096,
-        "height": 2048
+        "key": "ridgeline-loop/05-img-2071",
+        "kind": "flat",
+        "width": 2400,
+        "height": 1600
       },
       "takenAt": "2026-08-14T23:23:00.000Z",
       "caption": "Open rock with views east over the valley. Good lunch spot.",
@@ -116,7 +124,6 @@
       "lng": -121.458064,
       "heading": 95,
       "headingSource": "manual",
-      "step": true,
       "photo": {
         "key": "ridgeline-loop/06-img-2080",
         "kind": "flat",

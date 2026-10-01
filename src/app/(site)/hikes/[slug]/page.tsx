@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXContent } from "@/components/mdx/MDXContent";
-import { Minimap, MinimapBar } from "@/components/mdx/Minimap";
+import { GuideScrollSync } from "@/components/hike/GuideScrollSync";
+import { MinimapBar } from "@/components/mdx/Minimap";
+import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { Photo } from "@/components/ui/Photo";
 import { getHike, getHikes, getWaypoints } from "@/lib/content";
 import { DIFFICULTY_LABEL, formatFeet, formatMiles } from "@/lib/format";
@@ -36,6 +38,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
 
   return (
     <HikeProvider slug={slug} waypoints={waypoints}>
+      <GuideScrollSync />
       <article>
         {/* Hero */}
         <div className="relative h-[200px] border-b-[1.5px] border-line-strong sm:h-[360px]">
@@ -104,11 +107,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
           <div className="min-w-0 pt-2">
             <MDXContent code={hike.body} />
           </div>
-          <aside className="hidden lg:block">
-            <div className="sticky top-4 mt-[22px]">
-              <Minimap />
-            </div>
-          </aside>
+          <GuideSidebar />
         </div>
       </article>
     </HikeProvider>

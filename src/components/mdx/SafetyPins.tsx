@@ -30,7 +30,7 @@ export function SafetyPins({ height = 240 }: SafetyPinsProps) {
             <li key={w.id}>
               <button
                 type="button"
-                onClick={() => select(w.id)}
+                onClick={() => select(w.id, { reveal: true })}
                 className={cn(
                   "flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left",
                   w.id === activeId ? "border-forest bg-highlight" : "border-line",

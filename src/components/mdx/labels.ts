@@ -3,6 +3,7 @@ import type { HikeWaypoint } from "@/lib/hike";
 const KIND: Record<HikeWaypoint["type"], string> = {
   start: "Trailhead",
   turn: "Turning point",
+  note: "Note",
   viewpoint: "Viewpoint",
   water: "Water",
   bailout: "Bail-out",

@@ -16,11 +16,12 @@ export type HikeState = {
   activeId: string | null;
   /** Live look direction from an open 360° viewer, keyed to the waypoint it belongs to. */
   view: { waypointId: string; heading: number } | null;
-  /** Bumped to ask the owning component to scroll a waypoint's card into view. */
+  /** Bumped to ask <GuideScrollSync> to scroll the guide to a waypoint's section. */
   reveal: { id: string; nonce: number } | null;
 
+  /** `reveal: true` also scrolls the guide to the waypoint's section. */
   select: (id: string | null, opts?: { reveal?: boolean }) => void;
-  stepBy: (delta: 1 | -1) => void;
+  stepBy: (delta: 1 | -1, opts?: { reveal?: boolean }) => void;
   setView: (view: HikeState["view"]) => void;
 };
 
@@ -40,12 +41,12 @@ function createHikeStore(slug: string, waypoints: HikeWaypoint[]) {
         reveal: id && opts?.reveal ? { id, nonce: (s.reveal?.nonce ?? 0) + 1 } : s.reveal,
       })),
 
-    stepBy: (delta) => {
-      const { steps, activeId } = get();
+    stepBy: (delta, opts) => {
+      const { steps, activeId, select } = get();
       if (!steps.length) return;
       const i = steps.findIndex((s) => s.id === activeId);
       const next = i === -1 ? 0 : Math.min(steps.length - 1, Math.max(0, i + delta));
-      set({ activeId: steps[next].id });
+      select(steps[next].id, opts);
     },
 
     setView: (view) => set({ view }),
@@ -72,6 +73,13 @@ export function useHike<T>(selector: (s: HikeState) => T): T {
   const store = useContext(HikeStoreContext);
   if (!store) throw new Error("useHike must be used inside <HikeProvider>");
   return useStore(store, selector);
+}
+
+/** Imperative access (read state inside event handlers without subscribing). */
+export function useHikeApi(): StoreApi<HikeState> {
+  const store = useContext(HikeStoreContext);
+  if (!store) throw new Error("useHikeApi must be used inside <HikeProvider>");
+  return store;
 }
 
 export function useWaypoint(id: string | undefined) {

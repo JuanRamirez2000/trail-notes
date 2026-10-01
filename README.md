@@ -66,25 +66,46 @@ src/
    This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (`draft: true`), and writes web-sized photos. Useful flags: `--storage supabase`, `--dry-run` (read EXIF, write nothing) and `--force` (overwrite an existing `waypoints.json`; without it the script writes `waypoints.draft.json` next to it instead).
 3. **Review `waypoints.json`.** For each waypoint:
    - `id`: rename `wp-03` to something readable like `ridge-junction` (this is what MDX refers to)
-   - `type`: `start | turn | viewpoint | water | bailout`
+   - `type`: `start | turn | note | viewpoint | water | bailout` (see *Guide sections* below)
    - `label` (short map label), `title` (step instruction), `caption`, `note` (for safety pins)
    - `heading`: check any with `"headingSource": "inferred"`, and fill the ones left `null` (then set `"headingSource": "manual"`)
    - `mile`: optional real trail mileage. Without it, mileage is estimated from straight lines between photos, which reads low.
-   - `step: false` keeps a pin (e.g. a water source) off the step list.
    - `order` values have gaps of 10, so you can slot in extra waypoints.
 4. **Write the guide** in `index.mdx`, fill in the frontmatter, and set `draft: false`. Drafts show in `pnpm dev` but not in production.
 5. `pnpm dev` and check the page, or use the editor (below).
 
 Invalid content (unknown waypoint type, a slug that doesn't match its folder, a bad photo key…) fails `pnpm build` with a readable error.
 
+### Guide sections
+
+Every pin type declares how it relates to the written guide (`src/lib/pins.ts`):
+
+| Pin | Section | Sidebar step list |
+| --- | --- | --- |
+| Trailhead `S`, Turn `↰`, Note `✎`, Bail-out `!` | **Required.** Write `<Step waypoint="id">…</Step>` for it; if you don't, a stub section (title, photo, caption) is generated in route order | Numbered |
+| Viewpoint `◎`, Water `W` | **Optional.** Only appears if you write a `<Step>` for it | Not listed. Clicking the pin jumps to the nearest section before it |
+
+`note` is the flex type: a required section for anything that isn't a turn (a slick slab, a confusing fork, no cell signal). To give it its own look later, change its entry in `PIN_STYLES`.
+
+```mdx
+<Step waypoint="creek-junction">
+Your notes for this part of the trail. The step number, pin, mileage, photo and caption are added for you.
+</Step>
+```
+
+A `<Step>` pointing at an unknown waypoint id, or two `<Step>` blocks for the same waypoint, fails the build. The stub generator lives in `src/lib/mdx/remark-step-sections.ts`. One dev-only gotcha: if you edit only `waypoints.json` while `pnpm dev` is running, new required pins get their stub once `index.mdx` is saved next (the editor saves both).
+
+**Sidebar:** on desktop, the guide has a sticky rail with the minimap and the step list. Clicking a step scrolls to its section, and as you scroll, the active step follows what you're reading. On mobile, the same list lives in the pinned minimap bar. To add more cards to the rail, append to `src/components/sidebar/registry.tsx`.
+
 ### Components you can use in MDX
 
 | Component | Props | What it does |
 | --- | --- | --- |
+| `<Step waypoint="id">…</Step>` | `hidePhoto` | A guide section for a pin (see above) |
 | `<RouteMap />` | `height`, `labels`, `terrain` | All pins + route line, 3D terrain, legend |
-| `<StepByStep />` | `showMeta` | Clickable steps; opens photos, drives every map |
 | `<PhotoCard waypoint="id" />` | `caption` | Photo linked to its pin (360° photos switch to the viewer) |
-| `<PanoViewer waypoint="id" />` | `markerRadiusMi` | 360° viewer; the inset map cone follows where you look |
+| `<PanoViewer waypoint="id" />` | `markerRadiusMi` | 360° viewer; the inset map cone follows where you look. Shows a "coming soon" placeholder until the waypoint has a 360° photo |
+| `<StepByStep />` | `showMeta` | Inline step list (optional, since the sidebar already has one) |
 | `<Minimap />` | `height` | Current step map (the page already puts one in the sticky rail) |
 | `<SafetyPins />` | `height` | Water + bail-out layer, other pins faded |
 

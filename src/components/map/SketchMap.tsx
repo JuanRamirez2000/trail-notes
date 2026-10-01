@@ -54,19 +54,29 @@ export function SketchMap({ waypoints, activeId, heading, labels, safety, onSele
       {pts.map(({ w, x, y }) => {
         const dim = safety && !isSafety(w);
         const on = w.id === activeId;
-        return (
+        const pin = (
+          <>
+            <Pin type={w.type} size={pinSize} active={on} dimmed={dim} />
+            {labels && !dim && <MapLabel>{w.label}</MapLabel>}
+          </>
+        );
+        const pos = cn("absolute -translate-x-1/2 -translate-y-1/2", on ? "z-[6]" : isSafety(w) ? "z-[3]" : "z-[2]");
+        // Only clickable maps get buttons; static sketches (thumbnails) may sit inside other buttons.
+        return onSelect ? (
           <button
             key={w.id}
             type="button"
-            disabled={!onSelect}
-            onClick={() => onSelect?.(w.id)}
-            className={cn("absolute -translate-x-1/2 -translate-y-1/2", onSelect && "cursor-pointer", on ? "z-[6]" : isSafety(w) ? "z-[3]" : "z-[2]")}
+            onClick={() => onSelect(w.id)}
+            className={cn(pos, "cursor-pointer")}
             style={{ left: `${x}%`, top: `${y}%` }}
             aria-label={w.label}
           >
-            <Pin type={w.type} size={pinSize} active={on} dimmed={dim} />
-            {labels && !dim && <MapLabel>{w.label}</MapLabel>}
+            {pin}
           </button>
+        ) : (
+          <span key={w.id} className={pos} style={{ left: `${x}%`, top: `${y}%` }}>
+            {pin}
+          </span>
         );
       })}
     </div>

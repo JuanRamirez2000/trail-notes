@@ -4,6 +4,7 @@ import { PanoViewer } from "./PanoViewer";
 import { PhotoCard } from "./PhotoCard";
 import { RouteMap } from "./RouteMap";
 import { SafetyPins } from "./SafetyPins";
+import { Step } from "./Step";
 import { StepByStep } from "./StepByStep";
 
 /**
@@ -23,6 +24,12 @@ export type RegistryEntry = {
 };
 
 export const registry = {
+  Step: {
+    component: Step,
+    title: "Guide section",
+    description: "Section for a pin: number, photo, your notes",
+    snippet: '<Step waypoint="{{waypoint}}">\n\nWrite this part of the guide.\n\n</Step>',
+  },
   RouteMap: {
     component: RouteMap,
     title: "Route map",
@@ -43,8 +50,8 @@ export const registry = {
   },
   StepByStep: {
     component: StepByStep,
-    title: "Step-by-step",
-    description: "Steps highlight map, open photos",
+    title: "Step-by-step list",
+    description: "Inline step list (the sidebar already has one)",
     snippet: "<StepByStep />",
   },
   Minimap: {

@@ -6,6 +6,7 @@
  *   pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop
  *
  * Some photos deliberately omit the EXIF heading so the "inferred" path is exercised too.
+ * Pass `pano: true` on a shot to render a 2:1 equirectangular test image for the 360° viewer.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -28,7 +29,7 @@ const SHOTS: Shot[] = [
   { name: "IMG_2047.jpg", label: "Creek junction", legMi: 0.6, legBearing: 40, heading: 330, minute: 14 },
   { name: "IMG_2052.jpg", label: "Spring", legMi: 0.6, legBearing: 60, heading: null, minute: 29 },
   { name: "IMG_2060.jpg", label: "Ridge junction", legMi: 0.6, legBearing: 15, heading: 5, minute: 47 },
-  { name: "PANO_2071.jpg", label: "Overlook", legMi: 1.1, legBearing: 70, heading: 70, pano: true, minute: 78 },
+  { name: "IMG_2071.jpg", label: "Overlook", legMi: 1.1, legBearing: 70, heading: 70, minute: 78 },
   { name: "IMG_2080.jpg", label: "Saddle road exit", legMi: 0.8, legBearing: 95, heading: null, minute: 101 },
 ];
 

@@ -170,7 +170,8 @@ TODO intro.
 
 ## The route
 
-<StepByStep />
+{/* Every trailhead/turn/note/bail-out pin gets a section automatically. Write one yourself with
+<Step waypoint="wp-02">…</Step> to add your own notes; viewpoints and water only appear if you do. */}
 
 ## Water and bail-outs
 
@@ -210,7 +211,6 @@ async function main() {
       lng: round(p.lng),
       heading: headings[i].heading,
       headingSource: headings[i].source,
-      step: true,
       photo: {
         key: photoKey,
         kind: p.pano ? "pano" : "flat",

@@ -11,7 +11,7 @@ export const DIFFICULTIES = ["easy", "moderate", "hard", "strenuous"] as const;
 export const difficultySchema = z.enum(DIFFICULTIES);
 export type Difficulty = z.infer<typeof difficultySchema>;
 
-export const WAYPOINT_TYPES = ["start", "turn", "viewpoint", "water", "bailout"] as const;
+export const WAYPOINT_TYPES = ["start", "turn", "note", "viewpoint", "water", "bailout"] as const;
 export const waypointTypeSchema = z.enum(WAYPOINT_TYPES);
 export type WaypointType = z.infer<typeof waypointTypeSchema>;
 
@@ -54,8 +54,6 @@ export const waypointSchema = z.object({
   headingSource: z.enum(["exif", "inferred", "manual"]).nullable().default(null),
   /** Override for trail mileage; otherwise estimated from straight-line segments. */
   mile: z.number().nonnegative().optional(),
-  /** Whether the waypoint appears in <StepByStep />. Water stops usually don't. */
-  step: z.boolean().default(true),
   photo: photoSchema.optional(),
   takenAt: z.iso.datetime({ offset: true }).optional(),
 });

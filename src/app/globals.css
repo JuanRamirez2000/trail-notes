@@ -26,6 +26,7 @@
   /* Map pins — navigation pins are flat, safety pins get a double halo */
   --color-pin-start: #2f4a36;
   --color-pin-turn: #d9731f;
+  --color-pin-note: var(--color-bark);
   --color-pin-viewpoint: #7b4fa8;
   --color-pin-water: #1f78b4;
   --color-pin-bailout: #c23b2e;

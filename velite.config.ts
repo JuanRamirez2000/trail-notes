@@ -1,4 +1,7 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { defineCollection, defineConfig, s, z as vz } from "velite";
+import { remarkStepSections } from "./src/lib/mdx/remark-step-sections";
 import { frontmatterSchema, formatIssues, waypointsFileSchema } from "./src/lib/schemas";
 
 /**
@@ -50,6 +53,18 @@ const waypoints = defineCollection({
     }),
 });
 
+/**
+ * Waypoints for the post being compiled, read from its sibling waypoints.json. In `next dev`,
+ * editing only waypoints.json doesn't recompile the post, so new required waypoints get their
+ * stub section once index.mdx is next saved (the /editor saves both).
+ */
+function siblingWaypoints(file: { path: string }) {
+  const p = path.join(path.dirname(file.path), "waypoints.json");
+  if (!existsSync(p)) return null;
+  const parsed = waypointsFileSchema.safeParse(JSON.parse(readFileSync(p, "utf8")));
+  return parsed.success ? parsed.data.waypoints : null; // invalid files are reported by the waypoints collection
+}
+
 export default defineConfig({
   root: "content",
   output: {
@@ -59,4 +74,7 @@ export default defineConfig({
     clean: true,
   },
   collections: { hikes, waypoints },
+  mdx: {
+    remarkPlugins: [[remarkStepSections, { getWaypoints: siblingWaypoints }]],
+  },
 });
