@@ -1,15 +1,21 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useState } from "react";
 import { hasMapbox } from "@/components/map/config";
 import { SketchHikesMap } from "./SketchHikesMap";
 import type { HikesMapProps } from "./types";
 
-const MapboxHikesMap = dynamic(() => import("./MapboxHikesMap"), {
-  ssr: false,
-  loading: () => <div className="bg-contour absolute inset-0" />,
-});
+const MapboxHikesMap = dynamic(() => import("./MapboxHikesMap"), { ssr: false });
 
+/** Sketch underneath until Mapbox paints; if Mapbox can't start (no WebGL), the sketch stays. */
 export function HikesMap(props: HikesMapProps) {
-  return hasMapbox ? <MapboxHikesMap {...props} /> : <SketchHikesMap {...props} />;
+  const [status, setStatus] = useState<"idle" | "loaded" | "failed">("idle");
+  const useMapbox = hasMapbox && status !== "failed";
+  return (
+    <>
+      {status !== "loaded" && <SketchHikesMap {...props} />}
+      {useMapbox && <MapboxHikesMap {...props} onLoad={() => setStatus("loaded")} onFail={() => setStatus("failed")} />}
+    </>
+  );
 }

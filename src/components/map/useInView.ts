@@ -2,16 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** True once the element has come within `rootMargin` of the viewport. Never flips back. */
-export function useInViewOnce<T extends Element>(rootMargin = "200px") {
+/**
+ * True while the element is within `rootMargin` of the viewport.
+ *
+ * WebGL views (Mapbox, the 360° viewer) mount only while this is true. Browsers cap live
+ * WebGL contexts per page (Safari and some GPUs fail well before Chrome's ~16), so a long
+ * guide must release contexts it has scrolled past rather than keep every one alive.
+ */
+export function useNearViewport<T extends Element>(rootMargin = "300px") {
   const ref = useRef<T>(null);
-  const [seen, setSeen] = useState(false);
+  const [near, setNear] = useState(false);
   useEffect(() => {
     const el = ref.current;
-    if (!el || seen) return;
-    const io = new IntersectionObserver(([entry]) => entry.isIntersecting && setSeen(true), { rootMargin });
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), { rootMargin });
     io.observe(el);
     return () => io.disconnect();
-  }, [rootMargin, seen]);
-  return [ref, seen] as const;
+  }, [rootMargin]);
+  return [ref, near] as const;
 }

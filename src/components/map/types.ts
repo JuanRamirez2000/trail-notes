@@ -19,4 +19,6 @@ export type TrailMapProps = {
   className?: string;
   /** Fired once the real map has rendered (used to drop the sketch placeholder). */
   onLoad?: () => void;
+  /** Fired if the map can't initialise (most often: WebGL unavailable or context limit hit). */
+  onError?: () => void;
 };

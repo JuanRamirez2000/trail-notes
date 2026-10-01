@@ -5,4 +5,6 @@ export type HikesMapProps = {
   selected: string | null;
   onSelect: (slug: string | null) => void;
   className?: string;
+  onLoad?: () => void;
+  onFail?: () => void;
 };

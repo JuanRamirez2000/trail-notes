@@ -5,9 +5,11 @@ import "@photo-sphere-viewer/markers-plugin/index.css";
 import type { Viewer } from "@photo-sphere-viewer/core";
 import type { MarkerConfig, MarkersPlugin } from "@photo-sphere-viewer/markers-plugin";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { TrailMap } from "@/components/map/TrailMap";
-import { useInViewOnce } from "@/components/map/useInView";
+import { SketchMap } from "@/components/map/SketchMap";
+import { useNearViewport } from "@/components/map/useInView";
+import { canCreateWebGL2 } from "@/components/map/webgl";
 import { Frame } from "@/components/ui/Frame";
+import { Photo } from "@/components/ui/Photo";
 import { bearing, compassLabel, distanceMi, normalizeHeading } from "@/lib/geo";
 import type { HikeWaypoint } from "@/lib/hike";
 import { useHike, useWaypoint } from "@/lib/hike-store";
@@ -59,7 +61,8 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
   const current = panos.find((w) => w.id === currentId) ?? initial;
   const [heading, setHeading] = useState(current?.heading ?? 0);
 
-  const [inViewRef, inView] = useInViewOnce<HTMLDivElement>();
+  const [nearRef, near] = useNearViewport<HTMLDivElement>();
+  const [failed, setFailed] = useState(false);
   const revealRef = useReveal<HTMLDivElement>(waypoint);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
@@ -70,10 +73,11 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
     currentRef.current = current;
   }, [current]);
 
-  // Create the viewer once it scrolls near the viewport; three.js is only fetched then.
+  // The viewer (and its WebGL context) only lives while the card is near the viewport;
+  // three.js is fetched the first time it's needed.
   useEffect(() => {
     const wp = currentRef.current;
-    if (!inView || !containerRef.current || !wp?.photo) return;
+    if (!near || failed || !containerRef.current || !wp?.photo) return;
     let disposed = false;
     let frame = 0;
 
@@ -83,6 +87,8 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
         import("@photo-sphere-viewer/markers-plugin"),
       ]);
       if (disposed || !containerRef.current) return;
+      // PSV caches a failed WebGL check for the whole page, so probe first and fall back ourselves.
+      if (!canCreateWebGL2()) return setFailed(true);
 
       const viewer = new Viewer({
         container: containerRef.current,
@@ -120,6 +126,10 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
     return () => {
       disposed = true;
       cancelAnimationFrame(frame);
+      // three's WebGLRenderer.dispose() frees GPU resources but keeps the context alive;
+      // force it lost so scrolling past the viewer gives the context back to the browser.
+      const viewer = viewerRef.current as unknown as { renderer?: { renderer?: { forceContextLoss?: () => void } } } | null;
+      viewer?.renderer?.renderer?.forceContextLoss?.();
       viewerRef.current?.destroy();
       viewerRef.current = null;
       markersRef.current = null;
@@ -127,7 +137,7 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
     };
     // Viewer is created once; waypoint switches go through setPanorama below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView]);
+  }, [near, failed]);
 
   // Prev/next spot: swap panorama in place instead of rebuilding the viewer.
   useEffect(() => {
@@ -163,17 +173,28 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
           </div>
         }
       >
-        <div ref={inViewRef} className="bg-stripes relative h-[220px] sm:h-[360px]" onPointerDown={() => select(current.id)}>
-          <div ref={containerRef} className="absolute inset-0" />
+        <div ref={nearRef} className="bg-stripes relative h-[220px] sm:h-[360px]" onPointerDown={() => select(current.id)}>
+          {failed ? (
+            <>
+              {/* No WebGL: show the panorama flat, centred on its heading, instead of PSV's error overlay. */}
+              <Photo photoKey={current.photo.key} alt={current.photo.alt ?? current.title} className="absolute inset-0" />
+              <div className="absolute inset-x-2 top-12 z-10 mx-auto max-w-sm rounded-lg border border-line bg-card px-3 py-2 text-center text-sm sm:top-14">
+                The interactive 360° view needs WebGL, which this browser isn&apos;t providing right now. Showing the flat panorama instead.
+              </div>
+            </>
+          ) : (
+            <div ref={containerRef} className="absolute inset-0" />
+          )}
           <div className="pointer-events-none absolute left-2 top-2 z-10 rounded-md border border-line bg-card px-2.5 py-0.5 font-mono text-xs font-semibold sm:left-3.5 sm:top-3.5">
             <span className="hidden sm:inline">Facing </span>
             {compassLabel(heading)} · {Math.round(heading)}°
           </div>
-          <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full border border-line bg-card px-3 text-sm sm:bottom-3.5 sm:left-1/2 sm:-translate-x-1/2 sm:text-[15px]">
+          <div data-hidden={failed} className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full data-[hidden=true]:hidden border border-line bg-card px-3 text-sm sm:bottom-3.5 sm:left-1/2 sm:-translate-x-1/2 sm:text-[15px]">
             ◀ drag to look around ▶
           </div>
           <div className="absolute bottom-2 right-2 z-10 size-[84px] overflow-hidden rounded-lg border-2 border-forest sm:bottom-3.5 sm:right-3.5 sm:size-[130px]">
-            <TrailMap waypoints={waypoints} activeId={current.id} heading={heading} fit="active" interactive={false} className="size-full" />
+            {/* Sketch rather than Mapbox: a live map here would cost another WebGL context. */}
+            <SketchMap waypoints={waypoints} activeId={current.id} heading={heading} fit="active" pinSize={16} className="size-full" />
           </div>
         </div>
       </Frame>

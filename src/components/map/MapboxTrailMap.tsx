@@ -26,6 +26,7 @@ export default function MapboxTrailMap({
   fit = "route",
   className,
   onLoad,
+  onError,
 }: TrailMapProps) {
   const mapRef = useRef<MapRef>(null);
   const forest = useCssColor("--color-forest");
@@ -51,6 +52,9 @@ export default function MapboxTrailMap({
     <div className={cn("relative", className)}>
       <Map
         ref={mapRef}
+        // Unmounted maps go back to a shared pool instead of being destroyed, so WebGL contexts
+        // are capped at the number of maps on screen at once (and Strict Mode remounts are safe).
+        reuseMaps
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle={MAPBOX_STYLE}
         initialViewState={initialViewState}
@@ -61,6 +65,12 @@ export default function MapboxTrailMap({
         terrain={terrain ? { source: "mapbox-dem", exaggeration: 1.4 } : undefined}
         style={{ position: "absolute", inset: 0 }}
         onLoad={onLoad}
+        onError={(e) => {
+          // react-map-gl reports a failed constructor (no WebGL / context limit) with target null.
+          // Anything else is a tile or style hiccup on a working map.
+          if (!e.target) onError?.();
+          else console.warn("Mapbox:", e.error?.message);
+        }}
       >
         {terrain && (
           <Source id="mapbox-dem" type="raster-dem" url="mapbox://mapbox.mapbox-terrain-dem-v1" tileSize={512} maxzoom={14} />

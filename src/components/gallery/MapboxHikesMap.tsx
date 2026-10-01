@@ -10,7 +10,7 @@ import { HikePin } from "./HikePin";
 import { HikePopup } from "./HikePopup";
 import type { HikesMapProps } from "./types";
 
-export default function MapboxHikesMap({ hikes, selected, onSelect, className }: HikesMapProps) {
+export default function MapboxHikesMap({ hikes, selected, onSelect, className, onLoad, onFail }: HikesMapProps) {
   const mapRef = useRef<MapRef>(null);
   const all = useMemo(() => hikes.map((h) => h.trailhead), [hikes]);
   const sel = hikes.find((h) => h.slug === selected);
@@ -25,11 +25,18 @@ export default function MapboxHikesMap({ hikes, selected, onSelect, className }:
     <div className={cn("relative", className)}>
       <Map
         ref={mapRef}
+        reuseMaps
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle={MAPBOX_STYLE}
         initialViewState={all.length ? { bounds: bounds(all), fitBoundsOptions: { padding: 80, maxZoom: 11 } } : undefined}
         style={{ position: "absolute", inset: 0 }}
         onClick={() => onSelect(null)}
+        onLoad={onLoad}
+        onError={(e) => {
+          // target is null only when the map itself couldn't be created (no WebGL2 / context limit).
+          if (!e.target) onFail?.();
+          else console.warn("Mapbox:", e.error?.message);
+        }}
       >
         {hikes.map((h, i) => (
           <Marker
