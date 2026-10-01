@@ -30,8 +30,8 @@ jobs:
       - name: Content (Velite, strict)
         run: pnpm content
       - run: pnpm lint
-      - name: Typecheck
-        run: pnpm exec tsc --noEmit
+      - name: Typecheck (velite + next typegen + tsc)
+        run: pnpm typecheck
       - run: pnpm test
       - name: Photos referenced by content exist in Supabase
         run: pnpm photos check

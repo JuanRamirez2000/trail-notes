@@ -7,7 +7,7 @@
     "build": "velite build --strict && next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "velite build --strict && tsc --noEmit",
+    "typecheck": "velite build --strict && next typegen && tsc --noEmit",
     "content": "velite build --strict",
     "ingest": "tsx scripts/ingest-photos.ts",
     "sample:photos": "tsx scripts/make-sample-photos.ts",
