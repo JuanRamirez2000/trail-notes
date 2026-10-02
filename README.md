@@ -221,7 +221,7 @@ With the CLI: `npm i -g vercel`, `vercel link`, `vercel env add NEXT_PUBLIC_MAPB
 
 ## Notes
 
-- **Backlog:** unscheduled feature ideas live in [BACKLOG.md](BACKLOG.md).
+- **Backlog:** unscheduled feature ideas live in [docs/knowledge/backlog.md](docs/knowledge/backlog.md).
 
 - **Mapbox costs:** each map counts as a map load. Maps only mount when scrolled near the viewport, and the small inset maps skip 3D terrain. The free tier is 50k loads/month.
 - **Timestamps:** EXIF `DateTimeOriginal` has no timezone, so `takenAt` is interpreted in your machine's timezone. It's only used for ordering.
