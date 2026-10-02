@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-01. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** is agreed and starts with the E0 spike, see [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-01. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 done, E1 next, see [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -44,7 +44,7 @@ content/hikes/<slug>/{index.mdx, waypoints.json, track.json?}
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Dev server. Also starts Velite's watcher, and touches `index.mdx` when a sibling `waypoints.json`/`track.json` changes |
-| `pnpm test` | Vitest (60 tests: remark pass, schemas, geo, track, ingest/GPX helpers) |
+| `pnpm test` | Vitest (66 tests: remark pass, schemas, geo, track, ingest/GPX helpers, MDXEditor round trip on jsdom) |
 | `pnpm typecheck` | `velite build --strict && next typegen && tsc --noEmit` |
 | `pnpm build` | `velite build --strict && next build` |
 | `pnpm ingest <folder> --slug <slug>` | EXIF → waypoints. Merges into existing waypoints and snaps to the track; `--force` replaces; `--storage local` writes to `public/photos` |

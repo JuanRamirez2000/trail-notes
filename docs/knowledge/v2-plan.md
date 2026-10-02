@@ -1,11 +1,11 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01. Status: **agreed** (owner answers below). Next: E0._
+_Drafted 2026-10-01. Status: **agreed**; **E0 done (go)**. Next: E1._
 
 ## Decisions (owner, 2026-10-01)
 
 - **Writing:** a rich-text "Write" mode (E0 spike → E2), with Markdown source kept as a second tab.
-- **Live-site editing is in V2** (E5), including from the phone.
+- **Live-site editing is in V2** (E5), including from the phone, but **without photo uploads** (later).
 - **Order:** the text editor first (E0 → E1 → E2), then the pin editor (E3), creating a hike (E4), and live-site editing (E5).
 - **Design reference:** *Trail Guide Branded* in the Claude Design project. It has the editor and sample components.
 - **Every guide block is movable per guide.** That includes the ones the page layout currently fixes: "Before you go", "Safety points", "Steps" and "Route map". See "Movable blocks" below.
@@ -69,9 +69,12 @@ Today some blocks are layout rather than content: "Before you go" always renders
 
 ## Milestones
 
-**E0: Spike (1–2 days, go/no-go).** Load MDXEditor in `/editor` on Strawberry Peak and `granite-saddle`. Check the round trip (load, save, diff): frontmatter, `<Step>` with and without children, `{/* comments */}`, blank lines, lists. Write a round-trip test that runs in CI.
-- **Go:** E2 builds on MDXEditor.
-- **No-go** (it rewrites our MDX in ways we can't accept): keep CodeMirror as the only text editor and do E1, E3 and E4 anyway. They meet the "own components" requirement without WYSIWYG.
+**E0: Spike. ✅ Done 2026-10-01: GO.** MDXEditor 4.3.1 round-trips every guide with the same frontmatter and the same MDX syntax tree, and a second pass changes nothing. Strawberry Peak comes back byte-for-byte (apart from the final newline). Comments, numeric and boolean props, and headings, lists and links inside `<Step>` all survive. The remaining normalisations, once applied, are stable:
+- children of block components are indented 2 spaces
+- `_em_` becomes `*em*`
+- the final newline is dropped (the save path adds it back)
+
+`bullet: "-"` and `rule: "-"` keep our list and rule style. It renders in Next 16 dev with React 19 and Turbopack (client-only via `next/dynamic`), with no errors. The setup lives in `src/components/editor/mdx-editor-config.ts`; `src/components/editor/__tests__/roundtrip.test.tsx` runs in CI on jsdom. As expected, generic JSX blocks don't show props yet (E1) and the editor is unstyled (E2).
 
 **E1: Component manifest, settings panel, movable blocks.**
 - Read *Trail Guide Branded* for the editor and settings-panel design and its sample components.
@@ -100,11 +103,8 @@ Today some blocks are layout rather than content: "Before you go" always renders
 **E5: Editing on the live site (in V2).**
 - `/editor` runs in production behind an owner-only sign-in. The editor never needs a server filesystem: the preview already compiles in the browser.
 - **Saving:** a GitHub storage adapter commits `index.mdx`/`waypoints.json` to `main` through the GitHub API, Vercel redeploys, and the change is live in about a minute. The local adapter stays for `pnpm dev`.
-- **Photos from the phone:** the browser uploads to Supabase through short-lived signed upload URLs issued by a server route. This needs a server-only Supabase key on Vercel (until now the rule was "never on Vercel"); it never reaches the client.
-- **Risks to spike before building:**
-  - iOS Safari may convert HEIC to JPEG, and may strip location from photos picked in the browser. If so, GPS has to be read on the device before upload, or the pin placed on the map instead.
-  - sharp can't decode HEIC on the server.
-  - The auth choice: GitHub OAuth (it also gives the token for commits) or Sign in with Vercel.
+- **Photos are out of V2** (owner, 2026-10-01): live-site editing covers text, components and pins only; photos are still added with `pnpm ingest` on the Mac. Uploading from the phone (signed Supabase upload URLs, HEIC and iOS location handling) moved to [todo.md](todo.md).
+- **Risk to spike before building:** the sign-in choice, GitHub OAuth (which also gives the token for commits) or Sign in with Vercel.
 - **Fallback:** Keystatic's `github` mode if building our own auth and commits looks worse once E3 is done.
 
 ## Testing against the baseline

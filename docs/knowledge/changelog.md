@@ -2,6 +2,10 @@
 
 Newest first. Commit hashes refer to `main`.
 
+## V2 (in progress, from 2026-10-01): editing
+
+- **E0 spike: go.** MDXEditor round-trips all guides; the shared editor config and a round-trip test run in CI. Photo uploads from the live site moved out of V2.
+
 ## V1 (2026-09-30 → 2026-10-01): groundwork, real data, Strawberry Peak
 
 **Goal:** publish real hikes. Scope moved during the version: the planned map editor (M3) and elevation profile (M4) are now part of V2 / [todo.md](todo.md).

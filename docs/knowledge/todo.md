@@ -15,6 +15,7 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
 - [ ] Gallery: region filter, search, sort (including nearest), mobile pull-up sheet, "Load more". Only worth it with more hikes.
 - [ ] About page, "⋯" frame menu, drive time next to directions.
 - [ ] GPX export button (the route only, never timestamps).
+- [ ] Photo uploads from the live site / phone (deferred from V2 E5): browser → Supabase through short-lived signed upload URLs from a server route (server-only key on Vercel). Spike first: iOS Safari may convert HEIC and may strip location from photos picked in the browser, and sharp can't decode HEIC.
 
 ## v3/v4
 
