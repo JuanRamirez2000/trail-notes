@@ -1,79 +1,47 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
+import { BeforeYouGo } from "@/components/hike/BeforeYouGo";
+import { COMPONENT_NAMES, manifest, type ComponentName, type ManifestEntry, type ManifestProps } from "@/lib/mdx/manifest";
 import { Minimap } from "./Minimap";
 import { PanoViewer } from "./PanoViewer";
 import { PhotoCard } from "./PhotoCard";
 import { RouteMap } from "./RouteMap";
 import { SafetyPins } from "./SafetyPins";
+import { SafetyPoints } from "./SafetyPoints";
 import { Step } from "./Step";
 import { StepByStep } from "./StepByStep";
+import { Steps } from "./Steps";
 
 /**
- * Every component usable inside a hike's index.mdx.
+ * Every component usable inside a hike's index.mdx: the React side of lib/mdx/manifest.ts.
  *
- * To add a feature in a later phase (video overlay, elevation scrubber, GPX export…):
+ * To add a feature (video overlay, elevation scrubber, GPX export…):
  *   1. build the component (wrap it in <Frame> and read shared state with useHike)
- *   2. add one entry below
- * The MDX renderer and the /editor insert menu both read from this list.
+ *   2. describe its props in lib/mdx/manifest.ts
+ *   3. add it below
+ * The MDX renderer, the build-time prop check and the /editor (insert menu, settings, blocks)
+ * all pick it up from there. The type below fails if a component's props drift from its schema.
  */
-export type RegistryEntry = {
-  component: ComponentType<never>;
-  title: string;
-  description: string;
-  /** Snippet inserted by the editor. `{{waypoint}}` is replaced with a real waypoint id. */
-  snippet: string;
-};
+type PropsFor<K extends ComponentName> = ManifestProps<K> & ((typeof manifest)[K]["children"] extends "markdown" ? { children?: ReactNode } : unknown);
 
-export const registry = {
-  Step: {
-    component: Step,
-    title: "Guide section",
-    description: "Section for a pin: number, photo, your notes",
-    snippet: '<Step waypoint="{{waypoint}}">\n\nWrite this part of the guide.\n\n</Step>',
-  },
-  RouteMap: {
-    component: RouteMap,
-    title: "Route map",
-    description: "Turn, viewpoint, water and bail-out pins",
-    snippet: "<RouteMap />",
-  },
-  PhotoCard: {
-    component: PhotoCard,
-    title: "Turning-point photo card",
-    description: "Photo, caption, link to map",
-    snippet: '<PhotoCard waypoint="{{waypoint}}" />',
-  },
-  PanoViewer: {
-    component: PanoViewer,
-    title: "360° viewer",
-    description: "Pan photo, heading cone on mini map",
-    snippet: '<PanoViewer waypoint="{{waypoint}}" />',
-  },
-  StepByStep: {
-    component: StepByStep,
-    title: "Step-by-step list",
-    description: "Inline step list (the sidebar already has one)",
-    snippet: "<StepByStep />",
-  },
-  Minimap: {
-    component: Minimap,
-    title: "Minimap",
-    description: "Small map showing current step",
-    snippet: "<Minimap />",
-  },
-  SafetyPins: {
-    component: SafetyPins,
-    title: "Safety pins",
-    description: "Water and bail-out points",
-    snippet: "<SafetyPins />",
-  },
-} satisfies Record<string, RegistryEntry>;
+export const mdxComponents = {
+  Step,
+  BeforeYouGo,
+  RouteMap,
+  SafetyPins,
+  Minimap,
+  SafetyPoints,
+  Steps,
+  StepByStep,
+  PhotoCard,
+  PanoViewer,
+} satisfies { [K in ComponentName]: ComponentType<PropsFor<K>> };
 
-export type RegisteredComponent = keyof typeof registry;
+export type RegisteredComponent = ComponentName;
+export type RegistryEntry = ManifestEntry & { component: ComponentType<never> };
 
-/** Components map handed to MDX. */
-export const mdxComponents = Object.fromEntries(
-  Object.entries(registry).map(([name, entry]) => [name, entry.component]),
-) as { [K in RegisteredComponent]: (typeof registry)[K]["component"] };
+/** Manifest entry + component, in manifest order (the insert menu's order). */
+export const registry = Object.fromEntries(
+  COMPONENT_NAMES.map((name) => [name, { ...manifest[name], component: mdxComponents[name] as ComponentType<never> }]),
+) as Record<ComponentName, RegistryEntry>;
 
-/** Shown greyed-out in the editor's insert menu. */
-export const COMING_LATER = ["Video overlay", "Elevation scrubber", "Sun / shade simulator", "Viewshed map", "GPX export"];
+export { COMING_LATER } from "@/lib/mdx/manifest";

@@ -5,14 +5,10 @@ import { Frame } from "@/components/ui/Frame";
 import { Pin } from "@/components/ui/Pin";
 import { useHike } from "@/lib/hike-store";
 import { LEGEND_ORDER, PIN_STYLES } from "@/lib/pins";
+import type { ManifestProps } from "@/lib/mdx/manifest";
 
-export type RouteMapProps = {
-  /** Map height in px. */
-  height?: number;
-  labels?: boolean;
-  /** 3D terrain with tilt. */
-  terrain?: boolean;
-};
+/** Props are defined in lib/mdx/manifest.ts. */
+export type RouteMapProps = ManifestProps<"RouteMap">;
 
 export function RouteMap({ height = 320, labels = true, terrain = true }: RouteMapProps) {
   const waypoints = useHike((s) => s.waypoints);

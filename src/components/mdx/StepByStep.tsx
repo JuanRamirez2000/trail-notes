@@ -7,11 +7,10 @@ import { Pin } from "@/components/ui/Pin";
 import { formatMiles } from "@/lib/format";
 import { useHike } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
+import type { ManifestProps } from "@/lib/mdx/manifest";
 
-export type StepByStepProps = {
-  /** Show the "Turn · 0.6 mi" meta column. */
-  showMeta?: boolean;
-};
+/** Props are defined in lib/mdx/manifest.ts. */
+export type StepByStepProps = ManifestProps<"StepByStep">;
 
 /** Clickable step list. Selecting a step highlights it on every map and opens its photo. */
 export function StepByStep({ showMeta = true }: StepByStepProps) {

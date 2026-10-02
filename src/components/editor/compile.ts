@@ -3,8 +3,10 @@ import type { MDXContent } from "mdx/types";
 import * as runtime from "react/jsx-runtime";
 import { parse as parseYaml } from "yaml";
 import { deriveWaypoints, type HikeWaypoint } from "@/lib/hike";
+import { remarkComponentProps } from "@/lib/mdx/remark-component-props";
+import { remarkDefaultBlocks } from "@/lib/mdx/remark-default-blocks";
 import { remarkStepSections } from "@/lib/mdx/remark-step-sections";
-import { formatIssues, waypointsFileSchema } from "@/lib/schemas";
+import { formatIssues, waypointsFileSchema, type Track } from "@/lib/schemas";
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
@@ -22,7 +24,11 @@ export async function compilePreview(source: string, waypoints: HikeWaypoint[] |
     const { default: Content } = await evaluate(body, {
       ...runtime,
       development: false,
-      remarkPlugins: [[remarkStepSections, { getWaypoints: () => waypoints }]],
+      remarkPlugins: [
+        [remarkStepSections, { getWaypoints: () => waypoints }],
+        remarkDefaultBlocks,
+        [remarkComponentProps, { getWaypoints: () => waypoints }],
+      ],
     });
     return { ok: true, Content, frontmatter };
   } catch (e) {
@@ -30,11 +36,12 @@ export async function compilePreview(source: string, waypoints: HikeWaypoint[] |
   }
 }
 
-export function parseWaypoints(text: string): { ok: true; waypoints: HikeWaypoint[] } | { ok: false; error: string } {
+/** Parses the editor's waypoints.json text. With the hike's track, mileage is measured along it, as on the live page. */
+export function parseWaypoints(text: string, track?: Track | null): { ok: true; waypoints: HikeWaypoint[] } | { ok: false; error: string } {
   try {
     const parsed = waypointsFileSchema.safeParse(JSON.parse(text));
     if (!parsed.success) return { ok: false, error: formatIssues(parsed.error).join("\n") };
-    return { ok: true, waypoints: deriveWaypoints(parsed.data.waypoints) };
+    return { ok: true, waypoints: deriveWaypoints(parsed.data.waypoints, track) };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }

@@ -84,6 +84,13 @@ export const essentialsSchema = z.object({
 });
 export type Essentials = z.infer<typeof essentialsSchema>;
 
+/** Cards the guide's sidebar can show (components/sidebar/registry.tsx), in the default order. */
+export const SIDEBAR_CARDS = ["minimap", "safety", "steps"] as const;
+export type SidebarCardId = (typeof SIDEBAR_CARDS)[number];
+export const sidebarSchema = z
+  .array(z.enum(SIDEBAR_CARDS))
+  .refine((cards) => new Set(cards).size === cards.length, "each sidebar card can appear once");
+
 export const frontmatterSchema = z.object({
   title: z.string().min(1),
   slug: z.string().regex(/^[a-z0-9-]+$/),
@@ -100,6 +107,8 @@ export const frontmatterSchema = z.object({
   date: z.iso.date(),
   draft: z.boolean().default(false),
   essentials: essentialsSchema.optional(),
+  /** Sidebar cards for this guide, top to bottom (also the mobile bar's sections). Default: all, in SIDEBAR_CARDS order. */
+  sidebar: sidebarSchema.optional(),
 });
 export type Frontmatter = z.infer<typeof frontmatterSchema>;
 

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXContent } from "@/components/mdx/MDXContent";
-import { BeforeYouGo } from "@/components/hike/BeforeYouGo";
 import { GuideScrollSync } from "@/components/hike/GuideScrollSync";
 import { MinimapBar } from "@/components/mdx/Minimap";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
@@ -38,7 +37,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   ].filter((s): s is { k: string; v: string } => Boolean(s));
 
   return (
-    <HikeProvider slug={slug} waypoints={waypoints} route={getRoute(slug)}>
+    <HikeProvider slug={slug} waypoints={waypoints} route={getRoute(slug)} essentials={hike.essentials}>
       <GuideScrollSync />
       <article>
         {/* Hero */}
@@ -101,15 +100,15 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
         </div>
 
         {/* Direct child of <article> so `sticky` pins it for the whole page on mobile/tablet */}
-        <MinimapBar />
+        <MinimapBar cards={hike.sidebar} />
 
         {/* Guide: sections column + sticky navigation rail */}
         <div className="mx-auto grid w-full max-w-[1200px] gap-11 px-4 pb-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 pt-2">
-            <BeforeYouGo essentials={hike.essentials} />
+            {/* "Before you go" is part of the MDX now: placed by the author, or first by default. */}
             <MDXContent code={hike.body} />
           </div>
-          <GuideSidebar />
+          <GuideSidebar cards={hike.sidebar} />
         </div>
       </article>
     </HikeProvider>

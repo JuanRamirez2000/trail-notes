@@ -7,13 +7,10 @@ import { useHike, useWaypoint } from "@/lib/hike-store";
 import { waypointHeading } from "./labels";
 import { MissingWaypoint } from "./MissingWaypoint";
 import { PanoViewer } from "./PanoViewer";
+import type { ManifestProps } from "@/lib/mdx/manifest";
 
-export type PhotoCardProps = {
-  /** Waypoint id from waypoints.json. */
-  waypoint: string;
-  /** Overrides the waypoint caption. */
-  caption?: string;
-};
+/** Props are defined in lib/mdx/manifest.ts. */
+export type PhotoCardProps = ManifestProps<"PhotoCard">;
 
 /** Photo linked to its map pin. 360° photos hand off to <PanoViewer />. */
 export function PhotoCard({ waypoint, caption }: PhotoCardProps) {

@@ -1,6 +1,6 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01. Status: **agreed**; **E0 done (go)**. Next: E1._
+_Drafted 2026-10-01. Status: **agreed**; E0 done (go); **E1 done (2026-10-02)** apart from the design-based styling. Next: E2._
 
 ## Decisions (owner, 2026-10-01)
 
@@ -76,7 +76,14 @@ Today some blocks are layout rather than content: "Before you go" always renders
 
 `bullet: "-"` and `rule: "-"` keep our list and rule style. It renders in Next 16 dev with React 19 and Turbopack (client-only via `next/dynamic`), with no errors. The setup lives in `src/components/editor/mdx-editor-config.ts`; `src/components/editor/__tests__/roundtrip.test.tsx` runs in CI on jsdom. As expected, generic JSX blocks don't show props yet (E1) and the editor is unstyled (E2).
 
-**E1: Component manifest, settings panel, movable blocks.**
+**E1: Component manifest, settings panel, movable blocks. ✅ Done 2026-10-02**, except two items in [todo.md](todo.md): styling the panel from *Trail Guide Branded* (no local copy of the design yet) and selecting a component by clicking it in the preview (E2's Write mode covers that). As built:
+- `src/lib/mdx/manifest.ts` (pure zod) is the source of each component's props: build checks, the editor's forms, the insert-menu categories and the rich-text descriptors all read it, and the components take their prop types from it.
+- `remark-component-props` and `remark-default-blocks` run in Velite, in the editor preview and in the save API (`src/lib/mdx/check.ts`), so the editor can no longer write a guide that won't build.
+- The settings panel opens next to the source when the cursor is inside a component and rewrites only its opening tag (`src/components/editor/jsx-source.ts`).
+- New blocks `<BeforeYouGo />`, `<SafetyPoints />`, `<Steps />`, plus frontmatter `sidebar`.
+- The preview gets `track.json`, so its mileage and route match the live page.
+
+Original scope:
 - Read *Trail Guide Branded* for the editor and settings-panel design and its sample components.
 - Props schemas for all registry components; build-time prop validation in the remark pass.
 - Movable blocks (above): `<BeforeYouGo />`, `<SafetyPoints />`, `<Steps />` and a per-guide `sidebar` order, all with defaults so Strawberry Peak renders the same until it's edited.

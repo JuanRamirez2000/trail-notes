@@ -6,7 +6,8 @@ import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { useMemo } from "react";
 
-export type Cursor = { line: number; col: number };
+/** `offset` is the character index in the document (for locating the component under the cursor). */
+export type Cursor = { line: number; col: number; offset: number };
 
 type Props = {
   value: string;
@@ -34,7 +35,7 @@ export default function SourceEditor({ value, language, onChange, onReady, onCur
         if (!u.selectionSet && !u.docChanged) return;
         const head = u.state.selection.main.head;
         const line = u.state.doc.lineAt(head);
-        onCursor({ line: line.number, col: head - line.from + 1 });
+        onCursor({ line: line.number, col: head - line.from + 1, offset: head });
       }),
     ],
     [language, onCursor],

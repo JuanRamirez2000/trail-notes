@@ -10,16 +10,10 @@ import { useHike, useWaypoint } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
 import { MissingWaypoint } from "./MissingWaypoint";
 import { PanoViewer } from "./PanoViewer";
+import type { ManifestProps } from "@/lib/mdx/manifest";
 
-export type StepProps = {
-  /** Waypoint id from waypoints.json. */
-  waypoint: string;
-  /** Hide the waypoint's photo (e.g. when you place a <PhotoCard> yourself). */
-  hidePhoto?: boolean;
-  /** Set on sections generated for required waypoints that have no authored <Step>. */
-  auto?: boolean;
-  children?: ReactNode;
-};
+/** Props are defined in lib/mdx/manifest.ts (`auto` is set on generated stub sections). */
+export type StepProps = ManifestProps<"Step"> & { children?: ReactNode };
 
 /**
  * One section of the guide, tied to a map pin. Required pin types (trailhead, turn, note,

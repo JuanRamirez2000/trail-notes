@@ -4,7 +4,8 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
 
 ## V2: editing (in progress, see [v2-plan.md](v2-plan.md))
 
-- [ ] **The editor preview ignores `track.json`:** `parseWaypoints` in `src/components/editor/compile.ts` calls `deriveWaypoints` without the track, so preview mileages are straight-line estimates (Strawberry Peak's differ from the live page). Load the track in `src/app/editor/[slug]/page.tsx` and pass it through.
+- [ ] **Style the settings panel and editor blocks from *Trail Guide Branded*.** It's provisional, built from brand tokens. Needs a local export of the design file (the Claude Design project can't be read from a coding session without `/design-sync`).
+- [ ] Select a component by clicking it in the preview, not only by putting the cursor in its tag (comes naturally with E2's Write mode).
 - [ ] Everything in the V2 plan's milestones.
 
 ## Left over from V1 (unscheduled; pick up after V2 or between milestones)

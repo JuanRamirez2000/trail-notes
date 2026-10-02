@@ -3,13 +3,15 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { proseComponents } from "@/components/mdx/prose";
 import { mdxComponents } from "@/components/mdx/registry";
+import { routeCoords } from "@/lib/hike";
 import { HikeProvider } from "@/lib/hike-store";
+import { essentialsSchema, type Track } from "@/lib/schemas";
 import { compilePreview, parseWaypoints, type CompiledPreview } from "./compile";
 
-export function Preview({ slug, mdx, waypoints }: { slug: string; mdx: string; waypoints: string }) {
+export function Preview({ slug, mdx, waypoints, track }: { slug: string; mdx: string; waypoints: string; track: Track | null }) {
   const deferredMdx = useDeferredValue(mdx);
   const [compiled, setCompiled] = useState<CompiledPreview | null>(null);
-  const wp = useMemo(() => parseWaypoints(waypoints), [waypoints]);
+  const wp = useMemo(() => parseWaypoints(waypoints, track), [waypoints, track]);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,7 +34,13 @@ export function Preview({ slug, mdx, waypoints }: { slug: string; mdx: string; w
         <>
           <h1 className="font-display text-[30px] leading-[34px] font-bold text-forest">{String(compiled.frontmatter.title ?? slug)}</h1>
           {/* Keyed on the JSON so edits to waypoints rebuild the shared store. */}
-          <HikeProvider key={waypoints} slug={slug} waypoints={wp.ok ? wp.waypoints : []}>
+          <HikeProvider
+            key={`${waypoints}\n${JSON.stringify(compiled.frontmatter.essentials ?? null)}`}
+            slug={slug}
+            waypoints={wp.ok ? wp.waypoints : []}
+            route={routeCoords(wp.ok ? wp.waypoints : [], track)}
+            essentials={essentialsSchema.safeParse(compiled.frontmatter.essentials).data}
+          >
             <compiled.Content components={{ ...proseComponents, ...mdxComponents }} />
           </HikeProvider>
         </>

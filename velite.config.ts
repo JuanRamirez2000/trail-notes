@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineCollection, defineConfig, s, z as vz } from "velite";
+import { remarkComponentProps } from "./src/lib/mdx/remark-component-props";
+import { remarkDefaultBlocks } from "./src/lib/mdx/remark-default-blocks";
 import { remarkStepSections } from "./src/lib/mdx/remark-step-sections";
 import { frontmatterSchema, formatIssues, trackSchema, waypointsFileSchema } from "./src/lib/schemas";
 
@@ -91,6 +93,11 @@ export default defineConfig({
   },
   collections: { hikes, waypoints, tracks },
   mdx: {
-    remarkPlugins: [[remarkStepSections, { getWaypoints: siblingWaypoints }]],
+    // Order matters: stubs and default blocks are inserted first, then every component is checked.
+    remarkPlugins: [
+      [remarkStepSections, { getWaypoints: siblingWaypoints }],
+      remarkDefaultBlocks,
+      [remarkComponentProps, { getWaypoints: siblingWaypoints }],
+    ],
   },
 });

@@ -134,16 +134,31 @@ essentials:
 | Component | Props | What it does |
 | --- | --- | --- |
 | `<Step waypoint="id">…</Step>` | `hidePhoto` | A guide section for a pin (see above) |
+| `<BeforeYouGo />` | | The "Before you go" card from the frontmatter `essentials`. If a guide doesn't place it, it goes first |
 | `<RouteMap />` | `height`, `labels`, `terrain` | All pins + route line, 3D terrain, legend |
+| `<SafetyPins />` | `height` | Water + bail-out layer, other pins faded |
+| `<Minimap />` | `height` | Current step map (the page already puts one in the sticky rail) |
+| `<SafetyPoints />` | | The sidebar's safety list, placed in the guide |
+| `<Steps />` | | The sidebar's numbered step list, placed in the guide |
+| `<StepByStep />` | `showMeta` | Inline step list with photos |
 | `<PhotoCard waypoint="id" />` | `caption` | Photo linked to its pin (360° photos switch to the viewer) |
 | `<PanoViewer waypoint="id" />` | `markerRadiusMi` | 360° viewer; the inset map cone follows where you look. Shows a "coming soon" placeholder until the waypoint has a 360° photo |
-| `<StepByStep />` | `showMeta` | Inline step list (optional, since the sidebar already has one) |
-| `<Minimap />` | `height` | Current step map (the page already puts one in the sticky rail) |
-| `<SafetyPins />` | `height` | Water + bail-out layer, other pins faded |
 
-### Adding a new component (later phases)
+Props are checked at build time against `src/lib/mdx/manifest.ts`: an unknown component, an unknown or mistyped prop, an out-of-range number, content inside a component that takes none, or a pin id that isn't in `waypoints.json` fails the build with the line number. The editor refuses to save the same mistakes.
 
-Build the component inside `<Frame>` and read or write shared state with `useHike(...)`, then add one entry to `src/components/mdx/registry.tsx`. It becomes available in MDX and shows up in the editor's insert menu automatically.
+**Sidebar per guide:** the rail (and the mobile bar) shows `minimap`, `safety` and `steps` in that order by default. To reorder them or leave one out, list them in the frontmatter:
+
+```yaml
+sidebar: [steps, minimap]
+```
+
+### Adding a new component
+
+1. Build the component inside `<Frame>` and read or write shared state with `useHike(...)`.
+2. Describe its props in `src/lib/mdx/manifest.ts` (a zod object: `.describe()` is the field label, `waypointRef()` makes it a pin picker) and give it a title, category and snippet.
+3. Add it to `src/components/mdx/registry.tsx`. Its props type comes from the manifest (`ManifestProps<"Name">`).
+
+It then works in MDX, gets checked at build time, appears in the editor's insert menu under its category, and gets a settings form in the editor with no editor work.
 
 ---
 
@@ -159,7 +174,7 @@ This writes `content/hikes/<slug>/track.json` and prints the distance, gain and 
 
 ## The editor (`/editor`)
 
-`pnpm dev`, then open http://localhost:3000/editor. It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
+`pnpm dev`, then open http://localhost:3000/editor. It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Put the cursor inside a component tag and a settings panel opens next to the source, with a form generated from the component's props. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
 
 It's disabled in production: the pages and the save API return 404 unless `NODE_ENV=development`.
 

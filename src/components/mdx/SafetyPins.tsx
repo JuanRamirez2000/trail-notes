@@ -8,8 +8,10 @@ import { formatMiles } from "@/lib/format";
 import { isSafety } from "@/lib/hike";
 import { useHike } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
+import type { ManifestProps } from "@/lib/mdx/manifest";
 
-export type SafetyPinsProps = { height?: number };
+/** Props are defined in lib/mdx/manifest.ts. */
+export type SafetyPinsProps = ManifestProps<"SafetyPins">;
 
 /** Water and bail-out layer: safety pins emphasised, everything else faded back. */
 export function SafetyPins({ height = 240 }: SafetyPinsProps) {

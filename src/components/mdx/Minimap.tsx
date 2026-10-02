@@ -7,9 +7,12 @@ import { SafetyList } from "@/components/sidebar/SafetyList";
 import { StepList } from "@/components/sidebar/StepList";
 import { Frame } from "@/components/ui/Frame";
 import { cn } from "@/lib/cn";
+import { SIDEBAR_CARDS, type SidebarCardId } from "@/lib/schemas";
 import { useActiveWaypoint, useEffectiveHeading, useHike } from "@/lib/hike-store";
+import type { ManifestProps } from "@/lib/mdx/manifest";
 
-export type MinimapProps = { height?: number };
+/** Props are defined in lib/mdx/manifest.ts. */
+export type MinimapProps = ManifestProps<"Minimap">;
 
 function useMinimapState() {
   const waypoints = useHike((s) => s.waypoints);
@@ -54,33 +57,44 @@ export function Minimap({ height = 300 }: MinimapProps) {
   );
 }
 
-/** Mobile/tablet: collapsed bar pinned to the top; expands to the map plus the step list. */
-export function MinimapBar() {
+/** Mobile/tablet: collapsed bar pinned to the top; expands to the guide's sidebar cards (map, safety points, steps). */
+export function MinimapBar({ cards = [...SIDEBAR_CARDS] }: { cards?: SidebarCardId[] }) {
   const { waypoints, route, steps, select, active, heading, stepNo } = useMinimapState();
   const [open, setOpen] = useState(false);
   return (
     <div className="sticky top-0 z-30 border-b border-line bg-card lg:hidden">
       {open && (
         <>
-          <div className="relative h-[210px]">
-            <TrailMap
-          route={route}
-              waypoints={waypoints}
-              activeId={active?.id}
-              heading={heading}
-              onSelect={(id) => {
-                setOpen(false);
-                requestAnimationFrame(() => select(id, { reveal: true }));
-              }}
-              className="size-full"
-            />
-          </div>
-          {/* Same stack as the desktop rail: map, safety points, steps. */}
+          {cards.includes("minimap") && (
+            <div className="relative h-[210px]">
+              <TrailMap
+                route={route}
+                waypoints={waypoints}
+                activeId={active?.id}
+                heading={heading}
+                onSelect={(id) => {
+                  setOpen(false);
+                  requestAnimationFrame(() => select(id, { reveal: true }));
+                }}
+                className="size-full"
+              />
+            </div>
+          )}
+          {/* Same cards and order as the desktop rail. */}
           <div className="max-h-[50dvh] overflow-y-auto border-t border-line">
-            <BarHeading>Safety points</BarHeading>
-            <SafetyList bare onPick={() => setOpen(false)} />
-            <BarHeading>Steps</BarHeading>
-            <StepList bare onPick={() => setOpen(false)} />
+            {cards.map((id) =>
+              id === "safety" ? (
+                <div key={id}>
+                  <BarHeading>Safety points</BarHeading>
+                  <SafetyList bare onPick={() => setOpen(false)} />
+                </div>
+              ) : id === "steps" ? (
+                <div key={id}>
+                  <BarHeading>Steps</BarHeading>
+                  <StepList bare onPick={() => setOpen(false)} />
+                </div>
+              ) : null,
+            )}
           </div>
         </>
       )}

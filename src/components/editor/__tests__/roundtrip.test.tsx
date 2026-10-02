@@ -8,9 +8,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { editorPlugins, toMarkdownOptions } from "../mdx-editor-config";
 
-// Kept in sync with the registry by the "knows every registry component" test below.
-const COMPONENTS = ["Step", "RouteMap", "PhotoCard", "PanoViewer", "StepByStep", "Minimap", "SafetyPins"];
-
 afterEach(cleanup);
 
 /** Loads markdown into a real MDXEditor (jsdom) and reads it back, as the Write mode will. */
@@ -24,7 +21,7 @@ async function roundTrip(source: string) {
         markdown={source}
         onError={(e) => errors.push(e.error)}
         toMarkdownOptions={toMarkdownOptions}
-        plugins={editorPlugins(COMPONENTS)}
+        plugins={editorPlugins()}
       />,
     );
   });
@@ -100,11 +97,5 @@ describe("MDXEditor round trip (V2 Write mode)", () => {
   it("leaves the baseline guide (Strawberry Peak) byte-for-byte unchanged apart from the final newline", async () => {
     const src = readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8");
     expect(`${(await roundTrip(src)).out}\n`).toBe(src);
-  });
-
-  it("knows every registry component", () => {
-    const registry = readFileSync("src/components/mdx/registry.tsx", "utf8");
-    const names = [...registry.matchAll(/^ {2}(\w+): \{$/gm)].map((m) => m[1]);
-    expect(names.sort()).toEqual([...COMPONENTS].sort());
   });
 });

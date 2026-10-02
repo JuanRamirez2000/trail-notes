@@ -3,7 +3,8 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { formatIssues, frontmatterSchema, waypointsFileSchema } from "./schemas";
+import { checkMdx } from "./mdx/check";
+import { formatIssues, frontmatterSchema, trackSchema, waypointsFileSchema, type Track, type Waypoint } from "./schemas";
 
 /**
  * Disk access for the local /editor. Everything here refuses to run outside `next dev`:
@@ -31,7 +32,11 @@ export async function readHikeFiles(slug: string) {
   const mdx = await readFile(path.join(dir, "index.mdx"), "utf8");
   const wpPath = path.join(dir, "waypoints.json");
   const waypoints = existsSync(wpPath) ? await readFile(wpPath, "utf8") : '{\n  "waypoints": []\n}\n';
-  return { mdx, waypoints };
+  // The recorded route isn't edited here, but the preview needs it for mileage and the route line.
+  const trackPath = path.join(dir, "track.json");
+  const parsedTrack = existsSync(trackPath) ? trackSchema.safeParse(JSON.parse(await readFile(trackPath, "utf8"))) : null;
+  const track: Track | null = parsedTrack?.success ? parsedTrack.data : null;
+  return { mdx, waypoints, track };
 }
 
 export function splitFrontmatter(source: string) {
@@ -39,8 +44,12 @@ export function splitFrontmatter(source: string) {
   return m ? { data: parseYaml(m[1]) as unknown, body: source.slice(m[0].length) } : { data: {}, body: source };
 }
 
-/** Validates both files with the same schemas Velite uses. Returns problems as `file: path: message`. */
-export function validateHikeFiles(slug: string, mdx: string, waypointsJson: string): string[] {
+/**
+ * Validates both files the way the build does: the shared schemas, plus the MDX compiled with the
+ * same remark passes (unknown components, bad props, bad pin references, syntax errors).
+ * Returns problems as `file: message`.
+ */
+export async function validateHikeFiles(slug: string, mdx: string, waypointsJson: string): Promise<string[]> {
   const problems: string[] = [];
   try {
     const fm = frontmatterSchema.safeParse(splitFrontmatter(mdx).data);
@@ -49,12 +58,16 @@ export function validateHikeFiles(slug: string, mdx: string, waypointsJson: stri
   } catch (e) {
     problems.push(`index.mdx: frontmatter YAML: ${(e as Error).message}`);
   }
+  let waypoints: Waypoint[] | null = null;
   try {
     const wp = waypointsFileSchema.safeParse(JSON.parse(waypointsJson));
     if (!wp.success) problems.push(...formatIssues(wp.error).map((m) => `waypoints.json: ${m}`));
+    else waypoints = wp.data.waypoints;
   } catch (e) {
     problems.push(`waypoints.json: ${(e as Error).message}`);
   }
+  const mdxProblem = await checkMdx(mdx, waypoints);
+  if (mdxProblem) problems.push(`index.mdx: ${mdxProblem}`);
   return problems;
 }
 

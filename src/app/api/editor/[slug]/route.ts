@@ -10,7 +10,7 @@ export async function PUT(req: Request, ctx: RouteContext<"/api/editor/[slug]">)
     return Response.json({ ok: false, problems: ["Expected { mdx: string, waypoints: string }"] }, { status: 400 });
   }
 
-  const problems = validateHikeFiles(slug, body.mdx, body.waypoints);
+  const problems = await validateHikeFiles(slug, body.mdx, body.waypoints);
   if (problems.length) return Response.json({ ok: false, problems }, { status: 422 });
 
   await writeHikeFiles(slug, body.mdx, body.waypoints);

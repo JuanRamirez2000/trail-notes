@@ -1,3 +1,6 @@
+"use client";
+
+import { useHike } from "@/lib/hike-store";
 import type { Essentials } from "@/lib/schemas";
 
 const ROWS: { key: Exclude<keyof Essentials, "hazards">; label: string }[] = [
@@ -9,8 +12,16 @@ const ROWS: { key: Exclude<keyof Essentials, "hazards">; label: string }[] = [
   { key: "cellSignal", label: "Cell signal" },
 ];
 
-/** Trip-planning facts from the hike's frontmatter `essentials`. Renders nothing if absent. */
-export function BeforeYouGo({ essentials }: { essentials?: Essentials }) {
+/**
+ * `<BeforeYouGo />` in MDX: the hike's frontmatter `essentials`, wherever the guide places it.
+ * A guide that doesn't place it gets one at the top (lib/mdx/remark-default-blocks.ts).
+ */
+export function BeforeYouGo(_props: { auto?: boolean }) {
+  return <EssentialsCard essentials={useHike((s) => s.essentials)} />;
+}
+
+/** Trip-planning facts. Renders nothing if absent. */
+export function EssentialsCard({ essentials }: { essentials?: Essentials }) {
   if (!essentials) return null;
   const rows = ROWS.filter((r) => essentials[r.key]);
   if (!rows.length && !essentials.hazards?.length) return null;

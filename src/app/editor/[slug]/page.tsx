@@ -10,5 +10,5 @@ export default async function EditHike({ params }: PageProps<"/editor/[slug]">) 
   const { slug } = await params;
   const files = await readHikeFiles(slug).catch(() => null);
   if (!files) notFound();
-  return <Editor slug={slug} initialMdx={files.mdx} initialWaypoints={files.waypoints} />;
+  return <Editor slug={slug} initialMdx={files.mdx} initialWaypoints={files.waypoints} track={files.track} />;
 }

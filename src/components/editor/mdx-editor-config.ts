@@ -10,6 +10,7 @@ import {
   thematicBreakPlugin,
   type JsxComponentDescriptor,
 } from "@mdxeditor/editor";
+import { COMPONENT_NAMES, manifest, propFields } from "@/lib/mdx/manifest";
 
 /**
  * Shared MDXEditor setup for the rich-text "Write" mode (V2 E2) and its round-trip test.
@@ -23,12 +24,22 @@ import {
  */
 export const toMarkdownOptions = { bullet: "-", rule: "-", emphasis: "*", strong: "*" } as const;
 
-/** Block components: until the E1 manifest exists, every registry component uses the generic editor. */
-export function jsxDescriptors(names: string[], withChildren: string[] = ["Step"]): JsxComponentDescriptor[] {
-  return names.map((name) => ({ name, kind: "flow", props: [], hasChildren: withChildren.includes(name), Editor: GenericJsxEditor }));
+/** One rich-text block per manifest component, with its props so the generic editor can show and edit them. */
+export function jsxDescriptors(): JsxComponentDescriptor[] {
+  return COMPONENT_NAMES.map((name) => ({
+    name,
+    kind: "flow",
+    hasChildren: manifest[name].children === "markdown",
+    props: propFields(name).map((f) => ({
+      name: f.name,
+      type: f.kind === "boolean" || f.kind === "number" || f.kind === "integer" ? "expression" : "string",
+      required: f.required,
+    })),
+    Editor: GenericJsxEditor,
+  }));
 }
 
-export function editorPlugins(componentNames: string[]) {
+export function editorPlugins() {
   return [
     headingsPlugin(),
     listsPlugin(),
@@ -37,6 +48,6 @@ export function editorPlugins(componentNames: string[]) {
     thematicBreakPlugin(),
     frontmatterPlugin(),
     markdownShortcutPlugin(),
-    jsxPlugin({ jsxComponentDescriptors: jsxDescriptors(componentNames) }),
+    jsxPlugin({ jsxComponentDescriptors: jsxDescriptors() }),
   ];
 }

@@ -3,10 +3,13 @@
 import type { EditorView } from "@codemirror/view";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { registry, type RegisteredComponent } from "@/components/mdx/registry";
 import { cn } from "@/lib/cn";
+import type { Track } from "@/lib/schemas";
 import { countComponents, countWords, parseWaypoints } from "./compile";
+import { ComponentSettings } from "./ComponentSettings";
+import { findComponentAt, serializeOpeningTag } from "./jsx-source";
 import { InsertMenu } from "./InsertMenu";
 import { Preview } from "./Preview";
 import type { Cursor } from "./SourceEditor";
@@ -16,19 +19,19 @@ const SourceEditor = dynamic(() => import("./SourceEditor"), {
   loading: () => <div className="p-4 font-mono text-sm text-bark">Loading editor…</div>,
 });
 
-type Props = { slug: string; initialMdx: string; initialWaypoints: string };
+type Props = { slug: string; initialMdx: string; initialWaypoints: string; track: Track | null };
 type Tab = "mdx" | "json";
 type Mode = "split" | "editor" | "preview";
 type SaveState = { kind: "idle" | "saving" | "saved" | "error"; at?: Date; problems?: string[] };
 
 const AUTOSAVE_MS = 1500;
 
-export function Editor({ slug, initialMdx, initialWaypoints }: Props) {
+export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
   const [mdx, setMdx] = useState(initialMdx);
   const [waypoints, setWaypoints] = useState(initialWaypoints);
   const [tab, setTab] = useState<Tab>("mdx");
   const [mode, setMode] = useState<Mode>("split");
-  const [cursor, setCursor] = useState<Cursor>({ line: 1, col: 1 });
+  const [cursor, setCursor] = useState<Cursor>({ line: 1, col: 1, offset: 0 });
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const viewRef = useRef<EditorView | null>(null);
   const [saved, setSaved] = useState({ mdx: initialMdx, waypoints: initialWaypoints });
@@ -81,7 +84,7 @@ export function Editor({ slug, initialMdx, initialWaypoints }: Props) {
   };
 
   const insertComponent = (name: RegisteredComponent) => {
-    const wps = parseWaypoints(waypoints);
+    const wps = parseWaypoints(waypoints, track);
     const list = wps.ok ? wps.waypoints : [];
     const written = new Set([...mdx.matchAll(/<Step\s+waypoint="([^"]+)"/g)].map((m) => m[1]));
     const pick =
@@ -108,6 +111,20 @@ export function Editor({ slug, initialMdx, initialWaypoints }: Props) {
             : "All changes saved";
 
   const onReady = useCallback((v: EditorView) => (viewRef.current = v), []);
+
+  // Component under the cursor in the MDX source, edited through the settings panel.
+  const selected = useMemo(
+    () => (tab === "mdx" && mode !== "preview" ? findComponentAt(mdx, cursor.offset) : null),
+    [tab, mode, mdx, cursor.offset],
+  );
+  const parsedWaypoints = useMemo(() => parseWaypoints(waypoints, track), [waypoints, track]);
+  // Rewrite only the opening tag, as a CodeMirror transaction so the cursor and undo history stay intact.
+  const updateSelectedProps = (props: Record<string, unknown>) => {
+    const view = viewRef.current;
+    if (!view || !selected) return;
+    const tag = serializeOpeningTag(selected.name, props, selected.raw, selected.selfClosing);
+    view.dispatch({ changes: { from: selected.start, to: selected.openEnd, insert: tag } });
+  };
 
   return (
     <div className="flex h-dvh flex-col bg-paper">
@@ -169,7 +186,14 @@ export function Editor({ slug, initialMdx, initialWaypoints }: Props) {
       )}
 
       {/* Panes */}
-      <div className={cn("grid min-h-0 flex-1", mode === "split" ? "grid-cols-2" : "grid-cols-1")}>
+      <div
+        className={cn(
+          "grid min-h-0 flex-1",
+          mode === "split" && (selected ? "grid-cols-[1fr_300px_1fr]" : "grid-cols-2"),
+          mode === "editor" && (selected ? "grid-cols-[1fr_300px]" : "grid-cols-1"),
+          mode === "preview" && "grid-cols-1",
+        )}
+      >
         {mode !== "preview" && (
           <div className="flex min-h-0 flex-col border-r border-line bg-card">
             <div className="flex border-b border-line bg-frame font-mono text-[11px] font-semibold text-bark">
@@ -196,10 +220,18 @@ export function Editor({ slug, initialMdx, initialWaypoints }: Props) {
             </div>
           </div>
         )}
+        {selected && (
+          <ComponentSettings
+            key={`${selected.name}@${selected.start}`}
+            component={selected}
+            waypoints={parsedWaypoints.ok ? parsedWaypoints.waypoints : []}
+            onChange={updateSelectedProps}
+          />
+        )}
         {mode !== "editor" && (
           <div className="min-h-0 overflow-y-auto">
             <div className="sticky top-0 z-10 border-b border-line bg-frame px-4 py-1.5 font-mono text-[11px] font-semibold text-bark">LIVE PREVIEW</div>
-            <Preview slug={slug} mdx={mdx} waypoints={waypoints} />
+            <Preview slug={slug} mdx={mdx} waypoints={waypoints} track={track} />
           </div>
         )}
       </div>

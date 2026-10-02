@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-01. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 done, E1 next, see [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-01. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done, E2 next, see [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -33,18 +33,29 @@ content/hikes/<slug>/{index.mdx, waypoints.json, track.json?}
 - **Stack:** Next.js 16.3 App Router (breaking changes vs. older Next: read `node_modules/next/dist/docs` first), React 19.2, Tailwind v4 with brand tokens in `src/app/globals.css` (never hardcode hex in components), Velite 0.4, zod 4, Mapbox GL 3 through react-map-gl 8, Vitest 5, pnpm 11, Node 24 in CI.
 - **Schemas are the single source of truth** (`src/lib/schemas.ts`), shared by the Velite build, the scripts and the editor's save API.
 - **Pins and guide sections** (`src/lib/pins.ts`): `start/turn/note/bailout` require a section and are numbered steps; if the MDX has no `<Step>` for one, `src/lib/mdx/remark-step-sections.ts` inserts a stub in route order. `viewpoint/landmark/water/ranger` are optional. The safety pins are `water/ranger/bailout`.
-- **Registries:** MDX components are registered in `src/components/mdx/registry.tsx` (this feeds the renderer and the editor's insert menu); sidebar cards in `src/components/sidebar/registry.tsx`.
+- **Component manifest:** `src/lib/mdx/manifest.ts` (pure zod, no React) defines every MDX component's props, title, category, snippet and whether it takes content. `src/components/mdx/registry.tsx` maps each name to its React component, and the components take their prop types from the manifest (`ManifestProps<"Name">`). Everything else reads the manifest: build-time prop checks, the editor's settings forms, the insert menu and MDXEditor's block descriptors.
+- **Remark passes, in order** (identical in `velite.config.ts`, the editor preview `src/components/editor/compile.ts` and the save gate `src/lib/mdx/check.ts`):
+  1. `remark-step-sections`: stub `<Step auto>` for required pins.
+  2. `remark-default-blocks`: `<BeforeYouGo auto />` first if the guide doesn't place it.
+  3. `remark-component-props`: unknown components and props, types and ranges, no-content components, pin references.
+- **Movable blocks:** "Before you go", the safety list and the step list are MDX components (`<BeforeYouGo />`, `<SafetyPoints />`, `<Steps />`). The guide's sidebar order comes from the frontmatter `sidebar` (ids in `SIDEBAR_CARDS`, `src/lib/schemas.ts`; cards in `src/components/sidebar/registry.tsx`); the mobile bar follows it.
 - **Track math** (`src/lib/track.ts`): projects points onto track segments, searching forward from the previous point so out-and-backs resolve by route order. The match slack scales with the distance from the track. Page mileages (`src/lib/hike.ts`) and ingest both use it.
 - **Maps:** `TrailMap` → lazy `MapboxTrailMap`, with `SketchMap` (SVG) as the base layer and fallback. Maps mount only near the viewport and use a pool (`reuseMaps`) to stay under the browser's WebGL context limit. Pins are memoised `WaypointMarker`s.
 - **Photos:** Supabase Storage is the source of truth: `<slug>/<NN>-<name>.{full,thumb}.webp`, with all metadata stripped. `public/photos` is a gitignored, dev-only backend (`NEXT_PUBLIC_PHOTO_STORAGE=local`). Production builds refuse it (guard in `next.config.ts`).
-- **Editor** (`/editor`, `src/components/editor/`): local only (pages and the save API return 404 unless `NODE_ENV=development`). It has CodeMirror for `index.mdx` and the raw `waypoints.json`, a live preview compiled in the browser with the same remark pass, an insert menu driven by the registry, autosave after 1.5 s, and validation with the shared schemas before anything is written (`src/lib/editor-fs.ts`, `src/app/api/editor/[slug]/route.ts`).
+- **Editor** (`/editor`, `src/components/editor/`): local only (pages and the save API return 404 unless `NODE_ENV=development`).
+  - CodeMirror for `index.mdx` and the raw `waypoints.json`.
+  - A live preview compiled in the browser with the same remark passes, given `track.json` and `essentials`.
+  - A settings panel for the component under the cursor (`ComponentSettings.tsx` + `jsx-source.ts`, which rewrites only the opening tag through a CodeMirror transaction).
+  - An insert menu grouped by category, and autosave after 1.5 s.
+  - Saves are validated like a build (schemas + MDX compile) before anything is written (`src/lib/editor-fs.ts`, `src/app/api/editor/[slug]/route.ts`).
+  - MDXEditor (`mdx-editor-config.ts`) is installed for E2's Write mode; only the tests use it so far.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Dev server. Also starts Velite's watcher, and touches `index.mdx` when a sibling `waypoints.json`/`track.json` changes |
-| `pnpm test` | Vitest (66 tests: remark pass, schemas, geo, track, ingest/GPX helpers, MDXEditor round trip on jsdom) |
+| `pnpm test` | Vitest (97 tests: remark passes and prop checks, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, MDXEditor round trip on jsdom) |
 | `pnpm typecheck` | `velite build --strict && next typegen && tsc --noEmit` |
 | `pnpm build` | `velite build --strict && next build` |
 | `pnpm ingest <folder> --slug <slug>` | EXIF → waypoints. Merges into existing waypoints and snaps to the track; `--force` replaces; `--storage local` writes to `public/photos` |
@@ -69,4 +80,5 @@ CI (`.github/workflows/ci.yml`) runs content, lint, typecheck, tests, `photos ch
 - **Mapbox:** the token is URL-restricted, so some tiles return 403 on `localhost`. Every map registers non-passive `wheel`/`touchmove` listeners (Mapbox internals, even with `interactive: false`).
 - **iPhone photos:** files dragged out of Photos are tiny previews (`…_4_5005_c.jpeg`, 360–1024 px). Use File → Export, or the original HEIC. Convert HEIC with `sips -s format jpeg` (keeps GPS and heading, writes upright pixels with a normal orientation tag). sharp's prebuilt binary can't decode HEIC.
 - **A perceptual hash (dHash) doesn't detect "same vista" duplicates** when the framing differs. Compare heading and content.
-- **The editor preview computes mileage without `track.json`,** so its numbers differ from the live page for GPX hikes (see [todo.md](todo.md)).
+- **Structural typing won't catch a manifest prop that a component ignores.** Components take their prop types from the manifest to keep one definition, but nothing forces them to use every prop.
+- **`propFields` reads `z.toJSONSchema(..., { io: "input" })`.** Custom `.meta()` keys (`input`, `internal`) come through as JSON Schema keys; `.describe()` becomes `description`.

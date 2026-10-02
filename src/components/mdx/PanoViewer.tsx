@@ -16,13 +16,10 @@ import { useHike, useWaypoint } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
 import { photoUrl } from "@/lib/storage";
 import { MissingWaypoint } from "./MissingWaypoint";
+import type { ManifestProps } from "@/lib/mdx/manifest";
 
-export type PanoViewerProps = {
-  /** Waypoint id whose photo is a 360° pano. */
-  waypoint: string;
-  /** Show direction markers for other waypoints within this many miles. */
-  markerRadiusMi?: number;
-};
+/** Props are defined in lib/mdx/manifest.ts. */
+export type PanoViewerProps = ManifestProps<"PanoViewer">;
 
 const DEG = Math.PI / 180;
 
