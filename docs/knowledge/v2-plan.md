@@ -1,6 +1,14 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01. Status: **proposed**, waiting on the open questions at the end._
+_Drafted 2026-10-01. Status: **agreed** (owner answers below). Next: E0._
+
+## Decisions (owner, 2026-10-01)
+
+- **Writing:** a rich-text "Write" mode (E0 spike → E2), with Markdown source kept as a second tab.
+- **Live-site editing is in V2** (E5), including from the phone.
+- **Order:** the text editor first (E0 → E1 → E2), then the pin editor (E3), creating a hike (E4), and live-site editing (E5).
+- **Design reference:** *Trail Guide Branded* in the Claude Design project. It has the editor and sample components.
+- **Every guide block is movable per guide.** That includes the ones the page layout currently fixes: "Before you go", "Safety points", "Steps" and "Route map". See "Movable blocks" below.
 
 ## Goal
 
@@ -51,14 +59,24 @@ The `props` schema then generates:
 
 "Importing our own component" then means: build the component, add one registry entry with a props schema. It appears everywhere automatically.
 
+### Movable blocks
+
+Today some blocks are layout rather than content: "Before you go" always renders at the top from the `essentials` frontmatter, and the sidebar is always Minimap → Safety points → Steps (`src/components/sidebar/registry.tsx`). For them to move per guide:
+
+- **Article blocks become registry components:** `<BeforeYouGo />` (still reading `essentials` from the frontmatter, so its data stays structured), plus `<SafetyPoints />` and `<Steps />` as inline versions of the sidebar cards. `<RouteMap />` already is one.
+- **Defaults keep old guides unchanged:** if a guide doesn't place `<BeforeYouGo />`, it renders at the top as now (the same idea as auto-inserted step stubs).
+- **The sidebar becomes per-guide:** an optional `sidebar: [minimap, safety, steps]` in the frontmatter (validated against the sidebar registry; the default is today's order). The editor shows it as a reorderable list.
+
 ## Milestones
 
 **E0: Spike (1–2 days, go/no-go).** Load MDXEditor in `/editor` on Strawberry Peak and `granite-saddle`. Check the round trip (load, save, diff): frontmatter, `<Step>` with and without children, `{/* comments */}`, blank lines, lists. Write a round-trip test that runs in CI.
 - **Go:** E2 builds on MDXEditor.
 - **No-go** (it rewrites our MDX in ways we can't accept): keep CodeMirror as the only text editor and do E1, E3 and E4 anyway. They meet the "own components" requirement without WYSIWYG.
 
-**E1: Component manifest and settings panel.**
-- Props schemas for all 7 registry components; build-time prop validation in the remark pass.
+**E1: Component manifest, settings panel, movable blocks.**
+- Read *Trail Guide Branded* for the editor and settings-panel design and its sample components.
+- Props schemas for all registry components; build-time prop validation in the remark pass.
+- Movable blocks (above): `<BeforeYouGo />`, `<SafetyPoints />`, `<Steps />` and a per-guide `sidebar` order, all with defaults so Strawberry Peak renders the same until it's edited.
 - The settings panel from the design: click a component in the source or the preview and edit its props in a form.
 - Fix the preview mileage bug ([todo.md](todo.md)).
 - Tests: schema-to-form mapping, and prop validation on Strawberry Peak.
@@ -79,10 +97,15 @@ The `props` schema then generates:
 - Optional GPX upload (reuses `buildTrack`) and photo-folder import, with HEIC→JPEG conversion (`sips` on macOS) and the existing merge/snap ingest.
 - Lands in the E3 pin editor as a draft.
 
-**E5: Editing on the live site (decide after E3).**
-- A GitHub storage adapter (edits become commits to `main`, and Vercel redeploys), owner-only sign-in, and Supabase signed upload URLs for photos.
-- Or adopt Keystatic's `github` mode for this part.
-- This is the "edit from my phone" milestone.
+**E5: Editing on the live site (in V2).**
+- `/editor` runs in production behind an owner-only sign-in. The editor never needs a server filesystem: the preview already compiles in the browser.
+- **Saving:** a GitHub storage adapter commits `index.mdx`/`waypoints.json` to `main` through the GitHub API, Vercel redeploys, and the change is live in about a minute. The local adapter stays for `pnpm dev`.
+- **Photos from the phone:** the browser uploads to Supabase through short-lived signed upload URLs issued by a server route. This needs a server-only Supabase key on Vercel (until now the rule was "never on Vercel"); it never reaches the client.
+- **Risks to spike before building:**
+  - iOS Safari may convert HEIC to JPEG, and may strip location from photos picked in the browser. If so, GPS has to be read on the device before upload, or the pin placed on the map instead.
+  - sharp can't decode HEIC on the server.
+  - The auth choice: GitHub OAuth (it also gives the token for commits) or Sign in with Vercel.
+- **Fallback:** Keystatic's `github` mode if building our own auth and commits looks worse once E3 is done.
 
 ## Testing against the baseline
 
@@ -90,9 +113,6 @@ The `props` schema then generates:
 - **E2E:** Playwright test on `/editor/strawberry-peak`: insert a component, change a setting, move a pin, save, and verify the files and the rendered page. This adds `@playwright/test` as a dev dependency (until now Playwright has only been used ad hoc from the scratchpad).
 - **Unit:** manifest → form, prop validation, the pin editor's snap and reorder logic (pure functions, next to `src/lib/track.ts`).
 
-## Open questions (owner)
+## Open questions
 
-1. **Writing style:** a Notion-like rich-text "Write" mode (E2), or is Markdown source with forms for components (E1) enough? This decides whether E0/E2 happen.
-2. **Editing on the live site / from the phone:** needed in V2 (E5), or later?
-3. **Settings panel design:** which file in the Claude Design project is the reference? "Trail Guide Branded" is assumed.
-4. **Order:** the plan puts the pin editor (E3) after the text editor. If moving pins matters more right now, E3 can go first; it only depends on E1's form generator.
+- E5 sign-in: GitHub OAuth or Sign in with Vercel (decide at the E5 spike).

@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-01. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** is next, see [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-01. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** is agreed and starts with the E0 spike, see [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
