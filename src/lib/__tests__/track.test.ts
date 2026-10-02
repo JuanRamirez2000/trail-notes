@@ -43,6 +43,14 @@ describe("locateOnTrack", () => {
     expect(back.mile).toBeCloseTo((3 * total) / 4, 6);
   });
 
+  it("puts an off-track point near both ends of an out-and-back at the start", () => {
+    // The return leg ends a little east of where it started, so the end is closer to this point.
+    const line2 = trackLine({ ...OUT_AND_BACK, points: [[-118, 34, 0], [-118, 34.01, 0], [-117.9997, 34, 0]] });
+    const p = locateOnTrack(line2, { lat: 33.9993, lng: -117.9993 }); // ~100 m SE of the start
+    expect(p.index).toBe(0);
+    expect(p.mile).toBeLessThan(0.1);
+  });
+
   it("never steps backwards within the segment it resumes from", () => {
     const first = locateOnTrack(line, { lat: 34.006, lng: -118 });
     const second = locateOnTrack(line, { lat: 34.004, lng: -118 }, first);

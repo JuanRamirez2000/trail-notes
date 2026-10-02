@@ -6,23 +6,113 @@
       "type": "start",
       "label": "Red Box",
       "title": "Start at Red Box on the Angeles Crest Highway",
-      "caption": "The recording starts at the Red Box parking area at about 4,670 ft.",
+      "caption": "The recording starts at the Red Box parking area at about 4,670 ft. The first mile climbs steadily, about 5–9%.",
       "lat": 34.259122,
       "lng": -118.104093,
-      "heading": null,
-      "headingSource": null
+      "heading": 109.3,
+      "headingSource": "exif",
+      "photo": {
+        "key": "strawberry-peak/01-img-8950",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      },
+      "takenAt": "2026-04-19T14:14:04.000Z"
+    },
+    {
+      "id": "mountain-curve",
+      "order": 20,
+      "type": "note",
+      "label": "Mountain curve",
+      "title": "The climb eases and the trail wraps around the mountain",
+      "caption": "After about 330 ft of climbing in the first mile, the grade drops to 1–4%. The trail stays nearly level for the next mile, wrapping around the slope with the highway below, from about 5,040 ft to 5,230 ft.",
+      "lat": 34.265757,
+      "lng": -118.10375,
+      "heading": 265.6,
+      "headingSource": "exif",
+      "photo": {
+        "key": "strawberry-peak/02-img-8956",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      },
+      "takenAt": "2026-04-19T14:50:06.000Z"
+    },
+    {
+      "id": "saddle",
+      "order": 30,
+      "type": "note",
+      "label": "Saddle",
+      "title": "Cross the saddle",
+      "caption": "The low point between the level stretch and the summit climb, at about 5,210 ft, 2.4 mi in. A natural place for a break: from here on the going gets rougher and slower.",
+      "lat": 34.27452,
+      "lng": -118.111897,
+      "heading": 67.4,
+      "headingSource": "exif",
+      "photo": {
+        "key": "strawberry-peak/03-img-8958",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      },
+      "takenAt": "2026-04-19T15:18:59.000Z"
+    },
+    {
+      "id": "rocky-climb",
+      "order": 40,
+      "type": "note",
+      "label": "Rocky climb",
+      "title": "The rocky climb begins",
+      "caption": "From here to the top it's about 800 ft of gain in 0.9 mi, at 13–28% grades over rock. The recorded pace dropped to 45–80 min/mi, three to four times slower than the trail below, and the descent was just as slow. Budget time for both directions.",
+      "lat": 34.27845,
+      "lng": -118.11321,
+      "heading": 73.2,
+      "headingSource": "exif",
+      "photo": {
+        "key": "strawberry-peak/04-img-8959",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      },
+      "takenAt": "2026-04-19T15:31:00.000Z"
+    },
+    {
+      "id": "steepest-pitch",
+      "order": 50,
+      "type": "note",
+      "label": "Steepest pitch",
+      "title": "Steepest pitch: loose rock underfoot",
+      "caption": "The steepest part of the recording, 26–28% around miles 3.2–3.4, on loose rock and stone. Take your time, especially on the way back down.",
+      "lat": 34.283433,
+      "lng": -118.11666,
+      "heading": 73.8,
+      "headingSource": "exif",
+      "photo": {
+        "key": "strawberry-peak/05-img-8962",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      },
+      "takenAt": "2026-04-19T16:06:01.000Z"
     },
     {
       "id": "high-point",
-      "order": 20,
+      "order": 60,
       "type": "note",
-      "label": "High point",
-      "title": "Reach the high point and turn around",
-      "caption": "The highest point on the recording, about 6,140 ft, 3.6 mi from the start. The route returns the same way.",
+      "label": "Summit",
+      "title": "Reach the summit and turn around",
+      "caption": "The highest point on the recording, about 6,140 ft, 3.6 mi from the start. The view looks east back down the rocky ridge you just climbed. The route returns the same way.",
       "lat": 34.283509,
       "lng": -118.120474,
-      "heading": null,
-      "headingSource": null
+      "heading": 86.8,
+      "headingSource": "exif",
+      "photo": {
+        "key": "strawberry-peak/06-img-8968",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      },
+      "takenAt": "2026-04-19T16:20:10.000Z"
     }
   ]
 }

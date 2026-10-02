@@ -3,8 +3,13 @@ import type { LngLat, Track } from "./schemas";
 
 type Pt = Pick<LngLat, "lat" | "lng">;
 
-/** Within this of the closest match, take the earliest segment (so out-and-back legs resolve outbound first). */
+/**
+ * Within this of the closest match, take the earliest segment (so out-and-back legs resolve
+ * outbound first). The slack grows with distance from the track: a point 90 m off the trailhead
+ * of an out-and-back may be a little closer to where the track ends, but it belongs at the start.
+ */
 const SNAP_SLACK_MI = 0.01;
+const SNAP_SLACK_RATIO = 0.5;
 
 /** A recorded track prepared for point lookups. `miles[i]` is the trail mileage at vertex i. */
 export type TrackLine = { pts: Pt[]; miles: number[] };
@@ -53,7 +58,8 @@ export function locateOnTrack(line: TrackLine, p: Pt, after?: Pick<TrackPosition
   }
   if (!hits.length) return { index: 0, t: 0, ...pts[0], mile: 0, offMi: distanceMi(p, pts[0]) };
   const best = Math.min(...hits.map((h) => h.d));
-  const { i, t, at, d } = hits.find((h) => h.d <= best + SNAP_SLACK_MI)!;
+  const slack = Math.max(SNAP_SLACK_MI, best * SNAP_SLACK_RATIO);
+  const { i, t, at, d } = hits.find((h) => h.d <= best + slack)!;
   return { index: i, t, lat: at.lat, lng: at.lng, mile: miles[i] + (miles[i + 1] - miles[i]) * t, offMi: d };
 }
 
