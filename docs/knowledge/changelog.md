@@ -4,6 +4,12 @@ Newest first. Commit hashes refer to `main`.
 
 ## V2 (in progress, from 2026-10-01): editing
 
+- **E2: guides in Supabase, sign-in, guardrails** (built 2026-10-05, commits `2c2c713`, `4ec6560`; not yet switched on for the live site, see [e2-go-live.md](e2-go-live.md)):
+  - `ContentStore` with local-file and Supabase backends; every write validated and version-checked; history rows.
+  - Guides can't carry code (`remark-no-code`).
+  - The site and editor read and save through the store; pages refresh on save. Velite removed.
+  - Supabase tables with server-only row-level security; `pnpm content` and `pnpm editors`.
+  - Google sign-in scaffold with an editors allow-list; `/editor` stays a 404 until `EDITOR_AUTH=supabase`.
 - **E1: component manifest, settings panel, movable blocks** (2026-10-02):
   - The manifest drives the build checks, the editor forms and the insert menu.
   - The save API refuses MDX that wouldn't build.

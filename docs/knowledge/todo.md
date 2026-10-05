@@ -9,13 +9,14 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
   - **A "drop photo or browse" field** on the photo card: waits on photo uploads.
   - **A scroll-synced preview:** the preview scrolls to the selected component, but doesn't follow the source as you scroll.
   - **"Publish" and "Autosaved 2 min ago"** in the top bar (we have "Save" and a draft/published badge). Planned in E3.
-- [ ] Everything in the V2 plan's remaining milestones (E2–E5, renumbered 2026-10-05). E2, the move to Supabase with sign-in and guardrails, is next.
-- [ ] **Owner steps for E2** (can't be done from a coding session):
-  - Choose the sign-in method (emailed link, or GitHub/Google).
-  - Add `SUPABASE_SERVICE_ROLE_KEY` to Vercel as a sensitive, server-only variable.
-  - Close public sign-ups and set the site URL / redirect URLs in the Supabase Auth settings.
-  - Decide whether to stay on the free plan (it pauses after about a week idle).
-- [ ] Before any save can come from the live site (E2.1): make the save gate refuse MDX `import`/`export`, `{…}` expressions in text and non-literal props. The guide page runs compiled MDX as code, and the checks let these through today.
+- [ ] **E2 go-live (owner):** Google client, Supabase Auth settings, the editors list, Vercel variables, then the checks. All in [e2-go-live.md](e2-go-live.md).
+- [ ] E2 leftovers once it's live:
+  - An E2E suite (`@playwright/test`): signed out and signed-in non-editor get 404 on `/editor` and the save API; an editor can save; the conflict banner. Today these were checked by hand with ad hoc Playwright scripts and curl.
+  - History is written but has no UI: no list of revisions, no restore button (rows are in `hike_revisions`).
+  - Every autosave writes a revision row; prune or coarsen later.
+  - `pnpm photos check` reads `content/`, not the database.
+  - The editors can't preview a draft as a full page on the live site (drafts have no public page).
+- [ ] V2 milestones after E2: E3 Write mode and guide details form, E4 map and pin editor, E5 create a hike in the app ([v2-plan.md](v2-plan.md)).
 - [ ] Phone layout for the editor: design 3a is desktop-only (three columns, fixed 290px settings column), and live-site editing is meant to work from the phone.
 
 ## Left over from V1 (unscheduled; pick up after V2 or between milestones)

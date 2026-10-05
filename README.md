@@ -2,7 +2,7 @@
 
 Photo-by-photo trail guides. Each hike is an MDX guide with embedded map components; the route, turning points and view directions come from the EXIF data in your photos (GPS, timestamp, compass heading).
 
-**Stack:** Next.js 16 (App Router) · Tailwind CSS v4 · Velite · Mapbox GL JS (via react-map-gl) · Photo Sphere Viewer · Turf · Zod · Zustand · Supabase Storage
+**Stack:** Next.js 16 (App Router) · Tailwind CSS v4 · MDX · Mapbox GL JS (via react-map-gl) · Photo Sphere Viewer · Turf · Zod · Zustand · Supabase Storage
 
 ```bash
 pnpm install
@@ -15,11 +15,11 @@ Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set. Phot
 ```bash
 pnpm test        # unit tests (Vitest)
 pnpm lint
-pnpm typecheck   # velite build --strict + tsc
+pnpm typecheck   # next typegen + tsc
 pnpm build
 ```
 
-CI (`.github/workflows/ci.yml`) runs the content build, lint, typecheck, tests, `pnpm photos check` and `pnpm build` on every push and PR.
+CI (`.github/workflows/ci.yml`) runs `pnpm content check`, lint, typecheck, tests, `pnpm photos check` and `pnpm build` on every push and PR.
 
 ---
 
@@ -34,7 +34,8 @@ exifr (GPS · time · heading) → sort by time → fill headings (EXIF → bear
    → content/hikes/<slug>/waypoints.json (draft) + index.mdx stub
    │  you review and edit (by hand or in /editor)
    ▼
-Velite: validates index.mdx + waypoints.json with the Zod schemas in src/lib/schemas.ts
+Content store (src/lib/store): validates the guide + pins with the Zod schemas in src/lib/schemas.ts and compiles the MDX
+   (files in content/hikes by default; Supabase in production once switched on, see docs/knowledge/e2-go-live.md)
    ▼
 /hikes/[slug] (static) → MDX rendered with the component registry
    → <HikeProvider> store shared by RouteMap · Minimap · StepByStep · PhotoCard · PanoViewer · SafetyPins
@@ -88,7 +89,7 @@ src/
 4. **Write the guide** in `index.mdx`, fill in the frontmatter, and set `draft: false`. Drafts show in `pnpm dev` but not in production.
 5. `pnpm dev` and check the page, or use the editor (below).
 
-Invalid content (unknown waypoint type, a slug that doesn't match its folder, a bad photo key…) fails `pnpm build` with a readable error.
+Invalid content (unknown waypoint type, a slug that doesn't match its folder, a bad photo key, a mistyped component prop…) is refused when it's saved and reported by `pnpm content check`, with a readable error. Guides can't contain code: no `import`/`export`, no `{…}` expressions, and no raw HTML beyond a few harmless tags.
 
 ### Guide sections
 
@@ -174,9 +175,11 @@ This writes `content/hikes/<slug>/track.json` and prints the distance, gain and 
 
 ## The editor (`/editor`)
 
-`pnpm dev`, then open http://localhost:3100/editor (it only exists locally: on the live site `/editor` is a 404). It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Put the cursor inside a component tag and a settings panel opens next to the source, with a form generated from the component's props. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
+`pnpm dev`, then open http://localhost:3100/editor (a local owner, no sign-in). It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Put the cursor inside a component tag and a settings panel opens next to the source, with a form generated from the component's props. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
 
-It's disabled in production: the pages and the save API return 404 unless `NODE_ENV=development`.
+Each save names the version it was based on, so if the guide changed in the meantime (another tab, a script, another editor) the editor says so and writes nothing.
+
+On the live site the editor is closed (a 404) until Google sign-in is switched on with `EDITOR_AUTH=supabase`; then only people on the editors list (`pnpm editors add <email>`) can open it. See [docs/knowledge/e2-go-live.md](docs/knowledge/e2-go-live.md).
 
 ---
 
@@ -222,13 +225,13 @@ Only the two web-sized, metadata-free webp copies are uploaded. Your originals (
 
 ## Deploying to Vercel
 
-1. Push the repo to GitHub, then **Add New → Project** on Vercel and import it. The framework preset is detected, and `pnpm build` (runs `velite build --strict && next build`) is the build command.
+1. Push the repo to GitHub, then **Add New → Project** on Vercel and import it. The framework preset is detected, and `pnpm build` (`next build`) is the build command.
 2. Add environment variables (Production + Preview):
    - `NEXT_PUBLIC_MAPBOX_TOKEN`
    - `NEXT_PUBLIC_PHOTO_STORAGE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_BUCKET` (required: the build fails without them)
-   - **Don't** add `SUPABASE_SERVICE_ROLE_KEY`, because the site never uploads.
+   - To serve guides from the database and open the editor on the live site, also add `CONTENT_STORE=supabase`, `EDITOR_AUTH=supabase`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` (**Sensitive**, never `NEXT_PUBLIC_`). The full steps, including Google sign-in, are in [docs/knowledge/e2-go-live.md](docs/knowledge/e2-go-live.md). Without them the site reads the guides committed in `content/hikes` and the editor is closed.
 3. In your Mapbox account, add the Vercel domain(s) to the token's URL restrictions.
-4. Deploy. Every hike page is statically generated; adding a hike means committing its folder and pushing.
+4. Deploy. Hike pages are rendered once and cached. With guides in files, adding a hike means committing its folder and pushing; with guides in the database, a saved guide is live within seconds and needs no deploy.
 
 With the CLI: `npm i -g vercel`, `vercel link`, `vercel env add NEXT_PUBLIC_MAPBOX_TOKEN`, then `vercel --prod`.
 

@@ -1,6 +1,6 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is next: guides move to Supabase, with sign-in and guardrails** (owner decision, 2026-10-05). No more editor features are built until E2 is done._
+_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is built and deployed (2026-10-05) but not switched on:** the live site still reads files and its editor is closed until the owner completes [e2-go-live.md](e2-go-live.md). No more editor features are built until E2 is live and checked._
 
 ## Decisions
 
@@ -9,7 +9,8 @@ _Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. 
 - **Guides are stored in Supabase in production** (option B below). The git and CMS options are closed.
 - **The move is E2, the next big step, before any component-based customisation** (Write mode, the details form, the pin editor all come after).
 - **E2 includes sign-in and the guardrails that go with it,** not just the data move.
-- Still open: the sign-in method, and what happens to Velite (see "Open questions").
+- **Sign-in is Google** (owner, 2026-10-05), through Supabase Auth.
+- Velite was removed during E2.3 (decided in the owner's absence; reversible).
 
 ### Owner, 2026-10-04: change of direction
 
@@ -125,7 +126,9 @@ Original scope:
 - Fix the preview mileage bug ([todo.md](todo.md)).
 - Tests: schema-to-form mapping, and prop validation on Strawberry Peak.
 
-**E2: Guides move to Supabase, with sign-in and guardrails (next).** The big step before any more editor features. It ships in five parts; the live site keeps working after each.
+**E2: Guides move to Supabase, with sign-in and guardrails. 🟡 Built 2026-10-05, waiting on the owner to switch it on.** All five parts are in `main`. What was verified, what couldn't be without keys, and the owner's steps are in [e2-go-live.md](e2-go-live.md). Differences from the plan below: the sign-in is Google OAuth; the Supabase contract tests run against the real project with namespaced draft rows (no Docker for a local database); the E2E access tests exist only as manual checks so far ([todo.md](todo.md)).
+
+The plan as written: the big step before any more editor features. It ships in five parts; the live site keeps working after each.
 
 Done when: Strawberry Peak on the live site is served from the database; the owner signs in on the live site, edits it with today's editor, and the change is public within seconds with no deploy; and a signed-out visitor or a signed-in non-editor can neither see the editor nor write anything.
 
@@ -245,7 +248,5 @@ Explicitly **not** being built yet: real-time co-editing (two cursors in one doc
 
 ## Open questions
 
-- **Sign-in method** (Supabase Auth): an emailed sign-in link, or a provider such as GitHub or Google. Needed for E2.4.
-- **Retire Velite?** Proposed: once the site renders through the store (E2.3), replace `velite build --strict` in CI with a `pnpm content check` that runs the save gate over `content/`, and remove Velite. The alternative is keeping Velite for the dev path, at the cost of two render paths to keep identical.
 - **Supabase plan.** Free today (pauses after about a week idle). E2.3 adds a keep-alive; a paid plan removes the risk.
 - **Phone layout for the editor.** Design 3a is three columns with a fixed 290px settings column. What Write mode, the settings form and the pin map look like on a phone isn't designed, and the owner wants to edit from the phone.

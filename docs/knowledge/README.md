@@ -11,6 +11,7 @@ The working memory of this project, written for whoever picks it up next: the ow
 | [todo.md](todo.md) | Known issues and TODOs, grouped by the version they belong to | You find a problem you won't fix now, or finish one |
 | [backlog.md](backlog.md) | Unscheduled feature ideas, written up in enough detail to build | An idea comes up that isn't planned yet |
 | [v2-plan.md](v2-plan.md) | The plan for the version in progress (V2: editing) | The plan changes, or a milestone ships |
+| [e2-go-live.md](e2-go-live.md) | The owner's steps to switch the live site to Supabase and Google sign-in, and what to check afterwards | A step is done or checked; delete the file once E2 is fully live |
 
 Rules for keeping it useful:
 
