@@ -21,7 +21,11 @@ export async function proxy(request: NextRequest) {
       setAll: (list) => {
         for (const { name, value } of list) request.cookies.set(name, value);
         response = NextResponse.next({ request });
-        for (const { name, value, options } of list) response.cookies.set(name, value, options);
+        // HttpOnly: these cookies are only read on the server (same rule as lib/auth/server.ts,
+        // repeated here because the proxy can't share modules with the app).
+        for (const { name, value, options } of list) {
+          response.cookies.set(name, value, { ...options, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
+        }
       },
     },
   });

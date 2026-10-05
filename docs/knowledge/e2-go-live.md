@@ -100,7 +100,8 @@ These are the parts that could not be exercised without your keys, or that depen
 
 ### Technical
 
-- [ ] **Google sign-in has never run end to end.** The moving parts: `/auth/sign-in` starts it and stores a one-time verifier in a cookie; Google returns to Supabase, then to `/auth/callback`, which swaps the code for a session. If the verifier cookie doesn't survive the round trip, the callback fails.
+- [ ] **Google sign-in has never run end to end.** The moving parts: `/auth/sign-in` starts it and stores a one-time verifier in a cookie; Google returns to Supabase, then to `/auth/callback`, which swaps the code for a session. If the verifier cookie doesn't survive the round trip, the callback fails. Checked on 2026-10-05 with a local production server in `EDITOR_AUTH=supabase` mode, up to the Google boundary: signed out (and with a forged session cookie) `/editor` and the save API are 404, `/sign-in` renders, and `/auth/sign-in` redirects to Supabase with the verifier cookies set and `/auth/callback` as the return address.
+- [ ] **Session cookies are `HttpOnly`** (changed from the library default, because no browser code reads them). If sign-in completes but `/editor` still says not found, check in the browser's dev tools that `sb-…-auth-token` cookies are being set after the callback.
 - [ ] **Session refresh** (`src/proxy.ts`) hasn't seen a real token. Symptom if it's wrong: you're signed out after about an hour even while active.
 - [ ] **The site's address behind Vercel:** the sign-in and callback routes build redirect URLs from the request's own address. Check that after signing in on the live site you end up on `trail-notes-amber.vercel.app`, not a `*.vercel.app` deployment address.
 - [ ] **Page refresh after a save** (`revalidatePath`) is only proven under `pnpm dev`, where nothing is cached. On the live site, confirm a saved, published change appears without a redeploy.

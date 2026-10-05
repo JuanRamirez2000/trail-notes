@@ -24,6 +24,12 @@ export function authMode(): AuthMode {
   return process.env.NODE_ENV === "development" ? "local" : "off";
 }
 
+/**
+ * Session cookies are only ever read on the server (there is no Supabase client in the browser),
+ * so they're HttpOnly: a script injected into a page can't read an editor's session.
+ */
+export const hardened = <T extends object>(options: T) => ({ ...options, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const });
+
 const LOCAL_OWNER: Editor = { id: "local", name: "Local owner (pnpm dev)", role: "owner" };
 
 /** A Supabase client bound to this request's session cookies. Uses the public key: it can only do what the signed-in user can. */
@@ -37,7 +43,7 @@ export async function sessionClient() {
       getAll: () => jar.getAll(),
       setAll: (list) => {
         try {
-          for (const { name, value, options } of list) jar.set(name, value, options);
+          for (const { name, value, options } of list) jar.set(name, value, hardened(options));
         } catch {
           // Server Components can't set cookies; src/proxy.ts refreshes the session instead.
         }
