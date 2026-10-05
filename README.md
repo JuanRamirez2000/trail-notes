@@ -7,7 +7,7 @@ Photo-by-photo trail guides. Each hike is an MDX guide with embedded map compone
 ```bash
 pnpm install
 cp .env.example .env.local   # add your Mapbox token
-pnpm dev                     # http://localhost:3000
+pnpm dev                     # http://localhost:3100
 ```
 
 Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set. Photos come from Supabase; to work offline, run `pnpm photos pull` once and set `NEXT_PUBLIC_PHOTO_STORAGE=local` (dev only).
@@ -174,7 +174,7 @@ This writes `content/hikes/<slug>/track.json` and prints the distance, gain and 
 
 ## The editor (`/editor`)
 
-`pnpm dev`, then open http://localhost:3000/editor. It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Put the cursor inside a component tag and a settings panel opens next to the source, with a form generated from the component's props. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
+`pnpm dev`, then open http://localhost:3100/editor (it only exists locally: on the live site `/editor` is a 404). It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Put the cursor inside a component tag and a settings panel opens next to the source, with a form generated from the component's props. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
 
 It's disabled in production: the pages and the save API return 404 unless `NODE_ENV=development`.
 

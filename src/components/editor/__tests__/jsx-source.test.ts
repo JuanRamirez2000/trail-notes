@@ -76,3 +76,18 @@ describe("setComponentProps", () => {
     expect(listComponents(out)[1].props).toEqual({ waypoint: "saddle", hidePhoto: true });
   });
 });
+
+describe("remarkSourceMarkers (preview selection)", () => {
+  it("wraps authored block components with their offset in the full source, and skips generated ones", async () => {
+    const { compile } = await import("@mdx-js/mdx");
+    const { remarkSourceMarkers } = await import("../remark-source-markers");
+    const { remarkDefaultBlocks } = await import("@/lib/mdx/remark-default-blocks");
+    const fm = DOC.slice(0, DOC.indexOf("Intro."));
+    const body = DOC.slice(fm.length);
+    const out = String(await compile(body, { remarkPlugins: [remarkDefaultBlocks, [remarkSourceMarkers, { offset: fm.length }]], jsx: true }));
+    const starts = [...out.matchAll(/data-src-start="(\d+)" data-src-name="(\w+)"/g)].map((m) => [m[2], Number(m[1])]);
+    // Same offsets the settings panel uses; the inline <PhotoCard> (text-level) and the auto <BeforeYouGo> aren't wrapped.
+    const expected = listComponents(DOC).filter((c) => c.name !== "PhotoCard").map((c) => [c.name, c.start]);
+    expect(starts).toEqual(expected);
+  });
+});

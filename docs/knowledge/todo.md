@@ -4,8 +4,11 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
 
 ## V2: editing (in progress, see [v2-plan.md](v2-plan.md))
 
-- [ ] **Style the settings panel and editor blocks from *Trail Guide Branded*.** It's provisional, built from brand tokens. Needs a local export of the design file (the Claude Design project can't be read from a coding session without `/design-sync`).
-- [ ] Select a component by clicking it in the preview, not only by putting the cursor in its tag (comes naturally with E2's Write mode).
+- [ ] Remaining differences from the design's authoring view (*Trail Guide Branded*, screen 3a):
+  - **Frame options per component** ("Show footer", "Allow expand ⤢"): `Frame` has these as code props, but they aren't in the manifest.
+  - **A "drop photo or browse" field** on the photo card: waits on photo uploads.
+  - **A scroll-synced preview:** the preview scrolls to the selected component, but doesn't follow the source as you scroll.
+  - **"Publish" and "Autosaved 2 min ago"** in the top bar (we have "Save" and a draft/published badge).
 - [ ] Everything in the V2 plan's milestones.
 
 ## Left over from V1 (unscheduled; pick up after V2 or between milestones)

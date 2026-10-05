@@ -7,61 +7,81 @@ import { PIN_STYLES } from "@/lib/pins";
 import type { SourceComponent } from "./jsx-source";
 
 type Props = {
-  component: SourceComponent;
+  /** Component under the cursor or clicked in the preview; null shows the empty state. */
+  component: SourceComponent | null;
   waypoints: HikeWaypoint[];
   onChange: (props: Record<string, unknown>) => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
 };
 
 /**
- * Settings for the component under the cursor, generated from its schema in lib/mdx/manifest.ts.
- * Any component added to the manifest gets a form here with no editor work.
- * Styling is provisional until the Trail Guide Branded settings-panel design is in.
+ * The settings column of the authoring view (design: Trail Guide Branded, screen 3a). The form is
+ * generated from the component's schema in lib/mdx/manifest.ts, so any component added to the
+ * manifest gets one with no editor work.
  */
-export function ComponentSettings({ component, waypoints, onChange }: Props) {
+export function ComponentSettings({ component, waypoints, onChange, onDuplicate, onRemove }: Props) {
+  return (
+    <aside aria-label="Component settings" className="flex min-h-0 flex-col bg-paper-deep">
+      <div className="border-b border-line bg-frame px-4 py-1.5 font-mono text-[11px] font-semibold text-bark">COMPONENT SETTINGS</div>
+      {component ? (
+        <Form key={`${component.name}@${component.start}`} component={component} waypoints={waypoints} onChange={onChange} onDuplicate={onDuplicate} onRemove={onRemove} />
+      ) : (
+        <p className="px-4 py-3.5 text-[15px] text-bark">Click a component in the preview, or put the cursor inside its tag, to change its settings.</p>
+      )}
+    </aside>
+  );
+}
+
+function Form({ component, waypoints, onChange, onDuplicate, onRemove }: Props & { component: SourceComponent }) {
   const entry = manifest[component.name];
   const fields = propFields(component.name);
   const set = (name: string, value: unknown) => onChange({ ...component.props, [name]: value });
 
   return (
-    <aside aria-label={`${entry.title} settings`} className="flex min-h-0 flex-col border-l border-line bg-card">
-      <div className="border-b border-line bg-frame px-4 py-1.5 font-mono text-[11px] font-semibold text-bark">COMPONENT SETTINGS</div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        <div className="font-display text-lg font-bold text-forest">{entry.title}</div>
-        <div className="font-mono text-xs text-bark">&lt;{component.name}&gt;</div>
-        <p className="mt-1 text-sm text-bark">{entry.description}</p>
-
-        {fields.length === 0 && <p className="mt-4 text-sm text-bark">No settings. Move it by cutting and pasting the tag.</p>}
-
-        <div className="mt-4 flex flex-col gap-3.5">
-          {fields.map((field) =>
-            field.name in component.raw ? (
-              <Row key={field.name} field={field}>
-                <code className="block rounded-md border border-dashed border-line-strong px-2 py-1 text-xs">{`{${component.raw[field.name]}}`}</code>
-                <span className="text-caption text-bark">Written as an expression; edit it in the source.</span>
-              </Row>
-            ) : (
-              <Row key={field.name} field={field}>
-                <Input field={field} value={component.props[field.name]} waypoints={waypoints} onChange={(v) => set(field.name, v)} />
-              </Row>
-            ),
-          )}
-        </div>
-
-        {entry.children === "markdown" && (
-          <p className="mt-5 border-t border-dashed border-line-strong pt-3 text-sm text-bark">
-            Write this section&apos;s text between <code>&lt;{component.name}&gt;</code> and <code>&lt;/{component.name}&gt;</code>.
-          </p>
-        )}
+    <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-4 py-3.5">
+      <div>
+        <div className="font-display text-[19px] leading-tight font-bold">{entry.title}</div>
+        <p className="mt-0.5 text-[13px] text-bark">{entry.description}</p>
       </div>
-    </aside>
+
+      {fields.length === 0 && <p className="text-[15px] text-bark">This block has no settings.</p>}
+
+      {fields.map((field) => (
+        <Row key={field.name} field={field}>
+          {field.name in component.raw ? (
+            <>
+              <code className="block rounded-md border border-dashed border-line-strong bg-card px-2 py-1.5 text-xs">{`{${component.raw[field.name]}}`}</code>
+              <span className="text-[13px] text-bark">Written as an expression; edit it in the Markdown.</span>
+            </>
+          ) : (
+            <Input field={field} value={component.props[field.name]} waypoints={waypoints} onChange={(v) => set(field.name, v)} />
+          )}
+        </Row>
+      ))}
+
+      {entry.children === "markdown" && (
+        <p className="text-[13px] text-bark">
+          Its text goes between <code>&lt;{component.name}&gt;</code> and <code>&lt;/{component.name}&gt;</code> in the Markdown.
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <button type="button" onClick={onDuplicate} className="cursor-pointer rounded-lg border border-line bg-card px-3 py-0.5">
+          Duplicate
+        </button>
+        <button type="button" onClick={onRemove} className="cursor-pointer rounded-lg border border-line-strong px-3 py-0.5 text-bark">
+          Remove
+        </button>
+      </div>
+    </div>
   );
 }
 
 function Row({ field, children }: { field: PropField; children: React.ReactNode }) {
-  const id = `prop-${field.name}`;
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-caption font-semibold tracking-[.06em] text-bark uppercase">
+    <div>
+      <label htmlFor={`prop-${field.name}`} className="mb-[3px] block text-[13px] text-bark">
         {field.label}
         {field.required && <span className="text-pin-bailout"> *</span>}
       </label>
@@ -70,7 +90,7 @@ function Row({ field, children }: { field: PropField; children: React.ReactNode 
   );
 }
 
-const inputClass = "w-full rounded-md border border-line-strong bg-paper px-2 py-1 text-[15px] text-graphite";
+const inputClass = "w-full rounded-md border border-line-strong bg-card px-2 py-1.5 text-[15px] text-graphite";
 
 function Input({ field, value, waypoints, onChange }: { field: PropField; value: unknown; waypoints: HikeWaypoint[]; onChange: (v: unknown) => void }) {
   const id = `prop-${field.name}`;
@@ -96,7 +116,7 @@ function Input({ field, value, waypoints, onChange }: { field: PropField; value:
       return (
         <label className="flex cursor-pointer items-center gap-2">
           <input id={id} type="checkbox" className="size-4 accent-forest" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-          <span className={cn("text-sm", value === undefined && "text-bark")}>{value === undefined ? `Default (${checked ? "on" : "off"})` : checked ? "On" : "Off"}</span>
+          <span className={cn("text-[15px]", value === undefined && "text-bark")}>{value === undefined ? `Default (${checked ? "on" : "off"})` : checked ? "On" : "Off"}</span>
         </label>
       );
     }
@@ -116,7 +136,7 @@ function Input({ field, value, waypoints, onChange }: { field: PropField; value:
             step={field.kind === "integer" ? 1 : "any"}
             onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
           />
-          {range && <span className="text-caption text-bark">Allowed: {range}{field.default !== undefined ? `, default ${String(field.default)}` : ""}</span>}
+          {range && <span className="mt-[3px] block text-[13px] text-bark">Allowed: {range}{field.default !== undefined ? `, default ${String(field.default)}` : ""}</span>}
         </>
       );
     }

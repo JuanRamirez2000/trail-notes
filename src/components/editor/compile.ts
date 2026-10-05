@@ -7,6 +7,7 @@ import { remarkComponentProps } from "@/lib/mdx/remark-component-props";
 import { remarkDefaultBlocks } from "@/lib/mdx/remark-default-blocks";
 import { remarkStepSections } from "@/lib/mdx/remark-step-sections";
 import { formatIssues, waypointsFileSchema, type Track } from "@/lib/schemas";
+import { remarkSourceMarkers } from "./remark-source-markers";
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
@@ -28,6 +29,8 @@ export async function compilePreview(source: string, waypoints: HikeWaypoint[] |
         [remarkStepSections, { getWaypoints: () => waypoints }],
         remarkDefaultBlocks,
         [remarkComponentProps, { getWaypoints: () => waypoints }],
+        // Last: tags each component with its source offset so the preview can select it.
+        [remarkSourceMarkers, { offset: m ? m[0].length : 0 }],
       ],
     });
     return { ok: true, Content, frontmatter };

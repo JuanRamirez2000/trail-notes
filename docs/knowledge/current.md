@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-01. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done, E2 next, see [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-04. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done, E2 next, see [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -8,7 +8,7 @@ Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whos
 - **Repo:** github.com/JuanRamirez2000/trail-notes (public). Work happens directly on `main`, by the owner's choice, so every commit must build and pass CI.
 - **Vercel:** project `prj_BRkSr8pDopFEqEJGNNNtKhUOaPwl`, team `team_xA3s7AnPMr8p1ZVJafHQupxT`. Use the claude.ai Vercel connector; the plugin connector returns 403 on this team.
 - **Supabase:** project `fstcgdirhssuaevgxptv`, public bucket `hikes` (photos only).
-- **Design source:** Claude Design project `87e465cf-146d-4327-9930-d7562360f28b` ("Trail Guide Branded", "Trailnotes Brand", "TrailMapBrand").
+- **Design source:** Claude Design project `87e465cf-146d-4327-9930-d7562360f28b`. *Trail Guide Branded.dc.html* has the screens: 1 gallery, 2 guide page, 3a authoring view, 4a component sheet. It's readable from a session with the `DesignSync` tool (`list_files` / `get_file`) when the owner asks for it; inline styles map 1:1 onto the tokens in `globals.css`.
 
 ## Baseline hike: Strawberry Peak
 
@@ -45,7 +45,8 @@ content/hikes/<slug>/{index.mdx, waypoints.json, track.json?}
 - **Editor** (`/editor`, `src/components/editor/`): local only (pages and the save API return 404 unless `NODE_ENV=development`).
   - CodeMirror for `index.mdx` and the raw `waypoints.json`.
   - A live preview compiled in the browser with the same remark passes, given `track.json` and `essentials`.
-  - A settings panel for the component under the cursor (`ComponentSettings.tsx` + `jsx-source.ts`, which rewrites only the opening tag through a CodeMirror transaction).
+  - Layout per design 3a: Markdown · live preview · a fixed 290px settings column.
+  - A settings panel for the component under the cursor or clicked in the preview (`ComponentSettings.tsx` + `jsx-source.ts`, which rewrites only the opening tag through a CodeMirror transaction; `remark-source-markers.ts` makes preview blocks selectable), with Duplicate and Remove.
   - An insert menu grouped by category, and autosave after 1.5 s.
   - Saves are validated like a build (schemas + MDX compile) before anything is written (`src/lib/editor-fs.ts`, `src/app/api/editor/[slug]/route.ts`).
   - MDXEditor (`mdx-editor-config.ts`) is installed for E2's Write mode; only the tests use it so far.
@@ -54,8 +55,8 @@ content/hikes/<slug>/{index.mdx, waypoints.json, track.json?}
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Dev server. Also starts Velite's watcher, and touches `index.mdx` when a sibling `waypoints.json`/`track.json` changes |
-| `pnpm test` | Vitest (97 tests: remark passes and prop checks, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, MDXEditor round trip on jsdom) |
+| `pnpm dev` | Dev server on **port 3100** (3000 is taken by another project on the owner's machine). `/editor` only exists here; it's a 404 on the live site until V2 E5. Also starts Velite's watcher, and touches `index.mdx` when a sibling `waypoints.json`/`track.json` changes |
+| `pnpm test` | Vitest (98 tests: remark passes and prop checks, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, MDXEditor round trip on jsdom) |
 | `pnpm typecheck` | `velite build --strict && next typegen && tsc --noEmit` |
 | `pnpm build` | `velite build --strict && next build` |
 | `pnpm ingest <folder> --slug <slug>` | EXIF → waypoints. Merges into existing waypoints and snaps to the track; `--force` replaces; `--storage local` writes to `public/photos` |

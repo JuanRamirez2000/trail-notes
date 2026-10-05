@@ -125,6 +125,30 @@ export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
     const tag = serializeOpeningTag(selected.name, props, selected.raw, selected.selfClosing);
     view.dispatch({ changes: { from: selected.start, to: selected.openEnd, insert: tag } });
   };
+  const duplicateSelected = () => {
+    const view = viewRef.current;
+    if (!view || !selected) return;
+    view.dispatch({ changes: { from: selected.end, insert: `\n\n${mdx.slice(selected.start, selected.end)}` } });
+  };
+  const removeSelected = () => {
+    const view = viewRef.current;
+    if (!view || !selected) return;
+    // Take the blank line after it too, so no gap is left behind.
+    const after = /^\n{1,2}/.exec(mdx.slice(selected.end))?.[0].length ?? 0;
+    view.dispatch({ changes: { from: selected.start, to: selected.end + after, insert: "" } });
+  };
+  // Clicking a component in the preview puts the cursor inside its tag, which selects it.
+  const selectFromPreview = (start: number) => {
+    const go = () => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({ selection: { anchor: Math.min(start + 1, view.state.doc.length) }, scrollIntoView: true });
+    };
+    if (tab !== "mdx") {
+      setTab("mdx");
+      setTimeout(go, 50); // wait for the MDX editor to mount
+    } else go();
+  };
 
   return (
     <div className="flex h-dvh flex-col bg-paper">
@@ -189,8 +213,9 @@ export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
       <div
         className={cn(
           "grid min-h-0 flex-1",
-          mode === "split" && (selected ? "grid-cols-[1fr_300px_1fr]" : "grid-cols-2"),
-          mode === "editor" && (selected ? "grid-cols-[1fr_300px]" : "grid-cols-1"),
+          // Design 3a: Markdown · live preview · settings (290px), the settings column always present.
+          mode === "split" && "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_290px]",
+          mode === "editor" && "grid-cols-[minmax(0,1fr)_290px]",
           mode === "preview" && "grid-cols-1",
         )}
       >
@@ -220,19 +245,20 @@ export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
             </div>
           </div>
         )}
-        {selected && (
+        {mode !== "editor" && (
+          <div className={cn("min-h-0 overflow-y-auto", mode === "split" && "border-r border-line")}>
+            <div className="sticky top-0 z-10 border-b border-line bg-frame px-4 py-1.5 font-mono text-[11px] font-semibold text-bark">LIVE PREVIEW</div>
+            <Preview slug={slug} mdx={mdx} waypoints={waypoints} track={track} selectedStart={selected?.start} onSelectComponent={selectFromPreview} />
+          </div>
+        )}
+        {mode !== "preview" && (
           <ComponentSettings
-            key={`${selected.name}@${selected.start}`}
             component={selected}
             waypoints={parsedWaypoints.ok ? parsedWaypoints.waypoints : []}
             onChange={updateSelectedProps}
+            onDuplicate={duplicateSelected}
+            onRemove={removeSelected}
           />
-        )}
-        {mode !== "editor" && (
-          <div className="min-h-0 overflow-y-auto">
-            <div className="sticky top-0 z-10 border-b border-line bg-frame px-4 py-1.5 font-mono text-[11px] font-semibold text-bark">LIVE PREVIEW</div>
-            <Preview slug={slug} mdx={mdx} waypoints={waypoints} track={track} />
-          </div>
         )}
       </div>
 

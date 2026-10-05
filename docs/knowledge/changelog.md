@@ -9,6 +9,7 @@ Newest first. Commit hashes refer to `main`.
   - The save API refuses MDX that wouldn't build.
   - New blocks `<BeforeYouGo />`, `<SafetyPoints />`, `<Steps />`, and a per-guide `sidebar` order.
   - Fixed: preview mileage now uses `track.json`.
+  - Authoring view restyled from *Trail Guide Branded* 3a (2026-10-04): settings column on the right, click-to-select in the preview, Duplicate / Remove. `pnpm dev` pinned to port 3100.
 - **E0 spike: go.** MDXEditor round-trips all guides; the shared editor config and a round-trip test run in CI. Photo uploads from the live site moved out of V2.
 
 ## V1 (2026-09-30 → 2026-10-01): groundwork, real data, Strawberry Peak
