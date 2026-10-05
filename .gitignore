@@ -41,9 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# velite
-/.velite
-/public/static
 
 # ingest drafts & originals
 /fixtures/originals

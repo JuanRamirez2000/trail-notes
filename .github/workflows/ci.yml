@@ -27,10 +27,10 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Content (Velite, strict)
-        run: pnpm content
+      - name: Guides in content/ pass the save gate
+        run: pnpm content check
       - run: pnpm lint
-      - name: Typecheck (velite + next typegen + tsc)
+      - name: Typecheck (next typegen + tsc)
         run: pnpm typecheck
       - run: pnpm test
       - name: Photos referenced by content exist in Supabase

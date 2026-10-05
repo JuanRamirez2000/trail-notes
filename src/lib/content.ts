@@ -1,34 +1,55 @@
 import "server-only";
-import { hikes, tracks, waypoints } from "#site/content";
-import { deriveWaypoints, routeCoords } from "./hike";
+import { cache } from "react";
+import { deriveWaypoints, routeCoords, type HikeWaypoint, type RouteCoords } from "./hike";
+import { compileGuide } from "./mdx/compile";
+import { waypointsFileSchema, type Frontmatter, type Track } from "./schemas";
+import { getStore } from "./store/server";
+import type { HikeStatus } from "./store/types";
 
-export type HikeDoc = (typeof hikes)[number];
+/**
+ * What the public pages read. Everything comes through the content store (files or database), and
+ * the guide's MDX is compiled here, on the server, when a page is rendered; the rendered page is
+ * what gets cached (see the route's `revalidate` and the editor's save route).
+ */
 
-const isVisible = (h: HikeDoc) => process.env.NODE_ENV === "development" || !h.draft;
+/** Lightweight shape for the gallery: the guide's validated details. */
+export type HikeSummary = Frontmatter;
 
-export function getHikes(): HikeDoc[] {
-  return hikes.filter(isVisible).sort((a, b) => b.date.localeCompare(a.date));
-}
+/** Drafts show under `pnpm dev` only. */
+const isVisible = (status: HikeStatus) => process.env.NODE_ENV === "development" || status === "published";
 
-export function getHike(slug: string): HikeDoc | undefined {
-  return getHikes().find((h) => h.slug === slug);
-}
+export const getHikeSummaries = cache(async (): Promise<HikeSummary[]> => {
+  const hikes = await (await getStore()).list();
+  return hikes
+    .filter((h): h is typeof h & { details: Frontmatter } => h.details !== null && isVisible(h.status))
+    .map((h) => h.details)
+    .sort((a, b) => b.date.localeCompare(a.date));
+});
 
-export function getTrack(slug: string) {
-  return tracks.find((t) => t.hike === slug) ?? null;
-}
+export type HikePage = {
+  hike: Frontmatter;
+  /** Compiled MDX (a function body) for components/mdx/MDXContent. */
+  body: string;
+  waypoints: HikeWaypoint[];
+  /** Line drawn on the maps: the recorded track when present, else straight segments. */
+  route: RouteCoords;
+  track: Track | null;
+};
 
-export function getWaypoints(slug: string) {
-  return deriveWaypoints(waypoints.find((w) => w.hike === slug)?.waypoints ?? [], getTrack(slug));
-}
-
-/** Line drawn on the maps: the recorded GPX track when present, else straight segments. */
-export function getRoute(slug: string) {
-  return routeCoords(getWaypoints(slug), getTrack(slug));
-}
-
-/** Lightweight shape for the gallery (no MDX body). */
-export function getHikeSummaries() {
-  return getHikes().map(({ body: _body, ...rest }) => rest);
-}
-export type HikeSummary = ReturnType<typeof getHikeSummaries>[number];
+/** Everything a guide page needs, or null if there's no such (visible) hike. */
+export const getHikePage = cache(async (slug: string): Promise<HikePage | null> => {
+  if (!/^[a-z0-9-]+$/.test(slug)) return null;
+  const record = await (await getStore()).read(slug);
+  if (!record || !isVisible(record.status)) return null;
+  const summary = (await getHikeSummaries()).find((h) => h.slug === slug);
+  if (!summary) return null; // stored but currently invalid (hand-edited files): nothing to show
+  const pins = waypointsFileSchema.parse(JSON.parse(record.waypoints)).waypoints;
+  const waypoints = deriveWaypoints(pins, record.track);
+  return {
+    hike: summary,
+    body: await compileGuide(record.mdx, pins),
+    waypoints,
+    route: routeCoords(waypoints, record.track),
+    track: record.track,
+  };
+});

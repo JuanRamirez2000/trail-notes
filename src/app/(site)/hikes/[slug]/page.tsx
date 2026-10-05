@@ -6,27 +6,33 @@ import { GuideScrollSync } from "@/components/hike/GuideScrollSync";
 import { MinimapBar } from "@/components/mdx/Minimap";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { Photo } from "@/components/ui/Photo";
-import { getHike, getHikes, getRoute, getWaypoints } from "@/lib/content";
+import { getHikePage, getHikeSummaries } from "@/lib/content";
 import { DIFFICULTY_LABEL, formatFeet, formatMiles } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { HikeProvider } from "@/lib/hike-store";
 
-export function generateStaticParams() {
-  return getHikes().map((h) => ({ slug: h.slug }));
+export async function generateStaticParams() {
+  return (await getHikeSummaries()).map((h) => ({ slug: h.slug }));
 }
 
-export const dynamicParams = false;
+// Guides are rendered once and cached. A save in the editor refreshes that guide's page straight
+// away (revalidatePath in the save route). The hourly refresh is the safety net for changes made
+// outside the editor (pnpm ingest, pnpm content seed). If a refresh fails (database unreachable,
+// or a guide that no longer compiles), the last good page keeps being served.
+export const revalidate = 3600;
+// A hike created after the last deploy gets its page on first visit.
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: PageProps<"/hikes/[slug]">): Promise<Metadata> {
-  const hike = getHike((await params).slug);
-  return hike ? { title: hike.title, description: hike.summary } : {};
+  const page = await getHikePage((await params).slug);
+  return page ? { title: page.hike.title, description: page.hike.summary } : {};
 }
 
 export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   const { slug } = await params;
-  const hike = getHike(slug);
-  if (!hike) notFound();
-  const waypoints = getWaypoints(slug);
+  const page = await getHikePage(slug);
+  if (!page) notFound();
+  const { hike, waypoints, route, body } = page;
 
   const stats = [
     { k: "Distance", v: formatMiles(hike.distanceMi) },
@@ -37,7 +43,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   ].filter((s): s is { k: string; v: string } => Boolean(s));
 
   return (
-    <HikeProvider slug={slug} waypoints={waypoints} route={getRoute(slug)} essentials={hike.essentials}>
+    <HikeProvider slug={slug} waypoints={waypoints} route={route} essentials={hike.essentials}>
       <GuideScrollSync />
       <article>
         {/* Hero */}
@@ -106,7 +112,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
         <div className="mx-auto grid w-full max-w-[1200px] gap-11 px-4 pb-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 pt-2">
             {/* "Before you go" is part of the MDX now: placed by the author, or first by default. */}
-            <MDXContent code={hike.body} />
+            <MDXContent code={body} />
           </div>
           <GuideSidebar cards={hike.sidebar} />
         </div>

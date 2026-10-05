@@ -66,17 +66,26 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
     return (await load(slug))!.version;
   }
 
+  // A missing folder is an error, not "no hikes": if the files didn't ship with a deploy, a page
+  // refresh must fail (and keep the last good page) rather than turn every guide into a 404.
+  const missingRoot = () => {
+    if (!existsSync(root)) throw new Error(`Guides folder not found: ${root}`);
+  };
+
   return {
     kind: "local",
 
     async list() {
-      if (!existsSync(root)) return [];
+      missingRoot();
       const entries = await readdir(root, { withFileTypes: true });
       const hikes = await Promise.all(entries.filter((e) => e.isDirectory() && SLUG.test(e.name)).map((e) => load(e.name)));
       return hikes.filter((h): h is RawHike => h !== null).map(({ slug, details, status, version, updatedAt, updatedBy }) => ({ slug, details, status, version, updatedAt, updatedBy }));
     },
 
-    get: load,
+    async get(slug) {
+      missingRoot();
+      return load(slug);
+    },
 
     async insert(slug, data): Promise<BackendResult> {
       if (existsSync(path.join(dir(slug), "index.mdx"))) return { ok: false, kind: "exists" };

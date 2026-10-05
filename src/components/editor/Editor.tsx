@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import type { Track } from "@/lib/schemas";
 import { countComponents, countWords, parseWaypoints } from "./compile";
 import { ComponentSettings } from "./ComponentSettings";
+import { EditorAccount } from "./EditorAccount";
 import { findComponentAt, serializeOpeningTag } from "./jsx-source";
 import { InsertMenu } from "./InsertMenu";
 import { Preview } from "./Preview";
@@ -19,20 +20,30 @@ const SourceEditor = dynamic(() => import("./SourceEditor"), {
   loading: () => <div className="p-4 font-mono text-sm text-bark">Loading editor…</div>,
 });
 
-type Props = { slug: string; initialMdx: string; initialWaypoints: string; track: Track | null };
+type Props = {
+  slug: string;
+  initialMdx: string;
+  initialWaypoints: string;
+  /** The store's version of what was loaded; sent back with each save so a stale tab can't overwrite newer work. */
+  initialVersion: string;
+  track: Track | null;
+  editorName: string;
+  canSignOut: boolean;
+};
 type Tab = "mdx" | "json";
 type Mode = "split" | "editor" | "preview";
-type SaveState = { kind: "idle" | "saving" | "saved" | "error"; at?: Date; problems?: string[] };
+type SaveState = { kind: "idle" | "saving" | "saved" | "error" | "conflict"; at?: Date; problems?: string[] };
 
 const AUTOSAVE_MS = 1500;
 
-export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
+export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, track, editorName, canSignOut }: Props) {
   const [mdx, setMdx] = useState(initialMdx);
   const [waypoints, setWaypoints] = useState(initialWaypoints);
   const [tab, setTab] = useState<Tab>("mdx");
   const [mode, setMode] = useState<Mode>("split");
   const [cursor, setCursor] = useState<Cursor>({ line: 1, col: 1, offset: 0 });
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
+  const versionRef = useRef(initialVersion);
   const viewRef = useRef<EditorView | null>(null);
   const [saved, setSaved] = useState({ mdx: initialMdx, waypoints: initialWaypoints });
   const dirty = mdx !== saved.mdx || waypoints !== saved.waypoints;
@@ -44,23 +55,34 @@ export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
     const res = await fetch(`/api/editor/${slug}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(snapshot),
-    });
-    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; problems?: string[] };
-    if (res.ok && data.ok) {
+      body: JSON.stringify({ ...snapshot, baseVersion: versionRef.current }),
+    }).catch(() => null);
+    if (!res) {
+      setSave({ kind: "error", problems: ["Couldn't reach the server. Your text is still here; it will retry when you edit or press Save."] });
+      return;
+    }
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; problems?: string[]; version?: string; conflict?: boolean };
+    if (res.ok && data.ok && data.version) {
+      versionRef.current = data.version;
       setSaved(snapshot);
       setSave({ kind: "saved", at: new Date() });
+    } else if (res.status === 409) {
+      setSave({ kind: "conflict" });
+    } else if (res.status === 404) {
+      setSave({ kind: "error", problems: ["You're no longer signed in (or this hike was removed). Open the sign-in page in another tab, then press Save."] });
     } else {
       setSave({ kind: "error", problems: data.problems ?? [`HTTP ${res.status}`] });
     }
   }, [mdx, waypoints, slug]);
 
   // Autosave after a pause in typing. Invalid content is rejected server-side and shown, never written.
+  // A conflict stops autosave: retrying would only fail again, and must never overwrite the newer version.
+  const conflicted = save.kind === "conflict";
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty || conflicted) return;
     const t = setTimeout(doSave, AUTOSAVE_MS);
     return () => clearTimeout(t);
-  }, [dirty, doSave]);
+  }, [dirty, conflicted, doSave]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -106,6 +128,8 @@ export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
         ? `Saved ${save.at!.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
         : save.kind === "error"
           ? "Not saved: fix the errors below"
+          : save.kind === "conflict"
+            ? "Not saved: this guide changed elsewhere"
           : dirty
             ? "Unsaved changes"
             : "All changes saved";
@@ -157,7 +181,8 @@ export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
         <Link href="/editor" className="text-[15px] text-bark">← Hikes</Link>
         <span className="text-xl">{/^title:\s*(.+)$/m.exec(mdx)?.[1] ?? slug}</span>
         <span className="rounded-full border border-line-strong px-2.5 text-sm text-bark">{isDraft ? "Draft" : "Published"}</span>
-        <span className={cn("ml-auto text-sm", save.kind === "error" ? "text-pin-bailout" : "text-bark")}>{status}</span>
+        <span className={cn("ml-auto text-sm", save.kind === "error" || save.kind === "conflict" ? "text-pin-bailout" : "text-bark")}>{status}</span>
+        <EditorAccount name={editorName} canSignOut={canSignOut} />
         <a href={`/hikes/${slug}`} target="_blank" rel="noopener" className="rounded-lg border border-line bg-card px-3.5 py-1 text-graphite">
           Preview page ↗
         </a>
@@ -200,6 +225,18 @@ export function Editor({ slug, initialMdx, initialWaypoints, track }: Props) {
           ))}
         </div>
       </div>
+
+      {save.kind === "conflict" && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 border-b border-pin-bailout bg-card px-5 py-2 text-sm text-pin-bailout">
+          <span>
+            This guide was changed since you opened it (in another tab, or by someone else), so your changes were <strong>not saved</strong> and nothing was overwritten. Copy anything
+            you want to keep, then reload to get the latest version.
+          </span>
+          <button type="button" onClick={() => window.location.reload()} className="cursor-pointer rounded-lg border border-pin-bailout px-3 py-0.5">
+            Reload
+          </button>
+        </div>
+      )}
 
       {save.kind === "error" && save.problems && (
         <ul className="border-b border-pin-bailout bg-card px-5 py-2 font-mono text-xs text-pin-bailout">

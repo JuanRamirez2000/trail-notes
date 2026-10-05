@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/ui/SiteHeader";
-import { getHikes } from "@/lib/content";
+import { getHikeSummaries } from "@/lib/content";
 
 export const metadata: Metadata = { title: "Off the map" };
 
 /** Branded 404: the dashed "pencil trail" runs off the sketch map to a lost pin. */
-export default function NotFound() {
-  const hikes = getHikes().slice(0, 3);
+export default async function NotFound() {
+  // A 404 must never fail itself: if the store can't be reached, show the page without suggestions.
+  const hikes = (await getHikeSummaries().catch(() => [])).slice(0, 3);
   return (
     <>
       <SiteHeader />

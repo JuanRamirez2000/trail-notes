@@ -4,17 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3100",
-    "build": "velite build --strict && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "velite build --strict && next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "content": "tsx scripts/content.ts",
     "ingest": "tsx scripts/ingest-photos.ts",
     "sample:photos": "tsx scripts/make-sample-photos.ts",
     "gpx": "tsx scripts/import-gpx.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "photos": "tsx scripts/photos.ts"
+    "photos": "tsx scripts/photos.ts",
+    "editors": "tsx scripts/editors.ts"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
@@ -43,7 +44,6 @@
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.7.0",
     "unist-util-visit": "^5.1.0",
-    "velite": "^0.4.0",
     "yaml": "^2.9.1",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"

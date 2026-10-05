@@ -1,31 +1,32 @@
 /**
  * Turns a folder of hike photos into a draft waypoints file + web-ready images.
  *
- *   pnpm ingest <photo-folder> --slug <hike-slug> [--storage local|supabase] [--force] [--dry-run]
+ *   pnpm ingest <photo-folder> --slug <hike-slug> [--storage local|supabase] [--guides local|supabase] [--force] [--dry-run]
  *
  * 1. Reads GPS, capture time and compass heading from EXIF (exifr).
  * 2. Sorts by capture time and fills missing headings:
  *      EXIF heading → bearing to the next photo ("inferred") → null (set by hand).
  * 3. Writes 2 webp variants per photo with ALL metadata stripped (originals never leave your machine).
  * 4. Uploads to /public/photos or Supabase Storage.
- * 5. Writes content/hikes/<slug>/waypoints.json, plus an index.mdx stub for new hikes.
+ * 5. Writes the pins through the content store (files in content/hikes by default, the database
+ *    with --guides supabase), plus a stub guide for new hikes. The store validates the result
+ *    and refuses it if the hike was saved by someone else in the meantime.
  *
  * If the hike already has waypoints, the new photos are merged in rather than replacing them:
  * existing pins keep their ids and text, photos ingested before are skipped, and with a recorded
  * track (track.json) new photos are snapped onto it and slotted in by trail mileage.
  * --force replaces waypoints.json instead.
  */
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import exifr from "exifr";
 import sharp from "sharp";
-import type { z, ZodType } from "zod";
 import { cumulativeMiles } from "../src/lib/geo";
-import { formatIssues, trackSchema, waypointsFileSchema, type Waypoint } from "../src/lib/schemas";
+import { formatIssues, waypointsFileSchema, type Waypoint } from "../src/lib/schemas";
 import { photoObjectPath, type PhotoVariant } from "../src/lib/storage";
 import { existingNumbering, inferHeadings, kebab, mergeWaypoints, round, SNAP_MAX_MI } from "./lib/ingest";
+import { mustWrite, scriptStore } from "./lib/stores";
 
 try {
   process.loadEnvFile(".env.local");
@@ -55,6 +56,7 @@ const { values, positionals } = parseArgs({
   options: {
     slug: { type: "string" },
     storage: { type: "string" },
+    guides: { type: "string" },
     force: { type: "boolean", default: false },
     "dry-run": { type: "boolean", default: false },
   },
@@ -66,7 +68,7 @@ const storage = (values.storage ?? process.env.NEXT_PUBLIC_PHOTO_STORAGE ?? "loc
 const dryRun = values["dry-run"];
 
 if (!dir || !slug || !/^[a-z0-9-]+$/.test(slug) || !["local", "supabase"].includes(storage)) {
-  console.error("Usage: pnpm ingest <photo-folder> --slug <kebab-slug> [--storage local|supabase] [--force] [--dry-run]");
+  console.error("Usage: pnpm ingest <photo-folder> --slug <kebab-slug> [--storage local|supabase] [--guides local|supabase] [--force] [--dry-run]");
   process.exit(1);
 }
 
@@ -182,9 +184,15 @@ async function main() {
     .sort((a, b) => (a.takenAt?.getTime() ?? 0) - (b.takenAt?.getTime() ?? 0) || a.file.localeCompare(b.file));
   if (!photos.length) throw new Error("None of the photos have GPS data.");
 
-  const hikeDir = path.join(process.cwd(), "content/hikes", slug);
-  const existing = values.force ? [] : await readJson(path.join(hikeDir, "waypoints.json"), waypointsFileSchema, (f) => f.waypoints);
-  const track = await readJson(path.join(hikeDir, "track.json"), trackSchema, (t) => t);
+  const store = await scriptStore(values.guides);
+  const record = await store.read(slug);
+  let existing: Waypoint[] | null = null;
+  if (record && !values.force) {
+    const parsed = waypointsFileSchema.safeParse(JSON.parse(record.waypoints));
+    if (!parsed.success) throw new Error(`The hike's stored pins are invalid; fix them in the editor first:\n${formatIssues(parsed.error).join("\n")}`);
+    existing = parsed.data.waypoints;
+  }
+  const track = record?.track ?? null;
   const { next, names } = existingNumbering(existing ?? []);
 
   // Headings look at the neighbouring photos, so infer them across the whole folder before
@@ -193,7 +201,7 @@ async function main() {
   const fresh = photos.map((p, i) => ({ p, heading: headings[i] })).filter(({ p }) => !names.has(kebab(path.basename(p.file))));
   const already = photos.length - fresh.length;
   if (!fresh.length) {
-    console.log(`Nothing to do: all ${photos.length} photos are already in content/hikes/${slug}/waypoints.json.`);
+    console.log(`Nothing to do: all ${photos.length} photos are already pins of "${slug}".`);
     return;
   }
 
@@ -233,12 +241,13 @@ async function main() {
   if (!file.success) throw new Error(`Generated waypoints are invalid:\n${formatIssues(file.error).join("\n")}`);
 
   if (!dryRun) {
-    await mkdir(hikeDir, { recursive: true });
-    await writeFile(path.join(hikeDir, "waypoints.json"), JSON.stringify(file.data, null, 2) + "\n");
-    if (!existsSync(path.join(hikeDir, "index.mdx"))) {
-      const miles = track?.distanceMi ?? cumulativeMiles(waypoints).at(-1) ?? 0;
+    const pins = JSON.stringify({ waypoints }, null, 2) + "\n";
+    if (record) {
+      mustWrite(await store.save(slug, { mdx: record.mdx, waypoints: pins }, { editor: null, baseVersion: record.version }), `Saving the pins of "${slug}"`);
+    } else {
+      const miles = cumulativeMiles(waypoints).at(-1) ?? 0;
       const date = (photos[0].takenAt ?? new Date()).toISOString().slice(0, 10);
-      await writeFile(path.join(hikeDir, "index.mdx"), mdxStub(waypoints[0], miles, date));
+      mustWrite(await store.create(slug, { mdx: mdxStub(waypoints[0], miles, date), waypoints: pins }, { editor: null }), `Creating "${slug}"`);
     }
   }
 
@@ -246,9 +255,9 @@ async function main() {
   const missing = incoming.filter((w) => w.heading === null).length;
   const how = existing?.length ? `merged with ${existing.length} existing` : values.force ? "replaced" : "new";
   console.log(`
-${dryRun ? "[dry run] " : ""}${incoming.length} new waypoints (${how}) → content/hikes/${slug}/waypoints.json (photos: ${storage})
+${dryRun ? "[dry run] " : ""}${incoming.length} new waypoints (${how}) → "${slug}" in the ${store.kind} store (photos: ${storage})
   headings: ${incoming.length - inferred - missing} from EXIF, ${inferred} inferred from next photo, ${missing} need setting by hand`);
-  if (track) console.log(`  snapped onto track.json and ordered by trail mileage`);
+  if (track) console.log(`  snapped onto the recorded track and ordered by trail mileage`);
   if (already) console.log(`  ${already} photo(s) were already ingested and were skipped`);
   const m = (mi: number) => `${Math.round(mi * 1609)} m`;
   if (offTrack.length) {
@@ -268,14 +277,6 @@ ${dryRun ? "[dry run] " : ""}${incoming.length} new waypoints (${how}) → conte
   if (storage === "local" && !dryRun) {
     console.log("  photos were written to public/photos (dev only, not committed). Run `pnpm photos push` before deploying.");
   }
-}
-
-/** Reads and validates an optional JSON file; null when it doesn't exist. */
-async function readJson<S extends ZodType, R>(file: string, schema: S, pick: (data: z.infer<S>) => R): Promise<R | null> {
-  if (!existsSync(file)) return null;
-  const parsed = schema.safeParse(JSON.parse(await readFile(file, "utf8")));
-  if (!parsed.success) throw new Error(`${path.relative(process.cwd(), file)} is invalid:\n${formatIssues(parsed.error).join("\n")}`);
-  return pick(parsed.data);
 }
 
 main().catch((err) => {
