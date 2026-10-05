@@ -13,7 +13,7 @@ import {
 import { COMPONENT_NAMES, manifest, propFields } from "@/lib/mdx/manifest";
 
 /**
- * Shared MDXEditor setup for the rich-text "Write" mode (V2 E4) and its round-trip test.
+ * Shared MDXEditor setup for the rich-text "Write" mode (V2 E3) and its round-trip test.
  *
  * Round trips are structurally lossless on every guide (frontmatter, JSX props, MDX expression comments and markdown
  * inside <Step> all survive; see __tests__/roundtrip.test.tsx). These options keep

@@ -8,10 +8,14 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
   - **Frame options per component** ("Show footer", "Allow expand ⤢"): `Frame` has these as code props, but they aren't in the manifest.
   - **A "drop photo or browse" field** on the photo card: waits on photo uploads.
   - **A scroll-synced preview:** the preview scrolls to the selected component, but doesn't follow the source as you scroll.
-  - **"Publish" and "Autosaved 2 min ago"** in the top bar (we have "Save" and a draft/published badge). Planned in E4.
-- [ ] Everything in the V2 plan's remaining milestones (E2–E6, renumbered 2026-10-04).
-- [ ] **Owner decision needed:** where production stores guides, git or Supabase ([v2-plan.md](v2-plan.md), "Production storage: open decision"). Blocks E3 only; E2 can start.
-- [ ] Before any save can come from the live site (E2): make the save gate refuse MDX `import`/`export`, `{…}` expressions in text and non-literal props. The guide page runs compiled MDX as code, and the checks let these through today.
+  - **"Publish" and "Autosaved 2 min ago"** in the top bar (we have "Save" and a draft/published badge). Planned in E3.
+- [ ] Everything in the V2 plan's remaining milestones (E2–E5, renumbered 2026-10-05). E2, the move to Supabase with sign-in and guardrails, is next.
+- [ ] **Owner steps for E2** (can't be done from a coding session):
+  - Choose the sign-in method (emailed link, or GitHub/Google).
+  - Add `SUPABASE_SERVICE_ROLE_KEY` to Vercel as a sensitive, server-only variable.
+  - Close public sign-ups and set the site URL / redirect URLs in the Supabase Auth settings.
+  - Decide whether to stay on the free plan (it pauses after about a week idle).
+- [ ] Before any save can come from the live site (E2.1): make the save gate refuse MDX `import`/`export`, `{…}` expressions in text and non-literal props. The guide page runs compiled MDX as code, and the checks let these through today.
 - [ ] Phone layout for the editor: design 3a is desktop-only (three columns, fixed 290px settings column), and live-site editing is meant to work from the phone.
 
 ## Left over from V1 (unscheduled; pick up after V2 or between milestones)
