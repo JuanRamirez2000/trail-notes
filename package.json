@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "velite build --strict && next typegen && tsc --noEmit",
-    "content": "velite build --strict",
+    "content": "tsx scripts/content.ts",
     "ingest": "tsx scripts/ingest-photos.ts",
     "sample:photos": "tsx scripts/make-sample-photos.ts",
     "gpx": "tsx scripts/import-gpx.ts",
@@ -25,6 +25,7 @@
     "@mdxeditor/editor": "^4.3.1",
     "@photo-sphere-viewer/core": "^5.15.1",
     "@photo-sphere-viewer/markers-plugin": "^5.15.1",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@turf/bbox": "^7.4.0",
     "@turf/bearing": "^7.4.0",
@@ -68,5 +69,6 @@
     "vfile": "^6.0.3",
     "vitest": "^5.0.2"
   },
-  "packageManager": "pnpm@11.5.0"
+  "packageManager": "pnpm@11.5.0",
+  "type": "module"
 }

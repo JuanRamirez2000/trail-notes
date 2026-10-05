@@ -115,3 +115,25 @@ describe("checkMdx (the editor's save gate)", () => {
     expect(await checkMdx(`${fm}<RouteMap height={`, WAYPOINTS)).toMatch(/line \d+/);
   });
 });
+
+describe("remarkNoCode (guides can't carry code)", () => {
+  const gate = async (src: string) => (await import("../mdx/check")).checkMdx(src, WAYPOINTS);
+
+  it.each([
+    ["an import", "import fs from 'fs'\n\nHi", /import or export/],
+    ["an export", "export const x = 1\n\nHi", /import or export/],
+    ["an expression in text", "Total: {1 + 1}", /can't contain \{…\} expressions/],
+    ["a block expression", "{globalThis.process.exit()}", /can't contain \{…\} expressions/],
+    ["a prop written as an expression", "<RouteMap height={2 * 200} />", /only plain values/],
+    ["spread props", "<RouteMap {...{ height: 400 }} />", /spread props/],
+    ["a script tag", "<script>alert(1)</script>", /<script> isn't allowed/],
+    ["an iframe", '<iframe src="https://example.com" />', /<iframe> isn't allowed/],
+    ["attributes on an allowed tag", '<details open onToggle="x()">\n\nhi\n\n</details>', /can't have attributes/],
+  ])("refuses %s", async (_what, src, message) => {
+    expect(await gate(src)).toMatch(message);
+  });
+
+  it("allows comments, literal props and the harmless tags", async () => {
+    expect(await gate("{/* a note to self */}\n\n<RouteMap height={420} labels terrain={false} />\n\nH<sub>2</sub>O\n\n<details>\n\n<summary>More</summary>\n\nText.\n\n</details>")).toBeNull();
+  });
+});

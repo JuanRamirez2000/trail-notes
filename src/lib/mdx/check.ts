@@ -1,31 +1,25 @@
 import { compile } from "@mdx-js/mdx";
 import type { Waypoint } from "../schemas";
-import { remarkComponentProps } from "./remark-component-props";
-import { remarkDefaultBlocks } from "./remark-default-blocks";
-import { remarkStepSections } from "./remark-step-sections";
+import { blankFrontmatter, guideRemarkPlugins } from "./plugins";
 
-const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
+type MdxError = Error & { line?: number; place?: { line?: number; start?: { line?: number } } };
+
+/** `line N: message` for an MDX compile error. */
+export function describeMdxError(e: unknown): string {
+  const err = e as MdxError;
+  const line = err.line ?? err.place?.start?.line ?? err.place?.line;
+  return `${line ? `line ${line}: ` : ""}${err.message}`;
+}
 
 /**
- * Compiles a guide's MDX body with the same remark passes as the Velite build and returns the
- * first problem, or null if it would build. Used by the editor's save API so nothing that would
- * break `pnpm build` is ever written to disk.
+ * Compiles a guide with the shared remark passes and returns the first problem, or null if it
+ * would render. This is the save gate: nothing that fails here is ever stored.
  */
 export async function checkMdx(source: string, waypoints: Waypoint[] | null): Promise<string | null> {
-  // Keep line numbers right: blank the frontmatter instead of cutting it.
-  const body = source.replace(FRONTMATTER, (m) => m.replace(/[^\n]/g, ""));
   try {
-    await compile(body, {
-      remarkPlugins: [
-        [remarkStepSections, { getWaypoints: () => waypoints }],
-        remarkDefaultBlocks,
-        [remarkComponentProps, { getWaypoints: () => waypoints }],
-      ],
-    });
+    await compile(blankFrontmatter(source), { remarkPlugins: guideRemarkPlugins(waypoints) });
     return null;
   } catch (e) {
-    const err = e as Error & { line?: number; place?: { line?: number; start?: { line?: number } } };
-    const line = err.line ?? err.place?.start?.line ?? err.place?.line;
-    return `${line ? `line ${line}: ` : ""}${err.message}`;
+    return describeMdxError(e);
   }
 }

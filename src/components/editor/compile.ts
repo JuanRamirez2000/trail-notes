@@ -3,9 +3,7 @@ import type { MDXContent } from "mdx/types";
 import * as runtime from "react/jsx-runtime";
 import { parse as parseYaml } from "yaml";
 import { deriveWaypoints, type HikeWaypoint } from "@/lib/hike";
-import { remarkComponentProps } from "@/lib/mdx/remark-component-props";
-import { remarkDefaultBlocks } from "@/lib/mdx/remark-default-blocks";
-import { remarkStepSections } from "@/lib/mdx/remark-step-sections";
+import { guideRemarkPlugins } from "@/lib/mdx/plugins";
 import { formatIssues, waypointsFileSchema, type Track } from "@/lib/schemas";
 import { remarkSourceMarkers } from "./remark-source-markers";
 
@@ -15,20 +13,17 @@ export type CompiledPreview =
   | { ok: true; Content: MDXContent; frontmatter: Record<string, unknown> }
   | { ok: false; error: string };
 
-/** Browser-side MDX compile for the live preview (production pages use Velite's build-time output). */
+/** Browser-side MDX compile for the live preview, with the same remark passes as the save gate and the server compile. */
 export async function compilePreview(source: string, waypoints: HikeWaypoint[] | null): Promise<CompiledPreview> {
   try {
     const m = FRONTMATTER.exec(source);
     const frontmatter = m ? ((parseYaml(m[1]) ?? {}) as Record<string, unknown>) : {};
     const body = m ? source.slice(m[0].length) : source;
-    // Same stub-section pass as the Velite build, fed the editor's in-memory waypoints.
     const { default: Content } = await evaluate(body, {
       ...runtime,
       development: false,
       remarkPlugins: [
-        [remarkStepSections, { getWaypoints: () => waypoints }],
-        remarkDefaultBlocks,
-        [remarkComponentProps, { getWaypoints: () => waypoints }],
+        ...guideRemarkPlugins(waypoints),
         // Last: tags each component with its source offset so the preview can select it.
         [remarkSourceMarkers, { offset: m ? m[0].length : 0 }],
       ],
