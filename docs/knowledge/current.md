@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-04. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done, E2 next, see [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-04. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. The V2 plan was revised on 2026-10-04 for in-app editing in production with no hand-edited files; the remaining milestones are renumbered (E2 storage and identity boundary is next) and E3 awaits the owner's storage decision. See [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -49,13 +49,13 @@ content/hikes/<slug>/{index.mdx, waypoints.json, track.json?}
   - A settings panel for the component under the cursor or clicked in the preview (`ComponentSettings.tsx` + `jsx-source.ts`, which rewrites only the opening tag through a CodeMirror transaction; `remark-source-markers.ts` makes preview blocks selectable), with Duplicate and Remove.
   - An insert menu grouped by category, and autosave after 1.5 s.
   - Saves are validated like a build (schemas + MDX compile) before anything is written (`src/lib/editor-fs.ts`, `src/app/api/editor/[slug]/route.ts`).
-  - MDXEditor (`mdx-editor-config.ts`) is installed for E2's Write mode; only the tests use it so far.
+  - MDXEditor (`mdx-editor-config.ts`) is installed for the Write mode (V2 E4); only the tests use it so far.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Dev server on **port 3100** (3000 is taken by another project on the owner's machine). `/editor` only exists here; it's a 404 on the live site until V2 E5. Also starts Velite's watcher, and touches `index.mdx` when a sibling `waypoints.json`/`track.json` changes |
+| `pnpm dev` | Dev server on **port 3100** (3000 is taken by another project on the owner's machine). `/editor` only exists here; it's a 404 on the live site until V2 E3 (the editor in production). Also starts Velite's watcher, and touches `index.mdx` when a sibling `waypoints.json`/`track.json` changes |
 | `pnpm test` | Vitest (98 tests: remark passes and prop checks, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, MDXEditor round trip on jsdom) |
 | `pnpm typecheck` | `velite build --strict && next typegen && tsc --noEmit` |
 | `pnpm build` | `velite build --strict && next build` |
@@ -82,4 +82,5 @@ CI (`.github/workflows/ci.yml`) runs content, lint, typecheck, tests, `photos ch
 - **iPhone photos:** files dragged out of Photos are tiny previews (`…_4_5005_c.jpeg`, 360–1024 px). Use File → Export, or the original HEIC. Convert HEIC with `sips -s format jpeg` (keeps GPS and heading, writes upright pixels with a normal orientation tag). sharp's prebuilt binary can't decode HEIC.
 - **A perceptual hash (dHash) doesn't detect "same vista" duplicates** when the framing differs. Compare heading and content.
 - **Structural typing won't catch a manifest prop that a component ignores.** Components take their prop types from the manifest to keep one definition, but nothing forces them to use every prop.
+- **Guide pages run compiled MDX as code** (`new Function` in `src/components/mdx/MDXContent.tsx`), and the save gate doesn't yet refuse MDX `import`/`export` or `{…}` expressions. Safe while only the owner edits local files; it must be closed before saves can come from the live site (V2 E2).
 - **`propFields` reads `z.toJSONSchema(..., { io: "input" })`.** Custom `.meta()` keys (`input`, `internal`) come through as JSON Schema keys; `.describe()` becomes `description`.
