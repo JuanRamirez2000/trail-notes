@@ -81,7 +81,8 @@ export function findComponentAt(source: string, offset: number): SourceComponent
 const quote = (s: string) => (s.includes('"') ? `{${JSON.stringify(s)}}` : `"${s}"`);
 
 /**
- * Opening tag for `name` with `props`. Props equal to their default (or undefined) are left out,
+ * Opening tag for `name` with `props`. Props equal to their default (or undefined, or an optional
+ * boolean set to false) are left out,
  * known props come in manifest order, and anything else (internal flags, expressions) is kept.
  */
 export function serializeOpeningTag(name: ComponentName, props: Record<string, unknown>, raw: Record<string, string>, selfClosing: boolean) {
@@ -96,6 +97,8 @@ export function serializeOpeningTag(name: ComponentName, props: Record<string, u
     const value = props[key];
     const field = fields.find((f) => f.name === key);
     if (value === undefined || value === "" || (field && value === field.default)) continue;
+    // An optional checkbox with no default means "off" when absent, so `={false}` is just noise.
+    if (value === false && field?.kind === "boolean" && field.default === undefined) continue;
     if (value === true) parts.push(key);
     else if (typeof value === "string") parts.push(`${key}=${quote(value)}`);
     else parts.push(`${key}={${JSON.stringify(value)}}`);

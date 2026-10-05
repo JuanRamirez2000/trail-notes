@@ -55,6 +55,10 @@ describe("serializeOpeningTag", () => {
     expect(serializeOpeningTag("RouteMap", { terrain: false, height: 320, labels: true }, {}, true)).toBe("<RouteMap terrain={false} />");
   });
 
+  it("leaves out an optional boolean that is switched off", () => {
+    expect(serializeOpeningTag("Step", { waypoint: "a", hidePhoto: false }, {}, true)).toBe('<Step waypoint="a" />');
+  });
+
   it("writes strings, bare true, numbers, and quotes containing quotes", () => {
     expect(serializeOpeningTag("PhotoCard", { waypoint: "saddle", caption: 'the "notch"' }, {}, true)).toBe(
       '<PhotoCard waypoint="saddle" caption={"the \\"notch\\""} />',
