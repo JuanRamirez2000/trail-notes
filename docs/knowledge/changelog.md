@@ -4,6 +4,7 @@ Newest first. Commit hashes refer to `main`.
 
 ## V2 (in progress, from 2026-10-01): editing
 
+- **E5: New hike in the app** (2026-10-05): a form with an optional GPX read in the browser creates a draft hike and opens it in the editor.
 - **E4: Pins view** (2026-10-05): pins on an interactive map (drag, aim the photo direction, add by clicking), a list in route order, and a form per pin; renaming a pin updates the guide.
 - **E3: Write view, guide details form, Publish** (2026-10-05):
   - The editor opens in a document-style Write view with the real components as live blocks and their settings beside them.

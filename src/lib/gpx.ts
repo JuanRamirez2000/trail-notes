@@ -1,7 +1,7 @@
 import turfLength from "@turf/length";
 import { lineString } from "@turf/helpers";
 import turfSimplify from "@turf/simplify";
-import { trackSchema } from "../../src/lib/schemas";
+import { trackSchema } from "./schemas";
 
 const M_TO_FT = 3.28084;
 /** Moving-average window for elevation before summing gain; raw GPS altitude is noisy. */

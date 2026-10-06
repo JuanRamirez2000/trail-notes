@@ -1,6 +1,6 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is live** (2026-10-05: guides in Supabase, Google sign-in, sign-ups closed; a save from the live editor is still to be confirmed, see [e2-go-live.md](e2-go-live.md)). **E3 and E4 are built.** Next: E5, creating a hike in the app._
+_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is live** (2026-10-05: guides in Supabase, Google sign-in, sign-ups closed; a save from the live editor is still to be confirmed, see [e2-go-live.md](e2-go-live.md)). **E3, E4 and E5 are built: every V2 milestone is in `main`.** What's left is the checks on the live site ([e2-go-live.md](e2-go-live.md)) and the leftovers in [todo.md](todo.md)._
 
 ## Decisions
 
@@ -213,7 +213,9 @@ The plan as written (replaces the raw `waypoints.json` tab; the JSON moves under
 - A form per pin: type, label, title, caption, note, and a photo picker from the photos already uploaded for the hike. Listing them needs a small server route, since the browser only knows the photos that pins already use.
 - E2E test: move Strawberry Peak's saddle pin and check the mileage and step order update.
 
-**E5: Create a hike in the app.**
+**E5: Create a hike in the app. ✅ Built 2026-10-05.** As built: `/editor/new` (`NewHikeForm.tsx`) with a "＋ New hike" button on the hike list. The form takes title, address (filled in from the title, checked against existing hikes), region, summary, difficulty, date, and an optional GPX that is parsed in the browser (`src/lib/gpx.ts`, moved from `scripts/lib`); without one, distance, gain and trailhead are typed in. `src/lib/new-hike.ts` builds the draft (details, a route map, one trailhead pin) and `POST /api/editor` creates it through the store with the same guards as saving. Not built: the details form isn't reused (the new-hike form is its own, smaller one), and the address `new` is reserved.
+
+The plan as written:
 - A "New hike" form: the same generated form as E3's guide details, saved with the store's `create` as a draft.
 - **GPX upload, read in the browser.** `parseGpx` and `buildTrack` (`scripts/lib/gpx.ts`) are plain functions with no file access; they move to `src/lib` so the browser can run them. Only `[lng, lat, ele]` is sent to the server, which keeps the "timestamps stay private" decision ([current.md](current.md)). Distance and gain in the form are filled from the track.
 - **Pins start without photos** (the schema allows it) and are placed on the track in the E4 editor. Photos are attached later with `pnpm ingest --slug <slug>` on the Mac, which merges into existing pins.

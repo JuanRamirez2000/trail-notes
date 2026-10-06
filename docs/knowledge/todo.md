@@ -26,7 +26,10 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
   - No undo in the Pins view (the Write view has it); history rows exist but have no restore UI.
   - Out-and-back hikes: a new pin on a stretch walked twice is placed on the first pass; a "which way" choice would be clearer than moving it in the list.
   - Commit the pin-editor browser checks as an E2E test.
-- [ ] V2 milestone left: E5 create a hike in the app ([v2-plan.md](v2-plan.md)).
+- [ ] E5 leftovers:
+  - Replace a hike's track from the app (today: `pnpm gpx --slug <slug> --guides supabase`).
+  - No way to delete a hike from the app (drafts made by mistake stay as drafts).
+  - The new-hike form doesn't share code with the Details form.
 - [ ] Phone layout for the editor: design 3a is desktop-only (three columns, fixed 290px settings column), and live-site editing is meant to work from the phone.
 
 ## Left over from V1 (unscheduled; pick up after V2 or between milestones)

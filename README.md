@@ -69,6 +69,10 @@ src/
 
 ## Adding a hike
 
+**In the app:** open the editor, click **＋ New hike**, fill in the form and (optionally) choose a GPX recording. It creates a draft and opens it: place pins under **Pins**, write under **Write**, fill in the rest under **Details**, then **Publish**. Photos are still added from the command line (below), with `--guides supabase` if the site reads guides from the database.
+
+**From photos, on the command line:**
+
 1. **Export your photos as JPEG** (keep location metadata on). HEIC originals work for EXIF, but sharp's prebuilt binaries can't decode HEVC, so convert first.
 2. **Run the ingest script:**
 

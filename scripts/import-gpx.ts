@@ -14,7 +14,7 @@
 import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { formatIssues } from "../src/lib/schemas";
-import { buildTrack, parseGpx } from "./lib/gpx";
+import { buildTrack, parseGpx } from "../src/lib/gpx";
 import { mustWrite, scriptStore } from "./lib/stores";
 
 try {

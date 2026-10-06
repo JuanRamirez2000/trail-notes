@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. E2 is live: the site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). E3 (Write view, details form, Publish) and E4 (the Pins view) are built. Next: E5, creating a hike in the app. What's still unverified on the live site: [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. E2 is live: the site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). E3 (Write view, details form, Publish), E4 (the Pins view) and E5 (creating a hike in the app) are built, so every V2 milestone is in `main`. What's still unverified on the live site: [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -45,6 +45,7 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
   - Pins are stored exactly as written (validated, not rewritten); the database columns are `json`, not `jsonb`, because jsonb reorders keys.
 - **Rendering:** `src/lib/content.ts` reads through the store and compiles MDX on the server (`compileGuide`). `/` and `/hikes/[slug]` are static with `revalidate = 3600` and `dynamicParams = true`: refreshed when the editor saves (`revalidatePath`), hourly as a safety net, and a failed refresh keeps the last good page. Drafts show only under `pnpm dev`. `content/hikes` ships in the server bundle (`outputFileTracingIncludes`), and a missing folder is an error rather than "no hikes".
 - **Identity** (`src/lib/auth/`): `getEditor()` (`server.ts`) and `can()` (`can.ts`) are the only access checks, always on the server. `EDITOR_AUTH` picks the mode: unset = a fixed local owner under `pnpm dev`, nobody anywhere else; `supabase` = Google sign-in through Supabase Auth, and only users in the `editors` table count; `off` = nobody. Routes: `/sign-in`, `/auth/sign-in`, `/auth/callback` (signs a non-editor straight back out), `/auth/sign-out`; `src/proxy.ts` refreshes the session for editor routes only. Outsiders get a 404 everywhere.
+- **Create route** (`src/app/api/editor/route.ts`, `POST`): the same guards, then `store.create`. The form behind it is `/editor/new` (`NewHikeForm.tsx`): an optional GPX is parsed in the browser with `src/lib/gpx.ts`, so only `[lng, lat, ele]` is ever sent, and `src/lib/new-hike.ts` builds the draft (details, a route map, a trailhead pin). The address `new` is reserved.
 - **Save route** (`src/app/api/editor/[slug]/route.ts`), in order: editor check, same-origin, size and rate limits (`src/lib/auth/request.ts`), then the store (validation, version), then `revalidatePath`. Conflicts are 409, invalid content 422.
 - **Keep-alive:** `vercel.json` runs `/api/health` daily; with the Supabase store it reads from the database so the free-plan project doesn't pause.
 - **Pins and guide sections** (`src/lib/pins.ts`): `start/turn/note/bailout` require a section and are numbered steps; if the MDX has no `<Step>` for one, `src/lib/mdx/remark-step-sections.ts` inserts a stub in route order. `viewpoint/landmark/water/ranger` are optional. The safety pins are `water/ranger/bailout`.
@@ -72,7 +73,7 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Dev server on **port 3100** (3000 is taken by another project on the owner's machine). Guides are read from `content/hikes` on each request, so an edited file shows on reload. The editor is open as a local owner |
-| `pnpm test` | Vitest (162 tests: pin operations, frontmatter split/join/edit, store contract on local files, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom) |
+| `pnpm test` | Vitest (169 tests: new-hike builder, pin operations, frontmatter split/join/edit, store contract on local files, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom) |
 | `SUPABASE_CONTRACT_TESTS=1 pnpm test supabase` | The same store contract against the real Supabase project, plus the lockdown test. Uses and removes `zz-contract-*` draft rows. Never in CI |
 | `pnpm typecheck` | `next typegen && tsc --noEmit` |
 | `pnpm build` | `next build` |
@@ -80,7 +81,7 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 | `pnpm content seed [slug] [--force]` / `pull [slug]` | Copy guides files → database / database → files, through the store |
 | `pnpm editors list` / `add <email> [--role owner]` / `remove <email>` | The editors allow-list. Never creates accounts |
 | `pnpm ingest <folder> --slug <slug>` | EXIF → pins, through the store. Merges into existing pins and snaps to the track; `--force` replaces; `--storage local` writes photos to `public/photos`; `--guides supabase` writes the pins to the database |
-| `pnpm gpx <file.gpx> --slug <slug>` | GPX → the hike's track (lat/lng/elevation only), through the store; on a new slug it creates a draft hike. `--guides supabase` for the database |
+| `pnpm gpx <file.gpx> --slug <slug>` | (Also possible in the app: New hike.) GPX → the hike's track (lat/lng/elevation only), through the store; on a new slug it creates a draft hike. `--guides supabase` for the database |
 | `pnpm photos check\|push\|pull [slug]` | Photos referenced by `content/` exist in Supabase (CI runs this) / upload local photos / download for offline dev |
 
 CI (`.github/workflows/ci.yml`) runs `content check`, lint, typecheck, tests, `photos check` and build on every push and PR, with no secrets. If the `SUPABASE_SERVICE_ROLE_KEY` repository secret exists, it also checks every stored guide.

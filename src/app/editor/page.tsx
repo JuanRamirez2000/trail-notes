@@ -23,12 +23,19 @@ export default async function EditorIndex() {
         <Wordmark />
         <EditorAccount name={editor.name} canSignOut={authMode() === "supabase"} />
       </div>
-      <h1 className="mt-8 font-display text-h2 font-bold text-forest">Edit a hike</h1>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-h2 font-bold text-forest">Edit a hike</h1>
+        {can(editor, "create") && (
+          <Link href="/editor/new" className="rounded-lg border-2 border-forest bg-highlight px-3.5 py-1 text-graphite">
+            ＋ New hike
+          </Link>
+        )}
+      </div>
       <p className="mt-2 text-bark">
         {store.kind === "supabase"
           ? "Saves go to the database and are public within seconds once a guide is published."
           : "Saves write to content/hikes on this machine."}{" "}
-        New hikes come from <code>pnpm ingest</code>.
+        Photos are added with <code>pnpm ingest</code>.
       </p>
       <ul className="mt-6 divide-y divide-line rounded-[10px] border border-line bg-card">
         {hikes.map((h) => (
