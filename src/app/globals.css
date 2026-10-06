@@ -161,3 +161,160 @@
   border-radius: 4px;
   pointer-events: none;
 }
+
+/* ── Editor: Write view (MDXEditor) ─────────────────────────────────────
+   The document is styled like the public guide page (components/mdx/prose.tsx), so writing looks
+   like the result. MDXEditor's own chrome (toolbar, dialogs) is themed through its variables.
+   `.write-editor` is on the editor root; MDXEditor's popups render elsewhere, so the theme
+   variables are also set on its popup container. */
+.write-editor,
+.mdxeditor-popup-container {
+  --accentBase: var(--color-paper);
+  --accentBgSubtle: var(--color-paper-deep);
+  --accentBg: var(--color-highlight);
+  --accentBgHover: var(--color-highlight);
+  --accentBgActive: var(--color-chrome);
+  --accentLine: var(--color-line);
+  --accentBorder: var(--color-line-strong);
+  --accentBorderHover: var(--color-forest);
+  --accentSolid: var(--color-forest);
+  --accentSolidHover: var(--color-forest);
+  --accentText: var(--color-forest);
+  --accentTextContrast: var(--color-graphite);
+
+  --basePageBg: var(--color-paper);
+  --baseBase: var(--color-card);
+  --baseBgSubtle: var(--color-paper-deep);
+  --baseBg: var(--color-frame);
+  --baseBgHover: var(--color-chrome);
+  --baseBgActive: var(--color-highlight);
+  --baseLine: var(--color-line);
+  --baseBorder: var(--color-line-strong);
+  --baseBorderHover: var(--color-bark);
+  --baseSolid: var(--color-bark);
+  --baseSolidHover: var(--color-bark);
+  --baseText: var(--color-graphite);
+  --baseTextContrast: var(--color-graphite);
+
+  --font-body: var(--font-sans);
+  color: var(--color-graphite);
+}
+
+/* Toolbar: a plain strip under the view tabs, staying in view while the document scrolls. */
+.write-editor .write-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-radius: 0;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-paper);
+  padding: 6px 20px;
+  overflow: visible; /* the insert menu drops below the toolbar */
+  flex-wrap: wrap; /* on a phone the buttons wrap instead of running off the edge */
+  row-gap: 4px;
+  height: auto;
+}
+
+/* The document column, as wide as the guide's text column on the public page. */
+.write-prose {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 8px 24px 96px;
+  font-family: var(--font-sans);
+  font-size: var(--text-body, 17px);
+  line-height: 27px;
+  color: var(--color-graphite);
+}
+.write-prose:focus {
+  outline: none;
+}
+.write-prose h2 {
+  margin-top: 26px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+  color: var(--color-forest);
+}
+.write-prose h3 {
+  margin-top: 24px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 26px;
+  font-weight: 700;
+  color: var(--color-forest);
+}
+.write-prose p {
+  margin-top: 14px;
+}
+.write-prose ul,
+.write-prose ol {
+  margin-top: 14px;
+  padding-left: 24px;
+}
+.write-prose ul {
+  list-style: disc;
+}
+.write-prose ol {
+  list-style: decimal;
+}
+.write-prose a {
+  color: var(--color-forest);
+  text-decoration: underline;
+}
+.write-prose code {
+  border-radius: 4px;
+  background: var(--color-frame);
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.write-prose blockquote {
+  margin-top: 14px;
+  border-left: 3px solid var(--color-line-strong);
+  padding-left: 14px;
+  color: var(--color-bark);
+}
+.write-prose hr {
+  margin: 22px 0;
+  border: 0;
+  border-top: 1px dashed var(--color-line-strong);
+}
+
+/* A component in the document. Hovering hints that it can be selected; the selected one gets the
+   design's outline (3a). */
+.write-block {
+  position: relative;
+  border-radius: 10px;
+}
+.write-block:hover {
+  outline: 1.5px dashed var(--color-line-strong);
+  outline-offset: 4px;
+}
+.write-block.is-selected,
+.write-block.is-selected:hover {
+  outline: 3px dashed color-mix(in srgb, var(--color-graphite) 45%, transparent);
+  outline-offset: 5.5px;
+  box-shadow: 0 0 0 2.5px var(--color-graphite);
+}
+
+/* A block's own text (a Step's notes): part of the document, with a faint field so it's findable when empty. */
+.write-prose.write-nested {
+  max-width: none;
+  min-height: 44px;
+  margin: 10px 0 0;
+  padding: 2px 10px 10px;
+  border: 1px dashed var(--color-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-card) 60%, transparent);
+}
+.write-prose.write-nested:focus {
+  border-color: var(--color-forest);
+}
+/* Placeholder for a block's empty text field (Lexical keeps one empty paragraph in it). */
+.write-prose.write-nested > p:only-child:has(> br:only-child)::before {
+  content: "Add your notes for this part of the trail…";
+  color: var(--color-bark);
+  opacity: 0.7;
+  pointer-events: none;
+}

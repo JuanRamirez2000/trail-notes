@@ -1,6 +1,6 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is built and deployed (2026-10-05) but not switched on:** the live site still reads files and its editor is closed until the owner completes [e2-go-live.md](e2-go-live.md). No more editor features are built until E2 is live and checked._
+_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is live** (2026-10-05: guides in Supabase, Google sign-in, sign-ups closed; a save from the live editor is still to be confirmed, see [e2-go-live.md](e2-go-live.md)). **E3 is built.** Next: E4, the map and pin editor._
 
 ## Decisions
 
@@ -126,7 +126,7 @@ Original scope:
 - Fix the preview mileage bug ([todo.md](todo.md)).
 - Tests: schema-to-form mapping, and prop validation on Strawberry Peak.
 
-**E2: Guides move to Supabase, with sign-in and guardrails. 🟡 Built 2026-10-05, waiting on the owner to switch it on.** All five parts are in `main`. What was verified, what couldn't be without keys, and the owner's steps are in [e2-go-live.md](e2-go-live.md). Differences from the plan below: the sign-in is Google OAuth; the Supabase contract tests run against the real project with namespaced draft rows (no Docker for a local database); the E2E access tests exist only as manual checks so far ([todo.md](todo.md)).
+**E2: Guides move to Supabase, with sign-in and guardrails. ✅ Built and switched on 2026-10-05.** All five parts are in `main`. What was verified, what couldn't be without keys, and the owner's steps are in [e2-go-live.md](e2-go-live.md). Differences from the plan below: the sign-in is Google OAuth; the Supabase contract tests run against the real project with namespaced draft rows (no Docker for a local database); the E2E access tests exist only as manual checks so far ([todo.md](todo.md)).
 
 The plan as written: the big step before any more editor features. It ships in five parts; the live site keeps working after each.
 
@@ -187,7 +187,13 @@ Done when: Strawberry Peak on the live site is served from the database; the own
   - E2E access tests: signed out, `/editor` and the save API are 404; a signed-in non-editor gets 404; an editor can save.
 - **Photos stay out** (owner, 2026-10-01): the live editor covers text, components and pins; photos are added with `pnpm ingest` on the Mac.
 
-**E3: Write mode and the guide details form** (the primary way to write).
+**E3: Write mode and the guide details form. ✅ Built 2026-10-05.** As built:
+- The editor opens in **Write** (`src/components/editor/write/WriteView.tsx`): MDXEditor on the guide's body, every manifest component a live block rendering the real component, a block's own text (a Step's notes) editable inside it, the selected block's generated settings form in the settings column (a bottom sheet on a phone).
+- **Details** (`DetailsForm.tsx`) is generated from `frontmatterSchema`; each change rewrites one frontmatter entry (`src/lib/frontmatter.ts`).
+- **Publish / Unpublish** buttons flip the guide's `draft` flag; **Advanced** (`AdvancedView.tsx`) is the old Markdown/JSON/preview view.
+- Not done from the plan: the "Autosaved … ago" label (it shows "Saved 10:12 PM"), and the one-time normalisation commit (a guide is normalised the first time it's saved from Write instead). Leftovers are in [todo.md](todo.md).
+
+The plan as written (the primary way to write):
 - **"Write" is the default view:** rich text with headings, bold and italic, lists, links, and an "insert component" button. Components show as live blocks; clicking one opens the E1 settings panel. `<Step>` blocks show their pin's number, photo and caption, with editable notes inside.
 - **A "Guide details" form generated from `frontmatterSchema`** (`src/lib/schemas.ts`), the way component forms are generated from the manifest: title, region, summary, distance, elevation gain, difficulty, time, best season, cover photo, trailhead, date, the "Before you go" essentials, and the sidebar order as a reorderable list. The slug is shown but not editable. Nobody types YAML.
 - **Draft/published is a "Publish" button and a status**, backed by the store's `publish`, with "Autosaved … ago" beside it (both are in design 3a; see [todo.md](todo.md)).

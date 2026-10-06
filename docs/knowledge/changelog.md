@@ -4,7 +4,11 @@ Newest first. Commit hashes refer to `main`.
 
 ## V2 (in progress, from 2026-10-01): editing
 
-- **E2: guides in Supabase, sign-in, guardrails** (built 2026-10-05, commits `2c2c713`, `4ec6560`; not yet switched on for the live site, see [e2-go-live.md](e2-go-live.md)):
+- **E3: Write view, guide details form, Publish** (2026-10-05):
+  - The editor opens in a document-style Write view with the real components as live blocks and their settings beside them.
+  - Guide details are a generated form; raw Markdown and JSON moved under Advanced.
+  - Fixed: map pins appearing twice while Mapbox was loading.
+- **E2: guides in Supabase, sign-in, guardrails** (built 2026-10-05, commits `2c2c713`, `4ec6560`; switched on for the live site the same day by the owner):
   - `ContentStore` with local-file and Supabase backends; every write validated and version-checked; history rows.
   - Guides can't carry code (`remark-no-code`).
   - The site and editor read and save through the store; pages refresh on save. Velite removed.

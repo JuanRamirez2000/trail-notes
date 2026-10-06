@@ -6,13 +6,20 @@ import { manifest, propFields, type PropField } from "@/lib/mdx/manifest";
 import { PIN_STYLES } from "@/lib/pins";
 import type { SourceComponent } from "./jsx-source";
 
-type Props = {
-  /** Component under the cursor or clicked in the preview; null shows the empty state. */
-  component: SourceComponent | null;
+/** A component and its props as currently written, whichever editor it came from. */
+export type EditableComponent = Pick<SourceComponent, "name" | "props" | "raw">;
+
+type FormProps = {
+  component: EditableComponent;
   waypoints: HikeWaypoint[];
   onChange: (props: Record<string, unknown>) => void;
-  onDuplicate: () => void;
+  onDuplicate?: () => void;
   onRemove: () => void;
+};
+
+type Props = Omit<FormProps, "component"> & {
+  /** Component under the cursor or clicked in the preview; null shows the empty state. */
+  component: SourceComponent | null;
 };
 
 /**
@@ -25,7 +32,7 @@ export function ComponentSettings({ component, waypoints, onChange, onDuplicate,
     <aside aria-label="Component settings" className="flex min-h-0 flex-col bg-paper-deep">
       <div className="border-b border-line bg-frame px-4 py-1.5 font-mono text-[11px] font-semibold text-bark">COMPONENT SETTINGS</div>
       {component ? (
-        <Form key={`${component.name}@${component.start}`} component={component} waypoints={waypoints} onChange={onChange} onDuplicate={onDuplicate} onRemove={onRemove} />
+        <SettingsForm key={`${component.name}@${component.start}`} component={component} waypoints={waypoints} onChange={onChange} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : (
         <p className="px-4 py-3.5 text-[15px] text-bark">Click a component in the preview, or put the cursor inside its tag, to change its settings.</p>
       )}
@@ -33,7 +40,8 @@ export function ComponentSettings({ component, waypoints, onChange, onDuplicate,
   );
 }
 
-function Form({ component, waypoints, onChange, onDuplicate, onRemove }: Props & { component: SourceComponent }) {
+/** The generated form for one component. Rendered by the Markdown view's panel and, through a portal, by a selected block in the Write view. */
+export function SettingsForm({ component, waypoints, onChange, onDuplicate, onRemove }: FormProps) {
   const entry = manifest[component.name];
   const fields = propFields(component.name);
   const set = (name: string, value: unknown) => onChange({ ...component.props, [name]: value });
@@ -62,14 +70,16 @@ function Form({ component, waypoints, onChange, onDuplicate, onRemove }: Props &
 
       {entry.children === "markdown" && (
         <p className="text-[13px] text-bark">
-          Its text goes between <code>&lt;{component.name}&gt;</code> and <code>&lt;/{component.name}&gt;</code> in the Markdown.
+          Its text is written inside the block (in Markdown: between <code>&lt;{component.name}&gt;</code> and <code>&lt;/{component.name}&gt;</code>).
         </p>
       )}
 
       <div className="flex gap-2">
-        <button type="button" onClick={onDuplicate} className="cursor-pointer rounded-lg border border-line bg-card px-3 py-0.5">
-          Duplicate
-        </button>
+        {onDuplicate && (
+          <button type="button" onClick={onDuplicate} className="cursor-pointer rounded-lg border border-line bg-card px-3 py-0.5">
+            Duplicate
+          </button>
+        )}
         <button type="button" onClick={onRemove} className="cursor-pointer rounded-lg border border-line-strong px-3 py-0.5 text-bark">
           Remove
         </button>

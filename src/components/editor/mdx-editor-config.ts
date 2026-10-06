@@ -24,8 +24,11 @@ import { COMPONENT_NAMES, manifest, propFields } from "@/lib/mdx/manifest";
  */
 export const toMarkdownOptions = { bullet: "-", rule: "-", emphasis: "*", strong: "*" } as const;
 
-/** One rich-text block per manifest component, with its props so the generic editor can show and edit them. */
-export function jsxDescriptors(): JsxComponentDescriptor[] {
+/**
+ * One rich-text block per manifest component. `Editor` is what renders the block: the Write view
+ * passes one that shows the real component; the default is MDXEditor's generic prop table.
+ */
+export function jsxDescriptors(Editor: JsxComponentDescriptor["Editor"] = GenericJsxEditor): JsxComponentDescriptor[] {
   return COMPONENT_NAMES.map((name) => ({
     name,
     kind: "flow",
@@ -35,19 +38,20 @@ export function jsxDescriptors(): JsxComponentDescriptor[] {
       type: f.kind === "boolean" || f.kind === "number" || f.kind === "integer" ? "expression" : "string",
       required: f.required,
     })),
-    Editor: GenericJsxEditor,
+    Editor,
   }));
 }
 
-export function editorPlugins() {
+/** The plugins every MDXEditor instance of ours uses (the Write view adds its toolbar and link dialog). */
+export function editorPlugins(Editor?: JsxComponentDescriptor["Editor"]) {
   return [
-    headingsPlugin(),
+    headingsPlugin({ allowedHeadingLevels: [2, 3] }),
     listsPlugin(),
     quotePlugin(),
     linkPlugin(),
     thematicBreakPlugin(),
     frontmatterPlugin(),
     markdownShortcutPlugin(),
-    jsxPlugin({ jsxComponentDescriptors: jsxDescriptors() }),
+    jsxPlugin({ jsxComponentDescriptors: jsxDescriptors(Editor) }),
   ];
 }

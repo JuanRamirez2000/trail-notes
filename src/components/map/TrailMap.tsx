@@ -32,7 +32,9 @@ export function TrailMap({ className, ...props }: TrailMapProps) {
           {...props}
           onLoad={() => setStatus("loaded")}
           onError={() => setStatus("failed")}
-          className="absolute inset-0"
+          // Hidden until it has painted. Otherwise, while Mapbox is still loading (or its tiles are
+          // refused), its pins show on top of the sketch's pins and every pin appears twice.
+          className={cn("absolute inset-0", !painted && "invisible")}
         />
       )}
     </div>

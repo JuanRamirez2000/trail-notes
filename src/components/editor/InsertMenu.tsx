@@ -7,7 +7,7 @@ import type { ComponentCategory } from "@/lib/mdx/manifest";
 const CATEGORIES: ComponentCategory[] = ["Guide", "Trip info", "Maps", "Photos"];
 
 /** Lists every registered MDX component; future ones appear here automatically. */
-export function InsertMenu({ onInsert }: { onInsert: (name: RegisteredComponent) => void }) {
+export function InsertMenu({ onInsert, label = "＋ Insert component ▾" }: { onInsert: (name: RegisteredComponent) => void; label?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -25,7 +25,7 @@ export function InsertMenu({ onInsert }: { onInsert: (name: RegisteredComponent)
         aria-expanded={open}
         className="cursor-pointer rounded-lg border-2 border-forest bg-highlight px-3.5 py-0.5"
       >
-        ＋ Insert component ▾
+        {label}
       </button>
       {open && (
         <div className="absolute left-0 top-full z-30 mt-1 max-h-[70dvh] w-[330px] overflow-y-auto rounded-[10px] border border-line bg-card py-1.5 shadow-[4px_4px_0_rgb(0_0_0/0.15)]">

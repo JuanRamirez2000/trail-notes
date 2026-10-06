@@ -78,31 +78,42 @@ export function findComponentAt(source: string, offset: number): SourceComponent
   return hits.at(-1) ?? null;
 }
 
-const quote = (s: string) => (s.includes('"') ? `{${JSON.stringify(s)}}` : `"${s}"`);
+export type WrittenProp = { name: string } & ({ kind: "string"; value: string } | { kind: "flag" } | { kind: "literal"; value: unknown } | { kind: "expression"; source: string });
 
 /**
- * Opening tag for `name` with `props`. Props equal to their default (or undefined, or an optional
- * boolean set to false) are left out,
- * known props come in manifest order, and anything else (internal flags, expressions) is kept.
+ * What actually gets written for a component's props, in order. One rule for both editors (the
+ * Markdown view writes a tag, the Write view writes editor attributes):
+ *  - props equal to their default, undefined or "" are left out
+ *  - an optional checkbox with no default means "off" when absent, so `false` is left out
+ *  - known props come in manifest order; anything else (internal flags, expressions) is kept
  */
-export function serializeOpeningTag(name: ComponentName, props: Record<string, unknown>, raw: Record<string, string>, selfClosing: boolean) {
+export function writtenProps(name: ComponentName, props: Record<string, unknown>, raw: Record<string, string> = {}): WrittenProp[] {
   const fields = propFields(name);
   const order = [...fields.map((f) => f.name), ...Object.keys(props), ...Object.keys(raw)].filter((k, i, a) => a.indexOf(k) === i);
-  const parts: string[] = [];
+  const out: WrittenProp[] = [];
   for (const key of order) {
     if (key in raw) {
-      parts.push(`${key}={${raw[key]}}`);
+      out.push({ name: key, kind: "expression", source: raw[key] });
       continue;
     }
     const value = props[key];
     const field = fields.find((f) => f.name === key);
     if (value === undefined || value === "" || (field && value === field.default)) continue;
-    // An optional checkbox with no default means "off" when absent, so `={false}` is just noise.
     if (value === false && field?.kind === "boolean" && field.default === undefined) continue;
-    if (value === true) parts.push(key);
-    else if (typeof value === "string") parts.push(`${key}=${quote(value)}`);
-    else parts.push(`${key}={${JSON.stringify(value)}}`);
+    if (value === true) out.push({ name: key, kind: "flag" });
+    else if (typeof value === "string") out.push({ name: key, kind: "string", value });
+    else out.push({ name: key, kind: "literal", value });
   }
+  return out;
+}
+
+const quote = (s: string) => (s.includes('"') ? `{${JSON.stringify(s)}}` : `"${s}"`);
+
+/** Opening tag for `name` with `props` (see writtenProps for what's kept). */
+export function serializeOpeningTag(name: ComponentName, props: Record<string, unknown>, raw: Record<string, string>, selfClosing: boolean) {
+  const parts = writtenProps(name, props, raw).map((p) =>
+    p.kind === "flag" ? p.name : p.kind === "string" ? `${p.name}=${quote(p.value)}` : p.kind === "literal" ? `${p.name}={${JSON.stringify(p.value)}}` : `${p.name}={${p.source}}`,
+  );
   return `<${name}${parts.length ? ` ${parts.join(" ")}` : ""}${selfClosing ? " />" : ">"}`;
 }
 

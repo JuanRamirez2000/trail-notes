@@ -74,13 +74,13 @@ export type WaypointsFile = z.infer<typeof waypointsFileSchema>;
 
 /** Practical info shown in the guide's "Before you go" card. Every field is optional. */
 export const essentialsSchema = z.object({
-  permit: z.string().optional(),
-  parking: z.string().optional(),
-  facilities: z.string().optional(),
-  water: z.string().optional(),
-  dogs: z.string().optional(),
-  cellSignal: z.string().optional(),
-  hazards: z.array(z.string()).optional(),
+  permit: z.string().optional().describe("Permit"),
+  parking: z.string().optional().describe("Parking"),
+  facilities: z.string().optional().describe("Facilities"),
+  water: z.string().optional().describe("Water"),
+  dogs: z.string().optional().describe("Dogs"),
+  cellSignal: z.string().optional().describe("Cell signal"),
+  hazards: z.array(z.string()).optional().describe("Hazards"),
 });
 export type Essentials = z.infer<typeof essentialsSchema>;
 
@@ -91,24 +91,25 @@ export const sidebarSchema = z
   .array(z.enum(SIDEBAR_CARDS))
   .refine((cards) => new Set(cards).size === cards.length, "each sidebar card can appear once");
 
+/** `.describe()` is the field's label in the editor's guide details form (components/editor/DetailsForm.tsx). */
 export const frontmatterSchema = z.object({
-  title: z.string().min(1),
-  slug: z.string().regex(/^[a-z0-9-]+$/),
-  region: z.string().min(1),
-  summary: z.string().min(1),
-  distanceMi: z.number().positive(),
-  elevationGainFt: z.number().nonnegative(),
-  difficulty: difficultySchema,
-  estTime: z.string().optional(),
-  bestSeason: z.string().optional(),
+  title: z.string().min(1).describe("Title"),
+  slug: z.string().regex(/^[a-z0-9-]+$/).describe("Address"),
+  region: z.string().min(1).describe("Region"),
+  summary: z.string().min(1).describe("Summary"),
+  distanceMi: z.number().positive().describe("Distance (mi)"),
+  elevationGainFt: z.number().nonnegative().describe("Elevation gain (ft)"),
+  difficulty: difficultySchema.describe("Difficulty"),
+  estTime: z.string().optional().describe("Estimated time"),
+  bestSeason: z.string().optional().describe("Best season"),
   /** Photo key for the cover image. Optional: hikes without photos show a contour placeholder. */
-  cover: photoKey.optional(),
-  trailhead: lngLatSchema,
-  date: z.iso.date(),
-  draft: z.boolean().default(false),
-  essentials: essentialsSchema.optional(),
+  cover: photoKey.optional().describe("Cover photo"),
+  trailhead: lngLatSchema.describe("Trailhead"),
+  date: z.iso.date().describe("Date hiked"),
+  draft: z.boolean().default(false).describe("Draft"),
+  essentials: essentialsSchema.optional().describe("Before you go"),
   /** Sidebar cards for this guide, top to bottom (also the mobile bar's sections). Default: all, in SIDEBAR_CARDS order. */
-  sidebar: sidebarSchema.optional(),
+  sidebar: sidebarSchema.optional().describe("Sidebar"),
 });
 export type Frontmatter = z.infer<typeof frontmatterSchema>;
 

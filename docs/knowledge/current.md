@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. **E2 (guides in Supabase, sign-in, guardrails) is built and deployed but switched off on the live site,** which still reads guides from files and keeps its editor closed until the owner adds keys and settings: see [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. E2 is live: the site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). E3 (Write view, details form, Publish) is built. Next: E4, the map and pin editor. What's still unverified on the live site: [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -10,7 +10,7 @@ Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whos
 - **Supabase:** project `fstcgdirhssuaevgxptv` ("trail-notes", us-east-2, Postgres 17, **free plan**: pauses after about a week idle).
   - Storage: the public bucket `hikes` (photos).
   - Tables `hikes`, `hike_revisions`, `editors` (migrations in `supabase/migrations/`, applied with the Supabase connector). Row-level security is on with explicit "server only" policies: the public key and signed-in browser sessions can read and write nothing; only the server's service-role key can.
-  - The three guides are seeded. Auth (Google) is not configured yet.
+  - The three guides are seeded. Auth: Google provider on, sign-ups closed, one editor (the owner).
 - **Design source:** Claude Design project `87e465cf-146d-4327-9930-d7562360f28b`. *Trail Guide Branded.dc.html* has the screens: 1 gallery, 2 guide page, 3a authoring view, 4a component sheet. It's readable from a session with the `DesignSync` tool (`list_files` / `get_file`) when the owner asks for it; inline styles map 1:1 onto the tokens in `globals.css`.
 
 ## Baseline hike: Strawberry Peak
@@ -59,20 +59,19 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 - **Maps:** `TrailMap` → lazy `MapboxTrailMap`, with `SketchMap` (SVG) as the base layer and fallback. Maps mount only near the viewport and use a pool (`reuseMaps`) to stay under the browser's WebGL context limit. Pins are memoised `WaypointMarker`s.
 - **Photos:** Supabase Storage is the source of truth: `<slug>/<NN>-<name>.{full,thumb}.webp`, with all metadata stripped. `public/photos` is a gitignored, dev-only backend (`NEXT_PUBLIC_PHOTO_STORAGE=local`). Production builds refuse it (guard in `next.config.ts`).
 - **Editor** (`/editor`, `src/components/editor/`): open to whoever `getEditor()`/`can()` allow (the local owner under `pnpm dev`; on the live site nobody until `EDITOR_AUTH=supabase`).
-  - CodeMirror for the guide's MDX and the raw pins JSON, read and saved through the store.
-  - Each save sends the version it was based on; a stale one shows a conflict banner and writes nothing.
-  - A live preview compiled in the browser with the same remark passes, given the track and `essentials`.
-  - Layout per design 3a: Markdown · live preview · a fixed 290px settings column.
-  - A settings panel for the component under the cursor or clicked in the preview (`ComponentSettings.tsx` + `jsx-source.ts`, which rewrites only the opening tag through a CodeMirror transaction; `remark-source-markers.ts` makes preview blocks selectable), with Duplicate and Remove.
-  - An insert menu grouped by category, and autosave after 1.5 s.
-  - MDXEditor (`mdx-editor-config.ts`) is installed for the Write mode (V2 E3); only the tests use it so far.
+  - `Editor.tsx` is the shell: it holds the guide (MDX + pins JSON), autosaves after 1.5 s through the store, and switches between three views of the same document. Each save sends the version it was based on; a stale one shows a conflict banner and writes nothing.
+  - **Write** (default, `write/WriteView.tsx`): MDXEditor on the body only. Every manifest component is a live block rendering the real component inside a `HikeProvider`; a block's own text (a Step's notes) is a nested editor inside it; the selected block renders its generated `SettingsForm` into the settings column through a portal. `mdx-editor-config.ts` holds the shared plugin setup (also used by the round-trip test).
+  - **Details** (`DetailsForm.tsx`): a form generated from `frontmatterSchema` (labels are the schema's `.describe()`); each change rewrites one frontmatter entry with `src/lib/frontmatter.ts`, leaving the rest of the YAML as written.
+  - **Advanced** (`AdvancedView.tsx`): CodeMirror for the raw Markdown and pins JSON, a live preview compiled in the browser with the same remark passes, and the settings column for the component under the cursor or clicked in the preview (`jsx-source.ts` rewrites only the opening tag; `remark-source-markers.ts` makes preview blocks selectable). Layout per design 3a.
+  - Publish / Unpublish flip the guide's `draft` flag (a normal, autosaved change).
+  - `writtenProps` (`jsx-source.ts`) is the one rule for which props get written (defaults and unticked optional checkboxes are left out), used by both the Markdown tag writer and the Write view.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Dev server on **port 3100** (3000 is taken by another project on the owner's machine). Guides are read from `content/hikes` on each request, so an edited file shows on reload. The editor is open as a local owner |
-| `pnpm test` | Vitest (139 tests: store contract on local files, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom) |
+| `pnpm test` | Vitest (149 tests: frontmatter split/join/edit, store contract on local files, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom) |
 | `SUPABASE_CONTRACT_TESTS=1 pnpm test supabase` | The same store contract against the real Supabase project, plus the lockdown test. Uses and removes `zz-contract-*` draft rows. Never in CI |
 | `pnpm typecheck` | `next typegen && tsc --noEmit` |
 | `pnpm build` | `next build` |
@@ -99,6 +98,9 @@ Environment switches: `CONTENT_STORE` (`local` default, `supabase`), `EDITOR_AUT
 - **Next 16.3 evaluates `next.config.ts` in a child process** whose argv lacks `dev`. Detect dev with `process.env.NODE_ENV === "development"`.
 - **The service-role key bypasses row-level security.** It lives in `.env.local` and, once the owner adds it, in Vercel as a sensitive server-only variable. Only `src/lib/store/server.ts` (marked `server-only`) and the scripts create a client with it. It is never entered into a dashboard or tool from a coding session; the owner does that.
 - **Never create accounts in the real Supabase project from a session**, even test ones. Sign-in can therefore only be verified by the owner; what's unverified is listed in [e2-go-live.md](e2-go-live.md).
+- **MDXEditor only commits a block's nested text on blur.** `WriteView` asks the nested field to commit 500 ms after a keystroke (dispatching `NESTED_EDITOR_UPDATED_COMMAND` to the field's Lexical editor, found on the element as `__lexicalEditor`), otherwise autosave misses text still being typed. It listens to key/paste events, not `input`: Lexical cancels `beforeinput`, so `input` never fires.
+- **MDXEditor deletes a whole block on Backspace in its empty text field.** `WriteView` swallows that keystroke; blocks are removed with the Remove button.
+- **Maps: the Mapbox layer stays `invisible` until it has painted** (`TrailMap.tsx`). Otherwise, while tiles are loading or refused, Mapbox's pins show on top of the sketch map's pins and every pin appears twice.
 - **Stage files explicitly when committing.** `git add -A` once swept an editor autosave of the owner's into a commit; the dev server may be saving while a session works.
 - **Postgres `jsonb` reorders object keys.** Use `json` for anything that should read back as written (pins, track).
 - **`tsx` ran scripts as CommonJS until the package became `"type": "module"`;** the MDX compiler's dependencies are ESM-only and can't be `require`d.

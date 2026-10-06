@@ -16,7 +16,12 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
   - Every autosave writes a revision row; prune or coarsen later.
   - `pnpm photos check` reads `content/`, not the database.
   - The editors can't preview a draft as a full page on the live site (drafts have no public page).
-- [ ] V2 milestones after E2: E3 Write mode and guide details form, E4 map and pin editor, E5 create a hike in the app ([v2-plan.md](v2-plan.md)).
+- [ ] E3 leftovers:
+  - Write view: required pins without a `<Step>` still get a generated section on the page but aren't shown in the document. Show them as "add this section" placeholders.
+  - Write view: no Duplicate (the Markdown view has it); no drag-to-reorder for blocks (cut and paste works).
+  - "Autosaved 2 min ago" instead of a clock time; a publish confirmation.
+  - The editor's top bar on a phone wraps to three rows.
+- [ ] V2 milestones left: E4 map and pin editor, E5 create a hike in the app ([v2-plan.md](v2-plan.md)).
 - [ ] Phone layout for the editor: design 3a is desktop-only (three columns, fixed 290px settings column), and live-site editing is meant to work from the phone.
 
 ## Left over from V1 (unscheduled; pick up after V2 or between milestones)
