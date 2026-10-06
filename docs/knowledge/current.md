@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. E2 is live: the site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). E3 (Write view, details form, Publish) is built. Next: E4, the map and pin editor. What's still unverified on the live site: [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. E2 is live: the site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). E3 (Write view, details form, Publish) and E4 (the Pins view) are built. Next: E5, creating a hike in the app. What's still unverified on the live site: [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -59,9 +59,10 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 - **Maps:** `TrailMap` → lazy `MapboxTrailMap`, with `SketchMap` (SVG) as the base layer and fallback. Maps mount only near the viewport and use a pool (`reuseMaps`) to stay under the browser's WebGL context limit. Pins are memoised `WaypointMarker`s.
 - **Photos:** Supabase Storage is the source of truth: `<slug>/<NN>-<name>.{full,thumb}.webp`, with all metadata stripped. `public/photos` is a gitignored, dev-only backend (`NEXT_PUBLIC_PHOTO_STORAGE=local`). Production builds refuse it (guard in `next.config.ts`).
 - **Editor** (`/editor`, `src/components/editor/`): open to whoever `getEditor()`/`can()` allow (the local owner under `pnpm dev`; on the live site nobody until `EDITOR_AUTH=supabase`).
-  - `Editor.tsx` is the shell: it holds the guide (MDX + pins JSON), autosaves after 1.5 s through the store, and switches between three views of the same document. Each save sends the version it was based on; a stale one shows a conflict banner and writes nothing.
+  - `Editor.tsx` is the shell: it holds the guide (MDX + pins JSON), autosaves after 1.5 s through the store, and switches between four views of the same document. Each save sends the version it was based on; a stale one shows a conflict banner and writes nothing.
   - **Write** (default, `write/WriteView.tsx`): MDXEditor on the body only. Every manifest component is a live block rendering the real component inside a `HikeProvider`; a block's own text (a Step's notes) is a nested editor inside it; the selected block renders its generated `SettingsForm` into the settings column through a portal. `mdx-editor-config.ts` holds the shared plugin setup (also used by the round-trip test).
   - **Details** (`DetailsForm.tsx`): a form generated from `frontmatterSchema` (labels are the schema's `.describe()`); each change rewrites one frontmatter entry with `src/lib/frontmatter.ts`, leaving the rest of the YAML as written.
+  - **Pins** (`pins/PinsView.tsx`, `pins/PinMap.tsx`): the pins on an interactive map (drag to move, snapping onto the track within about 80 m; drag the yellow handle to aim the photo direction; add by clicking), a list in route order and a form per pin. All edits are pure functions over the pins JSON as written (`pins/pin-ops.ts`): they keep fields and their order, renumber `order` in steps of 10, slot a new pin in by trail mileage, and rename a pin together with the blocks that point at it.
   - **Advanced** (`AdvancedView.tsx`): CodeMirror for the raw Markdown and pins JSON, a live preview compiled in the browser with the same remark passes, and the settings column for the component under the cursor or clicked in the preview (`jsx-source.ts` rewrites only the opening tag; `remark-source-markers.ts` makes preview blocks selectable). Layout per design 3a.
   - Publish / Unpublish flip the guide's `draft` flag (a normal, autosaved change).
   - `writtenProps` (`jsx-source.ts`) is the one rule for which props get written (defaults and unticked optional checkboxes are left out), used by both the Markdown tag writer and the Write view.
@@ -71,7 +72,7 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Dev server on **port 3100** (3000 is taken by another project on the owner's machine). Guides are read from `content/hikes` on each request, so an edited file shows on reload. The editor is open as a local owner |
-| `pnpm test` | Vitest (149 tests: frontmatter split/join/edit, store contract on local files, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom) |
+| `pnpm test` | Vitest (162 tests: pin operations, frontmatter split/join/edit, store contract on local files, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom) |
 | `SUPABASE_CONTRACT_TESTS=1 pnpm test supabase` | The same store contract against the real Supabase project, plus the lockdown test. Uses and removes `zz-contract-*` draft rows. Never in CI |
 | `pnpm typecheck` | `next typegen && tsc --noEmit` |
 | `pnpm build` | `next build` |

@@ -1,6 +1,6 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is live** (2026-10-05: guides in Supabase, Google sign-in, sign-ups closed; a save from the live editor is still to be confirmed, see [e2-go-live.md](e2-go-live.md)). **E3 is built.** Next: E4, the map and pin editor._
+_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is live** (2026-10-05: guides in Supabase, Google sign-in, sign-ups closed; a save from the live editor is still to be confirmed, see [e2-go-live.md](e2-go-live.md)). **E3 and E4 are built.** Next: E5, creating a hike in the app._
 
 ## Decisions
 
@@ -201,7 +201,13 @@ The plan as written (the primary way to write):
 - Apply E0's one-time normalisations (2-space indent inside blocks, `*em*`) to the stored guides once first, so the first Write-mode save of a guide isn't a noisy diff.
 - Done when Strawberry Peak's text and details can be rewritten without opening the source view.
 
-**E4: Map and pin editor** (replaces the raw `waypoints.json` tab; the JSON moves under "Advanced").
+**E4: Map and pin editor. ✅ Built 2026-10-05.** As built: a **Pins** view (`src/components/editor/pins/`). `PinMap.tsx` is the interactive map (drag a pin; drag the yellow handle to aim the photo direction; "Add a pin" then click). `PinsView.tsx` has the list in route order (with move up/down) and a form for the selected pin (type, label, title, caption, safety note, photo, direction, position, mileage override, id with rename, delete). Every change goes through pure functions in `pin-ops.ts`, which work on the pins JSON as written. Differences from the plan below:
+- Dragging a pin keeps its place in the route order (an out-and-back makes "order by mileage" ambiguous); a new pin is slotted in by mileage, and the list has move up/down.
+- Renaming a pin updates the blocks that point at it; a pin a block points at can't be deleted.
+- The photo picker offers the photos the hike's pins already use, not everything in the bucket (that needs a server route; [todo.md](todo.md)).
+- The move-a-pin check ran as an ad hoc browser script, not a committed E2E test.
+
+The plan as written (replaces the raw `waypoints.json` tab; the JSON moves under "Advanced"):
 - A map with the track and pins. Drag a pin and it snaps to the track (`src/lib/track.ts`); drag the view cone to set the heading.
 - Click the track to add a pin; delete pins; order follows trail mileage automatically.
 - A form per pin: type, label, title, caption, note, and a photo picker from the photos already uploaded for the hike. Listing them needs a small server route, since the browser only knows the photos that pins already use.

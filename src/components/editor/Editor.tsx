@@ -12,6 +12,7 @@ import { AdvancedView } from "./AdvancedView";
 import { countComponents, countWords, parseWaypoints } from "./compile";
 import { DetailsForm } from "./DetailsForm";
 import { EditorAccount } from "./EditorAccount";
+import { PinsView } from "./pins/PinsView";
 import type { Cursor } from "./SourceEditor";
 
 // MDXEditor is large and browser-only, so it loads when the Write view is opened.
@@ -30,13 +31,14 @@ type Props = {
   editorName: string;
   canSignOut: boolean;
 };
-type View = "write" | "details" | "advanced";
+type View = "write" | "details" | "pins" | "advanced";
 type SaveState = { kind: "idle" | "saving" | "saved" | "error" | "conflict"; at?: Date; problems?: string[] };
 
 const AUTOSAVE_MS = 1500;
 const VIEWS: { id: View; label: string; hint: string }[] = [
   { id: "write", label: "Write", hint: "The guide as a document, with its blocks" },
   { id: "details", label: "Details", hint: "Title, stats, Before you go, sidebar" },
+  { id: "pins", label: "Pins", hint: "Pins on the map: move, aim, add, edit" },
   { id: "advanced", label: "Advanced", hint: "Raw Markdown and pins JSON" },
 ];
 
@@ -235,6 +237,24 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
           <DetailsForm yaml={doc.yaml} waypoints={pins} onChange={setYaml} />
         </div>
       )}
+
+      {view === "pins" &&
+        (parsed.ok ? (
+          <PinsView
+            waypoints={waypoints}
+            pins={pins}
+            mdx={mdx}
+            track={track}
+            route={route}
+            onWaypoints={setWaypoints}
+            onBoth={(json, nextMdx) => {
+              setWaypoints(json);
+              setMdx(nextMdx);
+            }}
+          />
+        ) : (
+          <p className="m-6 rounded-lg border-2 border-dashed border-pin-bailout bg-card p-3 text-pin-bailout">The pins have a problem that has to be fixed under Advanced → Pins (JSON) first: {parsed.error}</p>
+        ))}
 
       {view === "advanced" && (
         <AdvancedView slug={slug} mdx={mdx} waypoints={waypoints} onMdx={setMdx} onWaypoints={setWaypoints} track={track} parsedWaypoints={pins} onCursor={setCursor} />
