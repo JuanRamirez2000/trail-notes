@@ -124,9 +124,12 @@ export default function WriteView({ body, onChange, waypoints, route, essentials
             plugins={plugins}
             toMarkdownOptions={toMarkdownOptions}
             onChange={(markdown, initialNormalize) => {
-              latest.current = markdown;
+              // A space typed at the end of a line is serialised as "&#x20;" so Markdown keeps it.
+              // It means nothing in a guide, so it's dropped rather than saved.
+              const clean = markdown.replace(/(?:&#x20;)+(?=\n|$)/g, "");
+              latest.current = clean;
               // Loading a document can reformat it slightly (see mdx-editor-config). That isn't an edit.
-              if (!initialNormalize) onChange(markdown);
+              if (!initialNormalize) onChange(clean);
             }}
             onError={({ error }) => console.error("Write view:", error)}
           />

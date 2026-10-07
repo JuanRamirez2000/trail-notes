@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. E2 is live: the site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). E3 (Write view, details form, Publish), E4 (the Pins view) and E5 (creating a hike in the app) are built, so every V2 milestone is in `main`. What's still unverified on the live site: [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-05. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)** in progress: E0 and E1 done. E2 is live: the site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). E3 (Write view, details form, Publish), E4 (the Pins view) and E5 (creating a hike in the app) are built, so every V2 milestone is in `main`. Sign-in, a live save and the page refresh were verified on the live site on 2026-10-06; what's still unchecked is in [e2-go-live.md](e2-go-live.md). Plan: [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -100,6 +100,7 @@ Environment switches: `CONTENT_STORE` (`local` default, `supabase`), `EDITOR_AUT
 - **Next 16.3 evaluates `next.config.ts` in a child process** whose argv lacks `dev`. Detect dev with `process.env.NODE_ENV === "development"`.
 - **The service-role key bypasses row-level security.** It lives in `.env.local` and, once the owner adds it, in Vercel as a sensitive server-only variable. Only `src/lib/store/server.ts` (marked `server-only`) and the scripts create a client with it. It is never entered into a dashboard or tool from a coding session; the owner does that.
 - **Never create accounts in the real Supabase project from a session**, even test ones. Sign-in can therefore only be verified by the owner; what's unverified is listed in [e2-go-live.md](e2-go-live.md).
+- **MDXEditor writes a trailing space as `&#x20;`.** `WriteView` strips it before the text is saved.
 - **MDXEditor only commits a block's nested text on blur.** `WriteView` asks the nested field to commit 500 ms after a keystroke (dispatching `NESTED_EDITOR_UPDATED_COMMAND` to the field's Lexical editor, found on the element as `__lexicalEditor`), otherwise autosave misses text still being typed. It listens to key/paste events, not `input`: Lexical cancels `beforeinput`, so `input` never fires.
 - **MDXEditor deletes a whole block on Backspace in its empty text field.** `WriteView` swallows that keystroke; blocks are removed with the Remove button.
 - **Maps: the Mapbox layer stays `invisible` until it has painted** (`TrailMap.tsx`). Otherwise, while tiles are loading or refused, Mapbox's pins show on top of the sketch map's pins and every pin appears twice.

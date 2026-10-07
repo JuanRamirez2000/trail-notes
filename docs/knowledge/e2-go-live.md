@@ -83,6 +83,15 @@ You can do this in two stages if you prefer: set the first three and redeploy (t
 - **GitHub → repo Settings → Secrets and variables → Actions:** add `SUPABASE_SERVICE_ROLE_KEY`. CI then checks every stored guide on each push, so a code change that would break a stored guide is caught. Without it that step is skipped.
 - **Supabase plan:** the project is on the free plan, which pauses after about a week without activity. A daily request from Vercel keeps it awake once `CONTENT_STORE=supabase` is live. A paid plan removes the risk entirely.
 
+## Verified on the live site (2026-10-06)
+
+- Google sign-in, the editors list (`juanpram2000@gmail.com`, owner) and closed sign-ups: the owner signed in and reached the editor.
+- A save from the live editor: three saves on Strawberry Peak are in `hike_revisions` under the owner's account (versions 4–6), and the stored guide passes the save gate.
+- The public page refreshed without a deploy: the first request after the save was served `STALE` while the page was rebuilt, the next one had the change.
+- `/api/health` reports `"store":"supabase"`; signed out, `/editor`, `/editor/new` and both API routes are 404.
+
+Everything below that isn't covered by those four points is still unchecked.
+
 ## What to check once the keys are in
 
 These are the parts that could not be exercised without your keys, or that depend on a service behaving as documented. Grouped by where a problem would show.
