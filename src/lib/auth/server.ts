@@ -1,9 +1,11 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { cache } from "react";
-import { getServiceClient } from "../store/server";
-import type { Editor, EditorRole } from "../store/types";
+import { editors } from "../../db/schema";
+import { getDatabase } from "../store/server";
+import type { Editor } from "../store/types";
 
 /**
  * Who is using the editor. Everything that protects the editor goes through getEditor() here and
@@ -64,11 +66,10 @@ export const getEditor = cache(async (): Promise<Editor | null> => {
   if (error || !data.user) return null;
   const user = data.user;
 
-  // The allow-list is read with the service client: the table is closed to browser roles.
-  const service = await getServiceClient();
-  const row = await service.from("editors").select("role").eq("user_id", user.id).maybeSingle();
-  if (row.error || !row.data) return null;
+  // The allow-list is read by the server's own database connection: the table is closed to browser roles.
+  const [row] = await getDatabase().select({ role: editors.role }).from(editors).where(eq(editors.userId, user.id));
+  if (!row) return null;
 
   const meta = user.user_metadata as { full_name?: string; name?: string };
-  return { id: user.id, email: user.email, name: meta.full_name ?? meta.name ?? user.email ?? "Editor", role: row.data.role as EditorRole };
+  return { id: user.id, email: user.email, name: meta.full_name ?? meta.name ?? user.email ?? "Editor", role: row.role };
 });

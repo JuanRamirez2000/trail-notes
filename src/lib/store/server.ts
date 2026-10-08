@@ -1,22 +1,20 @@
 import "server-only";
-import { connect } from "../../db/client";
+import { connect, type Database } from "../../db/client";
 import { localBackend } from "./local";
 import { postgresBackend } from "./postgres";
 import { createStore } from "./store";
-import { serviceClient, supabaseBackend } from "./supabase";
 import type { ContentStore } from "./types";
 
 /**
  * Which store this server uses, from CONTENT_STORE:
  *   local    → files in content/hikes (the default: `pnpm dev`, tests)
- *   supabase → the database through supabase-js; needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
- *   postgres → the same database through Drizzle (src/db); needs DATABASE_URL
+ *   postgres → the database (Supabase in production) through Drizzle; needs DATABASE_URL
  *
- * Chosen explicitly rather than by "is the key present", so a missing key is a loud error at
- * build or request time instead of the site quietly serving the files baked into the deploy.
- * A value that is neither (a typo) is an error for the same reason.
+ * Chosen explicitly rather than by "is a connection string present", so a missing one is a loud
+ * error at build or request time instead of the site quietly serving the files baked into the
+ * deploy. A value that is neither (a typo, or the retired "supabase") is an error for the same reason.
  */
-const KINDS = ["local", "supabase", "postgres"] as const;
+const KINDS = ["local", "postgres"] as const;
 
 export function contentStoreKind(): (typeof KINDS)[number] {
   const kind = process.env.CONTENT_STORE || "local";
@@ -27,27 +25,16 @@ export function contentStoreKind(): (typeof KINDS)[number] {
 let store: Promise<ContentStore> | undefined;
 
 export function getStore(): Promise<ContentStore> {
-  store ??= make();
+  store ??= Promise.resolve().then(() => (contentStoreKind() === "local" ? createStore(localBackend()) : createStore(postgresBackend(getDatabase()))));
   return store;
 }
 
-async function make(): Promise<ContentStore> {
-  const kind = contentStoreKind();
-  if (kind === "local") return createStore(localBackend());
-  if (kind === "postgres") {
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error("CONTENT_STORE=postgres needs DATABASE_URL (server-only): the database's connection string.");
-    return createStore(postgresBackend(connect(url)));
-  }
-  return createStore(supabaseBackend(await getServiceClient()));
-}
+let db: Database | undefined;
 
-/** The service-role Supabase client. Server only: this key bypasses row-level security. */
-export async function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("CONTENT_STORE=supabase needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (server-only) to be set.");
-  }
-  return serviceClient(url, key);
+/** The database connection: server only, it connects as the database owner (row-level security doesn't apply). */
+export function getDatabase(): Database {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL (server-only) must be set: the database's connection string. See .env.example.");
+  db ??= connect(url);
+  return db;
 }

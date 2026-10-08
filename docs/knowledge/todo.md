@@ -11,7 +11,7 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
   - the public repo's git history (`content/hikes/*/waypoints.json` before 2026-10-07). Removing it means rewriting history and force-pushing.
 - [ ] **Backups.** The free Supabase plan has none, and the database is the only copy of edits made on the live site. A scheduled `pnpm content pull` (committed, or to a private place) would cover the text; the photo originals exist only on the owner's Mac.
 - [ ] **Nothing watches `/api/health`.** It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
-- [ ] **CI doesn't check the stored guides:** the `SUPABASE_SERVICE_ROLE_KEY` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
+- [ ] **CI doesn't check the stored guides:** the `DATABASE_URL` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
 - [ ] **The release itself** is planned step by step in [v0.1-plan.md](v0.1-plan.md) (`v0.1.0`, MIT for the code, decided 2026-10-08).
 - [ ] **An orphaned `pnpm start` on port 3101** (started 2026-09-29) was still running on the owner's Mac on 2026-10-07.
 
@@ -54,7 +54,7 @@ None changes behaviour; each needs the tests named first.
   - Out-and-back hikes: a new pin on a stretch walked twice is placed on the first pass; a "which way" choice would be clearer than moving it in the list.
   - Commit the pin-editor browser checks as an E2E test.
 - [ ] E5 leftovers:
-  - Replace a hike's track from the app (today: `pnpm gpx --slug <slug> --guides supabase`).
+  - Replace a hike's track from the app (today: `pnpm gpx --slug <slug> --guides postgres`).
   - The new-hike form doesn't share code with the Details form.
 - [ ] Phone layout for the editor: design 3a is desktop-only (three columns, fixed 290px settings column), and live-site editing is meant to work from the phone.
 

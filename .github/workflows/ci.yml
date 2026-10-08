@@ -14,7 +14,7 @@ env:
   NEXT_PUBLIC_PHOTO_STORAGE: supabase
   NEXT_PUBLIC_SUPABASE_URL: https://fstcgdirhssuaevgxptv.supabase.co
   NEXT_TELEMETRY_DISABLED: 1
-  HAS_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+  HAS_DATABASE_URL: ${{ secrets.DATABASE_URL != '' }}
 
 jobs:
   check:
@@ -50,10 +50,10 @@ jobs:
       - run: pnpm build
       # Guides in the database aren't covered by a build: a code change (a renamed prop, a stricter
       # rule) could break one without anything failing. This runs the save gate over every stored
-      # guide, read-only. It needs the SUPABASE_SERVICE_ROLE_KEY repository secret and is skipped
-      # without it (and on pull requests from forks, which never receive secrets).
+      # guide, read-only. It needs the DATABASE_URL repository secret and is skipped without it (and
+      # on pull requests from forks, which never receive secrets).
       - name: Stored guides pass the save gate
-        if: ${{ env.HAS_SERVICE_KEY == 'true' }}
+        if: ${{ env.HAS_DATABASE_URL == 'true' }}
         env:
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: pnpm content check --store supabase
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm content check --store postgres

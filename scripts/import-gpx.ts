@@ -1,9 +1,9 @@
 /**
  * Imports a recorded route (GPX) as a hike's track, through the content store (files in
- * content/hikes by default, the database with --guides supabase). For a slug that doesn't exist
+ * content/hikes by default, the database with --guides postgres). For a slug that doesn't exist
  * yet it creates a draft hike with the route's stats filled in.
  *
- *   pnpm gpx <file.gpx> --slug <hike-slug> [--tolerance 0.00003] [--guides local|supabase]
+ *   pnpm gpx <file.gpx> --slug <hike-slug> [--tolerance 0.00003] [--guides local|postgres]
  *
  * Privacy: only lat/lng/elevation are kept. Timestamps, heart rate, cadence, temperature and
  * device metadata are dropped, so the track is safe to publish.
@@ -30,7 +30,7 @@ const { values, positionals } = parseArgs({
 const file = positionals[0];
 const slug = values.slug ?? "";
 if (!file || !SLUG.test(slug) || RESERVED_SLUGS.includes(slug)) {
-  console.error("Usage: pnpm gpx <file.gpx> --slug <kebab-slug> [--tolerance 0.00003] [--guides local|supabase]");
+  console.error("Usage: pnpm gpx <file.gpx> --slug <kebab-slug> [--tolerance 0.00003] [--guides local|postgres]");
   process.exit(1);
 }
 

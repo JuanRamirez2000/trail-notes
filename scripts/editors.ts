@@ -9,10 +9,13 @@
  * This script only manages that list. It never creates accounts: with sign-ups closed, add the
  * person under Authentication → Users in the Supabase dashboard first (same email as their Google
  * account); their first Google sign-in then attaches to that user.
- * Needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (.env.local).
+ * Needs DATABASE_URL (.env.local). Accounts are looked up read-only in Supabase's auth.users.
  */
 import { parseArgs } from "node:util";
-import { serviceClient } from "../src/lib/store/supabase";
+import { asc, eq, sql } from "drizzle-orm";
+import { authUsers } from "drizzle-orm/supabase";
+import { editors } from "../src/db/schema";
+import { scriptDatabase } from "./lib/stores";
 
 try {
   process.loadEnvFile(".env.local");
@@ -24,39 +27,26 @@ const { values, positionals } = parseArgs({ allowPositionals: true, options: { r
 const [cmd, email] = positionals;
 
 async function main() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see .env.example)");
-  const supabase = await serviceClient(url, key);
-
-  const users = async () => {
-    const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (error) throw new Error(error.message);
-    return data.users;
-  };
-  const find = async (e: string) => (await users()).find((u) => u.email?.toLowerCase() === e.toLowerCase());
+  const db = scriptDatabase("pnpm editors");
 
   if (cmd === "list") {
-    const { data, error } = await supabase.from("editors").select("user_id, role, created_at").order("created_at");
-    if (error) throw new Error(error.message);
-    const all = await users();
-    if (!data.length) console.log("No editors yet. Add one with: pnpm editors add <email> --role owner");
-    for (const row of data) console.log(`  ${row.role.padEnd(6)} ${all.find((u) => u.id === row.user_id)?.email ?? row.user_id}`);
+    const rows = await db.select({ role: editors.role, email: authUsers.email, userId: editors.userId }).from(editors).leftJoin(authUsers, eq(authUsers.id, editors.userId)).orderBy(asc(editors.createdAt));
+    if (!rows.length) console.log("No editors yet. Add one with: pnpm editors add <email> --role owner");
+    for (const row of rows) console.log(`  ${row.role.padEnd(6)} ${row.email ?? row.userId}`);
     return;
   }
 
   if (!email || !["add", "remove"].includes(cmd)) throw new Error("Usage: pnpm editors <list | add <email> [--role owner|editor] | remove <email>>");
-  if (!["owner", "editor"].includes(values.role)) throw new Error('--role must be "owner" or "editor"');
-  const user = await find(email);
+  const role = values.role;
+  if (role !== "owner" && role !== "editor") throw new Error('--role must be "owner" or "editor"');
+  const [user] = await db.select({ id: authUsers.id }).from(authUsers).where(sql`lower(${authUsers.email}) = ${email.toLowerCase()}`);
   if (!user) throw new Error(`No account for ${email}. Add the user in the Supabase dashboard (Authentication → Users) first.`);
 
   if (cmd === "add") {
-    const { error } = await supabase.from("editors").upsert({ user_id: user.id, role: values.role });
-    if (error) throw new Error(error.message);
-    console.log(`✓ ${email} can now use the editor as ${values.role}`);
+    await db.insert(editors).values({ userId: user.id, role }).onConflictDoUpdate({ target: editors.userId, set: { role } });
+    console.log(`✓ ${email} can now use the editor as ${role}`);
   } else {
-    const { error } = await supabase.from("editors").delete().eq("user_id", user.id);
-    if (error) throw new Error(error.message);
+    await db.delete(editors).where(eq(editors.userId, user.id));
     console.log(`✓ ${email} removed from the editors list (their account still exists)`);
   }
 }

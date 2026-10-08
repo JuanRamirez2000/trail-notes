@@ -1,7 +1,7 @@
 /**
  * Turns a folder of hike photos into a draft waypoints file + web-ready images.
  *
- *   pnpm ingest <photo-folder> --slug <hike-slug> [--storage local|supabase] [--guides local|supabase] [--force] [--dry-run]
+ *   pnpm ingest <photo-folder> --slug <hike-slug> [--storage local|supabase] [--guides local|postgres] [--force] [--dry-run]
  *
  * 1. Reads GPS, capture time and compass heading from EXIF (exifr).
  * 2. Sorts by capture time (used for ordering only, never stored) and fills missing headings:
@@ -9,7 +9,7 @@
  * 3. Writes 2 webp variants per photo with ALL metadata stripped (originals never leave your machine).
  * 4. Uploads to /public/photos or Supabase Storage.
  * 5. Writes the pins through the content store (files in content/hikes by default, the database
- *    with --guides supabase), plus a stub guide for new hikes. The store validates the result
+ *    with --guides postgres), plus a stub guide for new hikes. The store validates the result
  *    and refuses it if the hike was saved by someone else in the meantime.
  *
  * If the hike already has waypoints, the new photos are merged in rather than replacing them:
@@ -69,7 +69,7 @@ const storage = (values.storage ?? process.env.NEXT_PUBLIC_PHOTO_STORAGE ?? "loc
 const dryRun = values["dry-run"];
 
 if (!dir || !SLUG.test(slug) || RESERVED_SLUGS.includes(slug) || !["local", "supabase"].includes(storage)) {
-  console.error("Usage: pnpm ingest <photo-folder> --slug <kebab-slug> [--storage local|supabase] [--guides local|supabase] [--force] [--dry-run]");
+  console.error("Usage: pnpm ingest <photo-folder> --slug <kebab-slug> [--storage local|supabase] [--guides local|postgres] [--force] [--dry-run]");
   process.exit(1);
 }
 

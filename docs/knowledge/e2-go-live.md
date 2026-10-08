@@ -7,7 +7,7 @@ _Written 2026-10-05, switched on the same day. The live site reads guides from S
 | Piece | State on 2026-10-07 |
 | --- | --- |
 | Database tables, lockdown rules, history | **Live** in Supabase project `fstcgdirhssuaevgxptv`. |
-| Site reading from the database | **Live** (`CONTENT_STORE=supabase`). |
+| Site reading from the database | **Live** (`CONTENT_STORE=supabase` until 2026-10-08; now `postgres`, through Drizzle). |
 | Google sign-in, editors list | **Live** (`EDITOR_AUTH=supabase`); sign-in, a save and the page refresh without a deploy were verified on 2026-10-06. |
 | Still unverified | See the checklist further down: session refresh with a real token, the conflict banner on the live site, a new hike's page without a deploy, an unreachable database. |
 
@@ -65,9 +65,9 @@ In Vercel, **Project → Settings → Environment Variables**, for **Production*
 
 | Name | Value | Notes |
 | --- | --- | --- |
-| `SUPABASE_SERVICE_ROLE_KEY` | the service-role key from `.env.local` | Mark it **Sensitive**. This key bypasses every database rule; it must never get a `NEXT_PUBLIC_` name. |
+| `DATABASE_URL` | the transaction pooler connection string from `.env.local` | Mark it **Sensitive**. It is the database owner's password; it must never get a `NEXT_PUBLIC_` name. (Until 2026-10-08 this row was `SUPABASE_SERVICE_ROLE_KEY`, which the site no longer uses.) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | the publishable key from `.env.local` | Public by design. |
-| `CONTENT_STORE` | `supabase` | The site reads and saves guides in the database. |
+| `CONTENT_STORE` | `postgres` | The site reads and saves guides in the database, through Drizzle. |
 | `EDITOR_AUTH` | `supabase` | Opens `/sign-in` and `/editor` to people on the editors list. |
 
 Then **redeploy** (Deployments → the latest → Redeploy). Variables only apply to new deployments.
@@ -113,14 +113,14 @@ These are the parts that could not be exercised without your keys, or that depen
 - [ ] **A brand-new hike gets a page without a deploy:** seed or create a published hike and open `/hikes/<slug>`.
 - [ ] **The daily keep-alive** shows under the project's Cron Jobs in Vercel, and `/api/health` reports `"store":"supabase"`.
 - [ ] **If the database is unreachable**, cached pages should keep being served. Untested; the only way to test it is to pause the project.
-- [ ] **The build now needs the database.** With `CONTENT_STORE=supabase`, a build reads guides from Supabase. If the key is missing or the project is paused, the build fails (the previous deployment stays live). That is intended, but it is a new way for a deploy to fail.
+- [ ] **The build now needs the database.** With `CONTENT_STORE=postgres`, a build reads guides from the database. If the key is missing or the project is paused, the build fails (the previous deployment stays live). That is intended, but it is a new way for a deploy to fail.
 - [ ] **Every autosave is a history row.** Typing for an hour writes a lot of rows to `hike_revisions`. Fine at this size; pruning or coarser history is a later job.
 - [ ] **The rate limit is per server instance** (60 saves a minute per editor). It stops a runaway tab, not a determined attacker; the real protection is that only listed editors can save at all.
 
 ### Dependencies and things that can drift
 
 - [ ] **`content/hikes` and the database are now two copies.** After the switch the database is what the site shows; the repo copy is seed data and the test baseline. Edits made in the live editor don't appear in the repo until `pnpm content pull`. `pnpm content seed` refuses to overwrite a stored guide that differs unless `--force`.
-- [ ] **`pnpm ingest` and `pnpm gpx` write to files unless told otherwise.** After the switch, use `--guides supabase` to change what the live site shows.
+- [ ] **`pnpm ingest` and `pnpm gpx` write to files unless told otherwise.** After the switch, use `--guides postgres` to change what the live site shows.
 - [ ] **`pnpm photos check` reads the repo's copy of the guides**, not the database, so it won't notice a photo referenced only by a guide edited live.
 - [ ] **Google in Testing mode** only lets listed test users in. A new editor who isn't a test user gets Google's own error page, before our "not on the editors list" message.
 - [ ] **Supabase links a Google sign-in to an existing account by email.** Step 3 creates the account by signing in, so this isn't relied on; it matters only if you ever create users by hand in the dashboard.

@@ -2,17 +2,13 @@
  * Guides between the repo's files and the database.
  *
  *   pnpm content check                  every guide in content/hikes passes the save gate (CI runs this)
- *   pnpm content check --store supabase the same for every guide stored in Supabase (read-only)
- *   pnpm content seed [slug] [--force]  copy content/hikes → Supabase, through the store
- *   pnpm content pull [slug]            copy Supabase → content/hikes (refresh the repo's copy on purpose)
- *
- * The database is reached with supabase-js by default, or with `--store postgres` through Drizzle
- * (DATABASE_URL); both are the same tables.
+ *   pnpm content check --store postgres the same for every guide in the database (read-only)
+ *   pnpm content seed [slug] [--force]  copy content/hikes → the database, through the store
+ *   pnpm content pull [slug]            copy the database → content/hikes (refresh the repo's copy on purpose)
  *
  * `content/hikes` is seed data, fixtures and the test baseline; in production the database is what
  * the site shows. Seeding never overwrites a stored guide that differs unless --force is given.
- * The Supabase commands need NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (.env.local);
- * `--store postgres` needs DATABASE_URL instead.
+ * The database commands need DATABASE_URL (.env.local).
  */
 import { parseArgs } from "node:util";
 import { localBackend } from "../src/lib/store/local";
@@ -34,8 +30,8 @@ const { values, positionals } = parseArgs({
 const [cmd, only] = positionals;
 
 const local = () => createStore(localBackend());
-/** The database, for seed and pull: through supabase-js unless `--store postgres` is given. */
-const remote = () => scriptStore(values.store === "local" ? "supabase" : values.store);
+/** The database, for seed and pull (and `check --store postgres`). */
+const remote = () => scriptStore(values.store === "local" ? "postgres" : values.store);
 
 const slugsOf = async (store: ContentStore) => (await store.list()).map((h) => h.slug).filter((s) => !only || s === only);
 
@@ -108,7 +104,7 @@ const commands: Record<string, () => Promise<void>> = {
   pull: async () => copy(await remote(), local()),
 };
 if (!commands[cmd]) {
-  console.error("Usage: pnpm content <check|seed|pull> [slug] [--store supabase|postgres] [--force]");
+  console.error("Usage: pnpm content <check|seed|pull> [slug] [--store postgres] [--force]");
   process.exit(1);
 }
 commands[cmd]().catch((err) => {
