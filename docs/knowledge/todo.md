@@ -6,11 +6,9 @@ Grouped by the version each item belongs to. Move items to [changelog.md](change
 
 From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are in; these need the owner or a decision.
 
-- [ ] **Capture times still stored (owner).** New saves and the public page no longer carry `takenAt`, but it is still in:
-  - the stored pins of the three guides in Supabase, until each is saved again (`pnpm content seed --force` writes the cleaned files over them; pull first if the live text has changed);
-  - old rows of `hike_revisions`;
+- [ ] **Capture times in old copies (owner's call).** The stored pins of the three guides were cleaned on 2026-10-07 (through the store, keeping the stored text), and nothing public carries `takenAt` any more. It is still in:
+  - rows of `hike_revisions` saved before then (server-only, never public);
   - the public repo's git history (`content/hikes/*/waypoints.json` before 2026-10-07). Removing it means rewriting history and force-pushing.
-- [ ] **Run `pnpm content check --store supabase`** once the fixes are deployed: the no-code rule is stricter now (links, `<Step>` inside a paragraph), and this confirms no stored guide relied on what it used to allow.
 - [ ] **Backups.** The free Supabase plan has none, and the database is the only copy of edits made on the live site. A scheduled `pnpm content pull` (committed, or to a private place) would cover the text; the photo originals exist only on the owner's Mac.
 - [ ] **Nothing watches `/api/health`.** It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
 - [ ] **CI doesn't check the stored guides:** the `SUPABASE_SERVICE_ROLE_KEY` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
