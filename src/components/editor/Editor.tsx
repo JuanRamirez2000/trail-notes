@@ -15,6 +15,8 @@ import { DetailsForm } from "./DetailsForm";
 import { EditorAccount } from "./EditorAccount";
 import { PinsView } from "./pins/PinsView";
 import type { Cursor } from "./SourceEditor";
+import { GeneratedSections } from "./write/GeneratedSections";
+import { insertSection } from "./write/missing-sections";
 
 // MDXEditor is large and browser-only, so it loads when the Write view is opened.
 const WriteView = dynamic(() => import("./write/WriteView"), {
@@ -160,6 +162,9 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
     else setYaml(setDetail(doc.yaml, ["draft"], draft));
   };
 
+  // The Write view reads its document once; a section written from outside it remounts it.
+  const [writeLoads, setWriteLoads] = useState(0);
+
   // Where the selected block in the Write view renders its settings form.
   const [panel, setPanel] = useState<HTMLDivElement | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
@@ -250,19 +255,29 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_290px]">
           <div className="min-h-0 overflow-y-auto">
             {parsed.ok ? (
-              // Remounted when the pins change (Advanced view), so the blocks see the new pins.
-              <WriteView
-                key={waypoints}
-                body={doc.body}
-                onChange={setBody}
-                waypoints={pins}
-                route={route}
-                essentials={essentials}
-                panel={panel}
-                onSelectionChange={setHasSelection}
-                deselect={deselect}
-                onOpenAdvanced={() => setView("advanced")}
-              />
+              <>
+                <GeneratedSections
+                  body={doc.body}
+                  waypoints={pins}
+                  onWrite={(section) => {
+                    setBody(insertSection(doc.body, section));
+                    setWriteLoads((n) => n + 1);
+                  }}
+                />
+                {/* Remounted when the pins change (Advanced view), so the blocks see the new pins. */}
+                <WriteView
+                  key={`${writeLoads}:${waypoints}`}
+                  body={doc.body}
+                  onChange={setBody}
+                  waypoints={pins}
+                  route={route}
+                  essentials={essentials}
+                  panel={panel}
+                  onSelectionChange={setHasSelection}
+                  deselect={deselect}
+                  onOpenAdvanced={() => setView("advanced")}
+                />
+              </>
             ) : (
               <p className="m-6 rounded-lg border-2 border-dashed border-pin-bailout bg-card p-3 text-pin-bailout">
                 The pins have a problem, so the guide can&rsquo;t be shown here. Fix it under Advanced → Pins (JSON): {parsed.error}

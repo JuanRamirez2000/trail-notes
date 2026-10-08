@@ -48,7 +48,6 @@ None changes behaviour; each needs the tests named first.
   - `pnpm photos check` reads `content/`, not the database.
   - The editors can't preview a draft as a full page on the live site (drafts have no public page).
 - [ ] E3 leftovers:
-  - Write view: required pins without a `<Step>` still get a generated section on the page but aren't shown in the document. Show them as "add this section" placeholders.
   - Write view: no Duplicate (the Markdown view has it); no drag-to-reorder for blocks (cut and paste works).
   - "Autosaved 2 min ago" instead of a clock time; a publish confirmation (Unpublish is one click, and editing a published guide autosaves to the public page).
   - Write view: support images, code blocks, reference links and footnotes, or refuse them in the gate. Today a guide that has one can only be edited under Advanced.
