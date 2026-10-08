@@ -13,7 +13,7 @@
 import { parseArgs } from "node:util";
 import { localBackend } from "../src/lib/store/local";
 import { createStore } from "../src/lib/store/store";
-import type { ContentStore } from "../src/lib/store/types";
+import type { ContentStore, WriteResult } from "../src/lib/store/types";
 import { scriptStore } from "./lib/stores";
 import { validateHike } from "../src/lib/store/validate";
 
@@ -42,59 +42,68 @@ async function check() {
   let bad = 0;
   for (const slug of slugs) {
     const hike = (await store.read(slug))!;
-    const v = await validateHike(slug, hike.mdx, hike.waypoints);
-    if (v.ok) console.log(`  ✓ ${slug} (${hike.status})`);
+    // The working copy and, when there is one, the published copy (what the site renders).
+    const copies = [["working", hike], ...(hike.published ? [["published", hike.published] as const] : [])] as const;
+    const problems: string[] = [];
+    for (const [name, copy] of copies) {
+      const v = await validateHike(slug, copy.mdx, copy.waypoints);
+      if (!v.ok) problems.push(...v.problems.map((p) => `${name} copy: ${p}`));
+    }
+    if (!problems.length) console.log(`  ✓ ${slug} (${hike.status}${hike.changed ? ", unpublished changes" : ""})`);
     else {
       bad++;
-      console.error(`  ✗ ${slug}\n${v.problems.map((p) => `      ${p}`).join("\n")}`);
+      console.error(`  ✗ ${slug}\n${problems.map((p) => `      ${p}`).join("\n")}`);
     }
   }
   if (bad) throw new Error(`${bad} of ${slugs.length} guide(s) in the ${store.kind} store would not render`);
   console.log(`✓ all ${slugs.length} guide(s) in the ${store.kind} store pass the save gate`);
 }
 
+type Copy = { mdx: string; waypoints: string };
+const same = (a: Copy | null | undefined, b: Copy | null | undefined) => (!a || !b ? !a && !b : a.mdx === b.mdx && JSON.stringify(JSON.parse(a.waypoints)) === JSON.stringify(JSON.parse(b.waypoints)));
+
+/** Makes each guide in `to` match `from`: the working copy, the published copy (or none) and the track. */
 async function copy(from: ContentStore, to: ContentStore) {
   const slugs = await slugsOf(from);
   if (!slugs.length) throw new Error(`Nothing to copy${only ? ` for "${only}"` : ""}`);
   for (const slug of slugs) {
     const src = (await from.read(slug))!;
     const dst = await to.read(slug);
-    if (!dst) {
-      const r = await to.create(slug, { mdx: src.mdx, waypoints: src.waypoints, track: src.track }, { editor: null });
-      console.log(r.ok ? `  + ${slug} created (${r.status})` : `  ✗ ${slug}: ${r.kind === "invalid" ? r.problems.join("; ") : r.kind}`);
-      if (!r.ok) process.exitCode = 1;
-      continue;
-    }
-    const same = dst.mdx === src.mdx && JSON.stringify(JSON.parse(dst.waypoints)) === JSON.stringify(JSON.parse(src.waypoints));
-    const sameTrack = JSON.stringify(dst.track) === JSON.stringify(src.track);
-    if (same && sameTrack) {
+    const sameTrack = JSON.stringify(dst?.track ?? null) === JSON.stringify(src.track);
+    if (dst && same(dst, src) && same(dst.published, src.published) && sameTrack) {
       console.log(`  = ${slug} already up to date`);
       continue;
     }
-    if (!values.force) {
+    if (dst && !values.force) {
       console.log(`  ! ${slug} differs in the ${to.kind} store; left alone (use --force to overwrite it)`);
       process.exitCode = 1;
       continue;
     }
-    let version = dst.version;
-    if (!same) {
-      const r = await to.save(slug, { mdx: src.mdx, waypoints: src.waypoints }, { editor: null, baseVersion: version });
-      if (!r.ok) {
-        console.log(`  ✗ ${slug}: ${r.kind === "invalid" ? r.problems.join("; ") : r.kind}`);
-        process.exitCode = 1;
-        continue;
+    try {
+      const ok = (r: WriteResult, what: string) => {
+        if (!r.ok) throw new Error(`${what}: ${r.kind === "invalid" ? r.problems.join("; ") : r.kind}`);
+        return r.version;
+      };
+      // The published copy goes through the working copy, then the working copy is put back on top.
+      let working: Copy = src.published ?? src;
+      let version = dst
+        ? dst.version
+        : ok(await to.create(slug, { mdx: working.mdx, waypoints: working.waypoints, track: src.track }, { editor: null }), "create");
+      if (dst) {
+        working = dst;
+        if (!sameTrack) version = ok(await to.setTrack(slug, src.track, { editor: null, baseVersion: version }), "track");
       }
-      version = r.version;
+      if (src.published) {
+        if (!same(working, src.published)) version = ok(await to.save(slug, src.published, { editor: null, baseVersion: version }), "save published copy");
+        if (!same(dst?.published, src.published) || !same(working, src.published)) ok(await to.publish(slug, { editor: null, baseVersion: version }), "publish");
+        working = src.published;
+      } else if (dst?.published) ok(await to.unpublish(slug, { editor: null, baseVersion: version }), "unpublish");
+      if (!same(working, src)) ok(await to.save(slug, { mdx: src.mdx, waypoints: src.waypoints }, { editor: null, baseVersion: version }), "save working copy");
+      console.log(dst ? `  ↻ ${slug} overwritten (${src.status})` : `  + ${slug} created (${src.status})`);
+    } catch (e) {
+      console.log(`  ✗ ${slug}: ${e instanceof Error ? e.message : e}`);
+      process.exitCode = 1;
     }
-    if (!sameTrack) {
-      const r = await to.setTrack(slug, src.track, { editor: null, baseVersion: version });
-      if (!r.ok) {
-        console.log(`  ✗ ${slug}: track not copied: ${r.kind === "invalid" ? r.problems.join("; ") : r.kind}`);
-        process.exitCode = 1;
-        continue;
-      }
-    }
-    console.log(`  ↻ ${slug} overwritten`);
   }
 }
 

@@ -32,8 +32,6 @@ type JsonSchema = {
 };
 
 const SCHEMA = z.toJSONSchema(frontmatterSchema, { io: "input" }) as JsonSchema;
-/** Shown elsewhere: the address can't change after creation, and Draft is the Publish button. */
-const HIDDEN = new Set(["draft"]);
 const LONG_TEXT = new Set(["summary"]);
 const SIDEBAR_LABELS: Record<SidebarCardId, string> = { minimap: "Minimap", safety: "Safety points", steps: "Steps" };
 
@@ -77,7 +75,6 @@ export function DetailsForm({ yaml, waypoints, onChange }: Props) {
     <form className="mx-auto flex w-full max-w-[720px] flex-col gap-4 px-6 py-6" onSubmit={(e) => e.preventDefault()}>
       <h2 className="font-display text-[22px] leading-tight font-bold text-forest">Guide details</h2>
       {Object.entries(SCHEMA.properties ?? {})
-        .filter(([key]) => !HIDDEN.has(key))
         .map(([key, field]) => {
           const label = field.description ?? key;
           const required = SCHEMA.required?.includes(key) ?? false;

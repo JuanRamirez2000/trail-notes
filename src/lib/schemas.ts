@@ -110,7 +110,6 @@ export const frontmatterSchema = z.object({
   cover: photoKey.optional().describe("Cover photo"),
   trailhead: lngLatSchema.describe("Trailhead"),
   date: z.iso.date().describe("Date hiked"),
-  draft: z.boolean().default(false).describe("Draft"),
   essentials: essentialsSchema.optional().describe("Before you go"),
   /** Sidebar cards for this guide, top to bottom (also the mobile bar's sections). Default: all, in SIDEBAR_CARDS order. */
   sidebar: sidebarSchema.optional().describe("Sidebar"),

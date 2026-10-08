@@ -48,10 +48,12 @@ describe("waypointsFileSchema", () => {
 });
 
 describe("frontmatterSchema", () => {
-  it("accepts a hike without a cover and defaults draft to false", () => {
-    const fm = frontmatterSchema.parse(FRONTMATTER);
-    expect(fm.draft).toBe(false);
-    expect(fm.cover).toBeUndefined();
+  it("accepts a hike without a cover", () => {
+    expect(frontmatterSchema.parse(FRONTMATTER).cover).toBeUndefined();
+  });
+
+  it("drops the retired draft flag (publishing is the guide's status now, not a detail)", () => {
+    expect(frontmatterSchema.parse({ ...FRONTMATTER, draft: true })).not.toHaveProperty("draft");
   });
 
   it("rejects a non-ISO date and an unknown difficulty", () => {

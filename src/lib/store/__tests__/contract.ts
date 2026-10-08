@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { joinGuide, setDetail, splitGuide } from "../../frontmatter";
 import type { ContentStore, Editor } from "../types";
 
 /**
@@ -10,7 +9,7 @@ import type { ContentStore, Editor } from "../types";
  */
 export function describeStoreContract(name: string, makeStore: () => ContentStore | Promise<ContentStore>, slug: string) {
   const fixture = (file: string) => readFileSync(`content/hikes/strawberry-peak/${file}`, "utf8");
-  const mdx = fixture("index.mdx").replace("slug: strawberry-peak", `slug: ${slug}`).replace(/^date:/m, "draft: true\ndate:");
+  const mdx = fixture("index.mdx").replace("slug: strawberry-peak", `slug: ${slug}`);
   const waypoints = fixture("waypoints.json");
   const track = JSON.parse(fixture("track.json"));
   const editor: Editor = { id: "00000000-0000-4000-8000-000000000001", name: "Contract Test", role: "owner" };
@@ -43,7 +42,8 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
 
     it("lists it with its validated details", async () => {
       const row = (await store.list()).find((h) => h.slug === slug);
-      expect(row).toMatchObject({ status: "draft", details: { title: "Strawberry Peak", distanceMi: 7.3, draft: true } });
+      expect(row).toMatchObject({ status: "draft", details: { title: "Strawberry Peak", distanceMi: 7.3 }, publishedDetails: null, changed: false });
+      expect((await store.read(slug))!).toMatchObject({ published: null, changed: false });
     });
 
     it("refuses to create a hike that already exists", async () => {
@@ -108,24 +108,37 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       expect((await store.read(slug))!.mdx).toBe(before.mdx);
     });
 
-    // Publishing is a save like any other: the editor flips the guide's `draft` flag.
-    it("publishes and unpublishes through the guide's own draft flag, in the list too", async () => {
-      const flip = (text: string, draft: boolean) => {
-        const doc = splitGuide(text);
-        return joinGuide({ yaml: setDetail(doc.yaml, ["draft"], draft), body: doc.body });
-      };
-      let hike = (await store.read(slug))!;
-      const pub = await store.save(slug, { mdx: flip(hike.mdx, false), waypoints }, { editor, baseVersion: version });
-      expect(pub).toMatchObject({ ok: true, status: "published" });
-      hike = (await store.read(slug))!;
-      expect(hike.status).toBe("published");
-      expect(hike.mdx).toMatch(/^draft: false$/m);
-      expect((await store.list()).find((h) => h.slug === slug)?.status).toBe("published");
+    it("publishes the working copy; saves after that don't reach the published copy until it's published again", async () => {
+      expect(await store.publish(slug, { editor, baseVersion: "stale-version" })).toEqual({ ok: false, kind: "conflict", version });
+      expect(await store.publish("zz-no-such-hike", { editor, baseVersion: "x" })).toEqual({ ok: false, kind: "not_found" });
 
-      const unpub = await store.save(slug, { mdx: flip(hike.mdx, true), waypoints }, { editor, baseVersion: hike.version });
-      expect(unpub).toMatchObject({ ok: true, status: "draft" });
+      const working = (await store.read(slug))!;
+      expect(await store.publish(slug, { editor, baseVersion: version })).toEqual({ ok: true, version, status: "published" });
+      let hike = (await store.read(slug))!;
+      expect(hike).toMatchObject({ status: "published", changed: false, version, published: { mdx: working.mdx, waypoints: working.waypoints } });
+      expect(Date.parse(hike.published!.at!)).not.toBeNaN();
+      let row = (await store.list()).find((h) => h.slug === slug)!;
+      expect(row).toMatchObject({ status: "published", changed: false, publishedDetails: { title: "Strawberry Peak" } });
+
+      // A save changes the working copy only.
+      const edited = working.mdx.replace("title: Strawberry Peak", "title: Strawberry Peak (edited)");
+      const saved = await store.save(slug, { mdx: edited, waypoints }, { editor, baseVersion: version });
+      expect(saved).toMatchObject({ ok: true, status: "published" });
       hike = (await store.read(slug))!;
-      expect(hike.mdx).toMatch(/^draft: true$/m);
+      expect(hike).toMatchObject({ mdx: edited, changed: true, published: { mdx: working.mdx } });
+      row = (await store.list()).find((h) => h.slug === slug)!;
+      expect(row).toMatchObject({ changed: true, details: { title: "Strawberry Peak (edited)" }, publishedDetails: { title: "Strawberry Peak" } });
+
+      // Publishing again brings the published copy up to date.
+      expect(await store.publish(slug, { editor, baseVersion: hike.version })).toMatchObject({ ok: true });
+      expect((await store.read(slug))!).toMatchObject({ changed: false, published: { mdx: edited } });
+
+      // Unpublish keeps the working copy.
+      expect(await store.unpublish(slug, { editor, baseVersion: "stale-version" })).toMatchObject({ ok: false, kind: "conflict" });
+      expect(await store.unpublish(slug, { editor, baseVersion: hike.version })).toEqual({ ok: true, version: hike.version, status: "draft" });
+      hike = (await store.read(slug))!;
+      expect(hike).toMatchObject({ status: "draft", published: null, changed: false, mdx: edited });
+      expect((await store.list()).find((h) => h.slug === slug)).toMatchObject({ status: "draft", publishedDetails: null });
       version = hike.version;
     });
 
@@ -158,16 +171,12 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       expect(await store.deleteDraft(slug, { editor, baseVersion: "stale-version" })).toEqual({ ok: false, kind: "conflict", version });
       expect(await store.deleteDraft("zz-no-such-hike", { editor, baseVersion: "x" })).toEqual({ ok: false, kind: "not_found" });
 
-      const doc = splitGuide((await store.read(slug))!.mdx);
-      const pub = await store.save(slug, { mdx: joinGuide({ yaml: setDetail(doc.yaml, ["draft"], false), body: doc.body }), waypoints }, { editor, baseVersion: version });
-      expect(pub).toMatchObject({ ok: true, status: "published" });
-      const published = (await store.read(slug))!;
-      expect(await store.deleteDraft(slug, { editor, baseVersion: published.version })).toEqual({ ok: false, kind: "published" });
+      expect(await store.publish(slug, { editor, baseVersion: version })).toMatchObject({ ok: true });
+      expect(await store.deleteDraft(slug, { editor, baseVersion: version })).toEqual({ ok: false, kind: "published" });
       expect(await store.read(slug)).not.toBeNull();
 
-      const unpub = await store.save(slug, { mdx, waypoints }, { editor, baseVersion: published.version });
-      expect(unpub).toMatchObject({ ok: true, status: "draft" });
-      expect(await store.deleteDraft(slug, { editor, baseVersion: unpub.ok ? unpub.version : "" })).toEqual({ ok: true });
+      expect(await store.unpublish(slug, { editor, baseVersion: version })).toMatchObject({ ok: true, status: "draft" });
+      expect(await store.deleteDraft(slug, { editor, baseVersion: version })).toEqual({ ok: true });
       expect(await store.read(slug)).toBeNull();
       expect((await store.list()).some((h) => h.slug === slug)).toBe(false);
     });

@@ -58,7 +58,6 @@ trailhead:
   lat: ${lat}
   lng: ${lng}
 date: ${new Date().toISOString().slice(0, 10)}
-draft: true
 ---
 
 TODO intro.

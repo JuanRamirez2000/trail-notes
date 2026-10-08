@@ -156,7 +156,6 @@ trailhead:
   lat: ${first.lat}
   lng: ${first.lng}
 date: ${date}
-draft: true
 ---
 
 TODO intro.

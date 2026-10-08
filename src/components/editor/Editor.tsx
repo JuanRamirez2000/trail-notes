@@ -4,10 +4,11 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import { joinGuide, readDetails, setDetail, splitGuide, yamlProblems } from "@/lib/frontmatter";
+import { joinGuide, readDetails, splitGuide } from "@/lib/frontmatter";
 import { routeCoords } from "@/lib/hike";
 import { COMPONENT_NAMES } from "@/lib/mdx/manifest";
 import { essentialsSchema, type Track } from "@/lib/schemas";
+import type { HikeContent } from "@/lib/store/types";
 import { AdvancedView } from "./AdvancedView";
 import { countComponents, countWords, parseWaypoints } from "./compile";
 import { DeleteDraft } from "./DeleteDraft";
@@ -31,6 +32,8 @@ type Props = {
   initialWaypoints: string;
   /** The store's version of what was loaded; sent back with each save so a stale tab can't overwrite newer work. */
   initialVersion: string;
+  /** What the public site shows, or null for a draft. */
+  initialPublished: HikeContent | null;
   track: Track | null;
   editorName: string;
   canSignOut: boolean;
@@ -52,7 +55,7 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * between four views of the same document. Write, Details and Pins are how guides are meant to
  * be made; Advanced is the raw source underneath them.
  */
-export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, track, editorName, canSignOut }: Props) {
+export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, initialPublished, track, editorName, canSignOut }: Props) {
   const [mdx, setMdx] = useState(initialMdx);
   const [waypoints, setWaypoints] = useState(initialWaypoints);
   const [view, setView] = useState<View>("write");
@@ -64,7 +67,11 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
 
   const doc = useMemo(() => splitGuide(mdx), [mdx]);
   const details = useMemo(() => readDetails(doc.yaml), [doc.yaml]);
-  const isDraft = details.draft === true;
+  // The editor saves the working copy; the site shows the published copy until Publish.
+  const [published, setPublished] = useState(initialPublished);
+  const [publishing, setPublishing] = useState(false);
+  const isDraft = published === null;
+  const unpublishedChanges = !!published && (published.mdx !== mdx || published.waypoints !== waypoints);
   const parsed = useMemo(() => parseWaypoints(waypoints, track), [waypoints, track]);
   const pins = useMemo(() => (parsed.ok ? parsed.waypoints : []), [parsed]);
   const route = useMemo(() => routeCoords(pins, track), [pins, track]);
@@ -156,13 +163,24 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
   // back together with the other half as it is right now.
   const setBody = useCallback((body: string) => setMdx((prev) => joinGuide({ yaml: splitGuide(prev).yaml, body })), []);
   const setYaml = useCallback((yaml: string) => setMdx((prev) => joinGuide({ yaml, body: splitGuide(prev).body })), []);
-  // Publishing is a change like any other (the guide's `draft` flag), saved by the same autosave.
-  const setDraft = (draft: boolean) => {
-    // A frontmatter with a YAML error can't be rewritten safely; say so instead of doing nothing.
-    const problems = yamlProblems(doc.yaml);
-    if (problems.length) setSave({ kind: "error", problems: [`Can't ${draft ? "unpublish" : "publish"} yet. The guide's details have a problem (see Details): ${problems[0]}`] });
-    else setYaml(setDetail(doc.yaml, ["draft"], draft));
+  // Publish and Unpublish act on what's saved, so they wait until nothing is left to save.
+  const title = typeof details.title === "string" && details.title ? details.title : slug;
+  const canPublish = !publishing && !dirty && save.kind !== "saving" && save.kind !== "conflict";
+  const changePublished = async (action: "publish" | "unpublish") => {
+    if (action === "unpublish" && !window.confirm(`Take “${title}” off the site? Its page will be gone until you publish it again. Your text stays here.`)) return;
+    setPublishing(true);
+    const res = await fetch(`/api/editor/${slug}/publish`, {
+      method: action === "publish" ? "POST" : "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ baseVersion: versionRef.current }),
+    }).catch(() => null);
+    const data = (await res?.json().catch(() => ({}))) as { problems?: string[] } | undefined;
+    if (res?.ok) setPublished(action === "publish" ? { mdx, waypoints } : null);
+    else if (res?.status === 409) setSave({ kind: "conflict" });
+    else setSave({ kind: "error", problems: !res ? [`Couldn't reach the server, so the guide wasn't ${action}ed.`] : (data?.problems ?? [res.status === 404 ? "You're no longer signed in (or this hike was removed)." : `HTTP ${res.status}`]) });
+    setPublishing(false);
   };
+
 
   // The Write view reads its document once; a section written from outside it remounts it.
   const [writeLoads, setWriteLoads] = useState(0);
@@ -192,19 +210,36 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
         <Link href="/editor" className="text-[15px] text-bark">
           ← Hikes
         </Link>
-        <span className="min-w-0 truncate text-xl max-sm:basis-full">{typeof details.title === "string" && details.title ? details.title : slug}</span>
-        <span className="rounded-full border border-line-strong px-2.5 text-sm text-bark">{isDraft ? "Draft" : "Published"}</span>
+        <span className="min-w-0 truncate text-xl max-sm:basis-full">{title}</span>
+        <span
+          className={cn("rounded-full border px-2.5 text-sm", unpublishedChanges ? "border-ochre bg-highlight text-graphite" : "border-line-strong text-bark")}
+          title={unpublishedChanges ? "The site still shows the version you last published." : undefined}
+        >
+          {isDraft ? "Draft" : unpublishedChanges ? "Published · changes not live" : "Published"}
+        </span>
         <span className={cn("ml-auto text-sm", save.kind === "error" || save.kind === "conflict" ? "text-pin-bailout" : "text-bark")}>{status}</span>
         <EditorAccount name={editorName} canSignOut={canSignOut} />
         <a href={`/hikes/${slug}`} target="_blank" rel="noopener" className="rounded-lg border border-line bg-card px-3.5 py-1 text-graphite">
           {isDraft ? "View page ↗" : "View live page ↗"}
         </a>
-        {isDraft ? (
-          <button type="button" onClick={() => setDraft(false)} className="cursor-pointer rounded-lg bg-forest px-3.5 py-1 text-paper">
-            Publish
+        {(isDraft || unpublishedChanges) && (
+          <button
+            type="button"
+            disabled={!canPublish}
+            title={canPublish ? undefined : "Waiting for your changes to be saved"}
+            onClick={() => changePublished("publish")}
+            className="cursor-pointer rounded-lg bg-forest px-3.5 py-1 text-paper disabled:cursor-default disabled:opacity-60"
+          >
+            {isDraft ? "Publish" : "Publish changes"}
           </button>
-        ) : (
-          <button type="button" onClick={() => setDraft(true)} className="cursor-pointer rounded-lg border border-line-strong px-3.5 py-1 text-bark">
+        )}
+        {!isDraft && (
+          <button
+            type="button"
+            disabled={publishing}
+            onClick={() => changePublished("unpublish")}
+            className="cursor-pointer rounded-lg border border-line-strong px-3.5 py-1 text-bark disabled:cursor-default disabled:opacity-60"
+          >
             Unpublish
           </button>
         )}
@@ -306,7 +341,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
         <div className="min-h-0 flex-1 overflow-y-auto">
           <DetailsForm yaml={doc.yaml} waypoints={pins} onChange={setYaml} />
           {isDraft && (
-            <DeleteDraft slug={slug} title={typeof details.title === "string" && details.title ? details.title : slug} saved={!dirty && save.kind !== "saving"} version={() => versionRef.current} />
+            <DeleteDraft slug={slug} title={title} saved={!dirty && save.kind !== "saving"} version={() => versionRef.current} />
           )}
         </div>
       )}

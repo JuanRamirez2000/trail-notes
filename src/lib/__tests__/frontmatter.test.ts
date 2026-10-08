@@ -61,8 +61,8 @@ describe("setDetail", () => {
 
   it("keeps the real guide's details valid after an edit", () => {
     const { yaml } = splitGuide(readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8"));
-    const edited = setDetail(setDetail(yaml, ["sidebar"], ["steps", "minimap"]), ["draft"], true);
-    expect(frontmatterSchema.parse(readDetails(edited))).toMatchObject({ sidebar: ["steps", "minimap"], draft: true, title: "Strawberry Peak" });
+    const edited = setDetail(setDetail(yaml, ["sidebar"], ["steps", "minimap"]), ["estTime"], "4 hours");
+    expect(frontmatterSchema.parse(readDetails(edited))).toMatchObject({ sidebar: ["steps", "minimap"], estTime: "4 hours", title: "Strawberry Peak" });
   });
 });
 

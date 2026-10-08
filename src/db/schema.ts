@@ -20,7 +20,7 @@ export const hikes = pgTable(
   "hikes",
   {
     slug: text().primaryKey(),
-    /** The guide: frontmatter + MDX body. */
+    /** The working copy, which the editor saves to: frontmatter + MDX body. */
     mdx: text().notNull(),
     /** `{ "waypoints": [...] }`. `json`, not `jsonb`: jsonb reorders keys, and pins must read back as written. */
     waypoints: json().notNull(),
@@ -28,7 +28,18 @@ export const hikes = pgTable(
     track: json().$type<Track>(),
     /** The validated frontmatter, for lists. */
     details: jsonb().$type<Frontmatter>().notNull(),
+    /** "published" exactly when there is a published copy (the columns below). */
     status: text().$type<"draft" | "published">().notNull(),
+    /**
+     * The published copy: what the public site shows. Publish copies the working copy here; saves
+     * never touch it; Unpublish clears it. The track is shared by both copies.
+     */
+    publishedMdx: text(),
+    publishedWaypoints: json(),
+    publishedDetails: jsonb().$type<Frontmatter>(),
+    /** The working copy's version when it was published. */
+    publishedVersion: integer(),
+    publishedAt: timestamp({ withTimezone: true }),
     /** Bumped on every save; a save must name the version it's based on. */
     version: integer().notNull().default(1),
     /** Auth user id; null for scripts and the local dev owner. */

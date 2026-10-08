@@ -92,7 +92,7 @@ supabase/migrations/   the SQL migrations up to 2026-10-08 (drizzle/0000_baselin
    pnpm ingest ~/Pictures/granite-lakes --slug granite-lakes
    ```
 
-   This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (`draft: true`), and uploads web-sized photos to Supabase. Useful flags: `--storage local` (write to `public/photos` instead; run `pnpm photos push` before deploying), `--dry-run` (read EXIF, write nothing) and `--force` (replace an existing `waypoints.json` instead of merging into it).
+   This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (a draft), and uploads web-sized photos to Supabase. Useful flags: `--storage local` (write to `public/photos` instead; run `pnpm photos push` before deploying), `--dry-run` (read EXIF, write nothing) and `--force` (replace an existing `waypoints.json` instead of merging into it).
 
    **Adding photos to a hike that already has waypoints** (or a recorded track) merges them in: existing pins keep their ids and text, photos that were ingested before are skipped, and new ones get the next free `wp-NN` id. If the hike has a `track.json`, each photo is snapped onto the track (when it's within ~80 m) and slotted in by trail mileage, so an out-and-back resolves by capture time. Photos far from the track keep their GPS position and are listed, with a hint when one looks out of order rather than off-trail. It's fine to import the GPX first and add photos later.
 3. **Review `waypoints.json`.** For each waypoint:
@@ -102,7 +102,7 @@ supabase/migrations/   the SQL migrations up to 2026-10-08 (drizzle/0000_baselin
    - `heading`: check any with `"headingSource": "inferred"`, and fill the ones left `null` (then set `"headingSource": "manual"`)
    - `mile`: optional real trail mileage. Without it, mileage is estimated from straight lines between photos, which reads low.
    - `order` values have gaps of 10, so you can slot in extra waypoints.
-4. **Write the guide** in `index.mdx`, fill in the frontmatter, and set `draft: false`. Drafts show in `pnpm dev` but not in production.
+4. **Write the guide** in `index.mdx` and fill in the frontmatter, then press **Publish** in the editor (with files, that copies them to `published/`). `pnpm dev` shows every guide's working copy; production shows only published copies.
 5. `pnpm dev` and check the page, or use the editor (below).
 
 Invalid content (unknown waypoint type, a slug that doesn't match its folder, a bad photo key, a mistyped component prop…) is refused when it's saved and reported by `pnpm content check`, with a readable error. Guides can't contain code: no `import`/`export`, no `{…}` expressions, and no raw HTML beyond a few harmless tags.
@@ -215,7 +215,7 @@ pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop --force
 
 `granite-saddle` is the detailed example: 18 pins covering every type, a full "Before you go" card, and a written section for each.
 
-Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it, already-ingested photos are skipped. Both samples are `draft: true`: they show in `pnpm dev` (and serve as reference content) but not in production. `strawberry-peak` is a real recorded route (GPX).
+Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it, already-ingested photos are skipped. Both samples are drafts (never published): they show in `pnpm dev` (and serve as reference content) but not in production. `strawberry-peak` is a real recorded route (GPX).
 
 ---
 

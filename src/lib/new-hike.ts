@@ -46,7 +46,6 @@ export function buildNewHike(form: NewHikeForm, track: Track | null): { slug: st
     difficulty: form.difficulty,
     trailhead: start,
     date: form.date,
-    draft: true,
   };
   // The summary isn't repeated in the body: the page shows it under the title, and as body text
   // it would have to be valid MDX (a `{` or `<` in it would refuse the whole hike).

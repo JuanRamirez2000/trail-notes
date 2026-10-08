@@ -36,6 +36,10 @@ describe("local files: things only files can do", () => {
     expect(hike?.mdx).toContain("No details.");
     expect(hike?.waypoints).toBe("{ not json"); // exact text kept, so nothing is lost before it's fixed
     expect((await store.list()).find((h) => h.slug === slug)).toMatchObject({ details: null, status: "draft" });
+    // Nothing invalid goes public.
+    const r = await store.publish(slug, { editor: null, baseVersion: hike!.version });
+    expect(r).toMatchObject({ ok: false, kind: "invalid" });
+    expect((await store.read(slug))!.published).toBeNull();
   });
 
   it("doesn't delete a track file it can't read when the guide is saved", async () => {

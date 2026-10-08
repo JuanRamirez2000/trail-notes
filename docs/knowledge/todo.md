@@ -45,7 +45,7 @@ None changes behaviour; each needs the tests named first.
   - The editors can't preview a draft as a full page on the live site (drafts have no public page).
 - [ ] E3 leftovers:
   - Write view: no Duplicate (the Markdown view has it); no drag-to-reorder for blocks (cut and paste works).
-  - "Autosaved 2 min ago" instead of a clock time; a publish confirmation (Unpublish is one click, and editing a published guide autosaves to the public page).
+  - "Autosaved 2 min ago" instead of a clock time.
   - Write view: support images, code blocks, reference links and footnotes, or refuse them in the gate. Today a guide that has one can only be edited under Advanced.
   - The editor's top bar on a phone wraps to three rows.
 - [ ] E4 leftovers:

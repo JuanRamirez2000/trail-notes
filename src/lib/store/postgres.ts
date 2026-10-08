@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import type { Database } from "../../db/client";
 import { hikeRevisions, hikes } from "../../db/schema";
 import type { BackendResult, DeleteResult, Editor, RawHike, RawWrite, StoreBackend } from "./types";
@@ -20,6 +21,9 @@ const summary = {
   slug: hikes.slug,
   details: hikes.details,
   status: hikes.status,
+  publishedDetails: hikes.publishedDetails,
+  // json columns hold the text as written, so comparing text is comparing what was saved.
+  changed: sql<boolean>`${hikes.publishedMdx} is not null and (${hikes.publishedMdx} <> ${hikes.mdx} or ${hikes.publishedWaypoints}::text <> ${hikes.waypoints}::text)`,
   version: hikes.version,
   updatedAt: hikes.updatedAt,
   updatedBy: hikes.updatedByLabel,
@@ -27,6 +31,18 @@ const summary = {
 
 export function postgresBackend(db: Database): StoreBackend {
   const current = async (tx: Pick<Database, "select">, slug: string) => (await tx.select({ status: hikes.status, version: hikes.version }).from(hikes).where(eq(hikes.slug, slug)))[0];
+
+  /** Publish or unpublish: one statement, only while the working copy is at `baseVersion`; the version doesn't change. */
+  const changeStatus = async (slug: string, baseVersion: string, set: PgUpdateSetSource<typeof hikes>): Promise<BackendResult> => {
+    const [row] = await db
+      .update(hikes)
+      .set(set)
+      .where(and(eq(hikes.slug, slug), eq(hikes.version, asVersion(baseVersion))))
+      .returning({ version: hikes.version });
+    if (row) return { ok: true, version: String(row.version) };
+    const now = await current(db, slug);
+    return now ? { ok: false, kind: "conflict", version: String(now.version) } : { ok: false, kind: "not_found" };
+  };
 
   return {
     kind: "postgres",
@@ -46,6 +62,10 @@ export function postgresBackend(db: Database): StoreBackend {
         track: r.track,
         details: r.details,
         status: r.status,
+        published:
+          r.publishedMdx === null
+            ? null
+            : { mdx: r.publishedMdx, waypoints: r.publishedWaypoints, details: r.publishedDetails, at: r.publishedAt?.toISOString() ?? null },
         version: String(r.version),
         updatedAt: r.updatedAt.toISOString(),
         updatedBy: r.updatedByLabel,
@@ -56,11 +76,11 @@ export function postgresBackend(db: Database): StoreBackend {
       db.transaction(async (tx): Promise<BackendResult> => {
         const [row] = await tx
           .insert(hikes)
-          .values({ slug, ...data, updatedBy: userId(editor), updatedByLabel: label(editor) })
+          .values({ slug, ...data, status: "draft", updatedBy: userId(editor), updatedByLabel: label(editor) })
           .onConflictDoNothing()
           .returning({ version: hikes.version });
         if (!row) return { ok: false, kind: "exists" };
-        await tx.insert(hikeRevisions).values({ slug, version: row.version, mdx: data.mdx, waypoints: data.waypoints, status: data.status, savedBy: userId(editor), savedByLabel: label(editor) });
+        await tx.insert(hikeRevisions).values({ slug, version: row.version, mdx: data.mdx, waypoints: data.waypoints, status: "draft", savedBy: userId(editor), savedByLabel: label(editor) });
         return { ok: true, version: String(row.version) };
       }),
 
@@ -70,13 +90,37 @@ export function postgresBackend(db: Database): StoreBackend {
           .update(hikes)
           .set({ ...data, version: sql`${hikes.version} + 1`, updatedBy: userId(editor), updatedByLabel: label(editor), updatedAt: sql`now()` })
           .where(and(eq(hikes.slug, slug), eq(hikes.version, asVersion(baseVersion))))
-          .returning({ version: hikes.version });
+          .returning({ version: hikes.version, status: hikes.status });
         if (row) {
-          await tx.insert(hikeRevisions).values({ slug, version: row.version, mdx: data.mdx, waypoints: data.waypoints, status: data.status, savedBy: userId(editor), savedByLabel: label(editor) });
+          await tx.insert(hikeRevisions).values({ slug, version: row.version, mdx: data.mdx, waypoints: data.waypoints, status: row.status, savedBy: userId(editor), savedByLabel: label(editor) });
           return { ok: true, version: String(row.version) };
         }
         const now = await current(tx, slug);
         return now ? { ok: false, kind: "conflict", version: String(now.version) } : { ok: false, kind: "not_found" };
+      }),
+
+    publish: (slug, baseVersion, editor) =>
+      changeStatus(slug, baseVersion, {
+        publishedMdx: sql`${hikes.mdx}`,
+        publishedWaypoints: sql`${hikes.waypoints}`,
+        publishedDetails: sql`${hikes.details}`,
+        publishedVersion: sql`${hikes.version}`,
+        publishedAt: sql`now()`,
+        status: "published",
+        updatedBy: userId(editor),
+        updatedByLabel: label(editor),
+      }),
+
+    unpublish: (slug, baseVersion, editor) =>
+      changeStatus(slug, baseVersion, {
+        publishedMdx: null,
+        publishedWaypoints: null,
+        publishedDetails: null,
+        publishedVersion: null,
+        publishedAt: null,
+        status: "draft",
+        updatedBy: userId(editor),
+        updatedByLabel: label(editor),
       }),
 
     async history(slug, limit) {

@@ -43,7 +43,7 @@ if (url) {
 
   describe("Postgres: history and lockdown", () => {
     const sp = { mdx: readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8"), waypoints: readFileSync("content/hikes/strawberry-peak/waypoints.json", "utf8") };
-    const draftOf = (slug: string) => sp.mdx.replace("slug: strawberry-peak", `slug: ${slug}`).replace(/^date:/m, "draft: true\ndate:");
+    const draftOf = (slug: string) => sp.mdx.replace("slug: strawberry-peak", `slug: ${slug}`);
 
     it("records every save in the history table, with who made it", async () => {
       const store = createStore(postgresBackend(await database()));

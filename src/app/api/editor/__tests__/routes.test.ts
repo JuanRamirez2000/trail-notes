@@ -26,6 +26,7 @@ vi.mock("@/lib/store/server", () => ({ getStore: async () => createStore(localBa
 const { PUT, DELETE, GET: getOne } = await import("../[slug]/route");
 const { POST, GET: getAll } = await import("../route");
 const { GET: getHistory } = await import("../[slug]/history/route");
+const { POST: publishRoute, DELETE: unpublishRoute, GET: getPublish } = await import("../[slug]/publish/route");
 const { GET: getRevision } = await import("../[slug]/history/[version]/route");
 
 const ORIGIN = "https://trailnotes.example";
@@ -74,13 +75,15 @@ describe("PUT /api/editor/[slug]", () => {
     for (const bad of ["{ not json", "null", "[]", { mdx: g.mdx }, { ...body, baseVersion: 3 }]) expect((await put("strawberry-peak", bad)).status).toBe(400);
   });
 
-  it("saves a valid change once, refreshes the pages, and refuses the same version twice", async () => {
+  it("saves a valid change once to the working copy, and refuses the same version twice", async () => {
     const g = await guide();
     const body = { mdx: g.mdx.replace("7.3 miles", "7.4 miles"), waypoints: g.waypoints, baseVersion: g.version };
     const ok = await put("strawberry-peak", body);
     expect(ok.status).toBe(200);
-    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/"]);
+    // The public pages show the published copy, which a save doesn't change.
+    expect(state.revalidated).toEqual([]);
     expect((await guide()).mdx).toContain("7.4 miles");
+    expect((await guide()).published?.mdx).toContain("7.3 miles");
     const stale = await put("strawberry-peak", { ...body, mdx: g.mdx });
     expect(stale.status).toBe(409);
     expect((await guide()).mdx).toContain("7.4 miles");
@@ -105,7 +108,7 @@ describe("PUT /api/editor/[slug]", () => {
 describe("POST /api/editor", () => {
   const draft = async (slug: string) => {
     const g = await guide();
-    return { slug, mdx: g.mdx.replace("slug: strawberry-peak", `slug: ${slug}`).replace(/^date:/m, "draft: true\ndate:"), waypoints: g.waypoints };
+    return { slug, mdx: g.mdx.replace("slug: strawberry-peak", `slug: ${slug}`), waypoints: g.waypoints };
   };
 
   it("creates a hike, keeping only the track's own fields", async () => {
@@ -188,5 +191,43 @@ describe("GET /api/editor/[slug]/history and /history/[version]", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ revisions: [], kept: false });
     expect((await revision("strawberry-peak", "1")).status).toBe(404);
+  });
+});
+
+describe("POST / DELETE /api/editor/[slug]/publish", () => {
+  const ctx = (slug: string) => ({ params: Promise.resolve({ slug }) });
+  const publish = (slug: string, body: unknown, headers?: Record<string, string>) => publishRoute(request("POST", `/api/editor/${slug}/publish`, body, headers), ctx(slug));
+  const unpublish = (slug: string, body: unknown, headers?: Record<string, string>) => unpublishRoute(request("DELETE", `/api/editor/${slug}/publish`, body, headers), ctx(slug));
+
+  it("is a 404 for anyone who isn't an editor, and a 403 from another site", async () => {
+    const g = await guide();
+    state.editor = null;
+    expect((await publish("strawberry-peak", { baseVersion: g.version })).status).toBe(404);
+    expect((await unpublish("strawberry-peak", { baseVersion: g.version })).status).toBe(404);
+    expect((await getPublish()).status).toBe(404);
+    state.editor = OWNER;
+    expect((await publish("strawberry-peak", { baseVersion: g.version }, { origin: "https://evil.example" })).status).toBe(403);
+    for (const bad of ["{ not json", {}, { baseVersion: 1 }]) expect((await publish("strawberry-peak", bad)).status).toBe(400);
+    expect((await publish("no-such-hike", { baseVersion: "x" })).status).toBe(404);
+    expect(state.revalidated).toEqual([]);
+  });
+
+  it("publishes the working copy, refreshes the pages, and refuses a stale version", async () => {
+    const g = await guide();
+    expect((await publish("strawberry-peak", { baseVersion: "stale" })).status).toBe(409);
+    const res = await publish("strawberry-peak", { baseVersion: g.version });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, status: "published" });
+    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/"]);
+    expect((await guide()).published?.mdx).toBe(g.mdx);
+  });
+
+  it("unpublishes, keeping the working copy", async () => {
+    const g = await guide("strawberry-peak");
+    const res = await unpublish("strawberry-peak", { baseVersion: g.version });
+    expect(res.status).toBe(200);
+    const after = await guide("strawberry-peak");
+    expect(after).toMatchObject({ status: "draft", published: null, mdx: g.mdx });
+    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/"]);
   });
 });

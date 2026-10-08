@@ -33,8 +33,8 @@ export default async function EditorIndex() {
       </div>
       <p className="mt-2 text-bark">
         {store.kind !== "local"
-          ? "Saves go to the database and are public within seconds once a guide is published."
-          : "Saves write to content/hikes on this machine."}{" "}
+          ? "Saves go to the database. The site shows what you last published; publish again to put changes live."
+          : "Saves write to content/hikes on this machine; published copies are in each hike's published/ folder."}{" "}
         Photos are added with <code>pnpm ingest</code>.
       </p>
       <ul className="mt-6 divide-y divide-line rounded-[10px] border border-line bg-card">
@@ -49,7 +49,7 @@ export default async function EditorIndex() {
                 </span>
               </span>
               <span className="flex flex-none items-center gap-3 text-sm text-bark">
-                <span className="rounded-full border border-line-strong px-2.5">{h.status === "published" ? "Published" : "Draft"}</span>
+                <span className="rounded-full border border-line-strong px-2.5">{h.status === "draft" ? "Draft" : h.changed ? "Published · changes not live" : "Published"}</span>
                 Edit →
               </span>
             </Link>

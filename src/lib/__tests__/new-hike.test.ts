@@ -26,11 +26,11 @@ describe("buildNewHike", () => {
       summary: 'A short, steep climb with "big" views.',
       distanceMi: 7.3,
       elevationGainFt: 1830,
-      draft: true,
       trailhead: { lat: TRACK.points[0][1], lng: TRACK.points[0][0] },
     });
     expect(JSON.parse(hike.waypoints).waypoints).toMatchObject([{ id: "trailhead", type: "start", lat: 34.259122, lng: -118.104093 }]);
     expect(hike.mdx).toContain("<RouteMap />");
+    expect(hike.mdx).not.toMatch(/^draft:/m); // a new hike is a draft because nothing is published yet
   });
 
   it("accepts a summary with characters that mean something in MDX", async () => {

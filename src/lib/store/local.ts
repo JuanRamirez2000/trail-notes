@@ -7,8 +7,9 @@ import type { BackendResult, DeleteResult, RawHike, RawWrite, StoreBackend } fro
 import { splitFrontmatter, waypointsText } from "./validate";
 
 /**
- * Guides as files: `<root>/<slug>/{index.mdx, waypoints.json, track.json?}`. Used by `pnpm dev`,
- * the scripts and the tests. Production reads the database (./supabase.ts).
+ * Guides as files: `<root>/<slug>/{index.mdx, waypoints.json, track.json?}` is the working copy,
+ * and `<root>/<slug>/published/{index.mdx, waypoints.json}` the published copy, when there is one.
+ * Used by `pnpm dev`, the scripts and the tests. Production reads the database (./postgres.ts).
  *
  * The version is a hash of the files, so an edit made outside the editor (a script, a text
  * editor, git) is noticed as a conflict too. Who saved isn't recorded; files have git for that.
@@ -34,6 +35,7 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
     // Files can be edited by hand, so they may be invalid. Still return them (details: null) so
     // the editor can open the guide and show what's wrong; nothing invalid can be written back.
     const details = frontmatterSchema.safeParse(safe(() => splitFrontmatter(mdx).data));
+    const published = await loadPublished(d);
     const waypoints = safe(() => JSON.parse(wpText) as unknown);
     const track = trackText ? trackSchema.safeParse(safe(() => JSON.parse(trackText))) : null;
     return {
@@ -44,10 +46,26 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
       track: track?.success ? track.data : null,
       trackUnreadable: track ? !track.success : undefined,
       details: details.success ? details.data : null,
-      status: details.success && !details.data.draft ? "published" : "draft",
+      status: published ? "published" : "draft",
+      published,
       version: versionOf(mdx, wpText, trackText),
       updatedAt: (await stat(mdxPath)).mtime.toISOString(),
       updatedBy: null,
+    };
+  }
+
+  async function loadPublished(d: string): Promise<RawHike["published"]> {
+    const mdxPath = path.join(d, PUBLISHED, "index.mdx");
+    if (!existsSync(mdxPath)) return null;
+    const mdx = await readFile(mdxPath, "utf8");
+    const wpText = await readFile(path.join(d, PUBLISHED, "waypoints.json"), "utf8").catch(() => waypointsText({ waypoints: [] }));
+    const details = frontmatterSchema.safeParse(safe(() => splitFrontmatter(mdx).data));
+    return {
+      mdx,
+      waypoints: safe(() => JSON.parse(wpText) as unknown) ?? { waypoints: [] },
+      waypointsText: wpText,
+      details: details.success ? details.data : null,
+      at: (await stat(mdxPath)).mtime.toISOString(),
     };
   }
 
@@ -91,7 +109,18 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
       missingRoot();
       const entries = await readdir(root, { withFileTypes: true });
       const hikes = await Promise.all(entries.filter((e) => e.isDirectory() && SLUG.test(e.name)).map((e) => load(e.name)));
-      return hikes.filter((h): h is RawHike => h !== null).map(({ slug, details, status, version, updatedAt, updatedBy }) => ({ slug, details, status, version, updatedAt, updatedBy }));
+      return hikes
+        .filter((h): h is RawHike => h !== null)
+        .map(({ slug, details, status, published, mdx, waypointsText: wp, version, updatedAt, updatedBy }) => ({
+          slug,
+          details,
+          status,
+          publishedDetails: published?.details ?? null,
+          changed: !!published && (published.mdx !== mdx || published.waypointsText !== wp),
+          version,
+          updatedAt,
+          updatedBy,
+        }));
     },
 
     async get(slug) {
@@ -111,6 +140,28 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
         if (!current) return { ok: false, kind: "not_found" };
         if (current.version !== baseVersion) return { ok: false, kind: "conflict", version: current.version };
         return { ok: true, version: await write(slug, data) };
+      }),
+
+    // Publishing copies the working files byte for byte; the version (a hash of the working files) doesn't change.
+    publish: (slug, baseVersion) =>
+      inTurn(slug, async (): Promise<BackendResult> => {
+        const current = await load(slug);
+        if (!current) return { ok: false, kind: "not_found" };
+        if (current.version !== baseVersion) return { ok: false, kind: "conflict", version: current.version };
+        const to = path.join(dir(slug), PUBLISHED);
+        await mkdir(to, { recursive: true });
+        await writeFile(path.join(to, "index.mdx"), current.mdx);
+        await writeFile(path.join(to, "waypoints.json"), current.waypointsText ?? waypointsText(current.waypoints));
+        return { ok: true, version: current.version };
+      }),
+
+    unpublish: (slug, baseVersion) =>
+      inTurn(slug, async (): Promise<BackendResult> => {
+        const current = await load(slug);
+        if (!current) return { ok: false, kind: "not_found" };
+        if (current.version !== baseVersion) return { ok: false, kind: "conflict", version: current.version };
+        await rm(path.join(dir(slug), PUBLISHED), { recursive: true, force: true });
+        return { ok: true, version: current.version };
       }),
 
     // Files keep no history of their own; git does.
@@ -134,6 +185,7 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
 }
 
 const trackFileText = (track: Track) => `${JSON.stringify(track)}\n`;
+const PUBLISHED = "published";
 
 function safe<T>(fn: () => T): T | undefined {
   try {

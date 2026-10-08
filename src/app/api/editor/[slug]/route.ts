@@ -1,5 +1,4 @@
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import { can } from "@/lib/auth/can";
 import { rateLimiter, sameOrigin } from "@/lib/auth/request";
 import { getEditor } from "@/lib/auth/server";
@@ -21,7 +20,8 @@ const json = (body: unknown, status: number) => Response.json(body, { status });
  *   2. the request comes from our own pages (not another site driving an editor's browser)
  *   3. size and rate limits
  *   4. the store validates (schemas + MDX compile + no code) and refuses a stale version
- * Only then is anything written, with who and when, and the public pages are refreshed.
+ * Only then is anything written, with who and when. The public site doesn't change: it shows the
+ * published copy until the guide is published again.
  */
 export async function PUT(req: Request, ctx: RouteContext<"/api/editor/[slug]">) {
   const { slug } = await ctx.params;
@@ -49,16 +49,8 @@ export async function PUT(req: Request, ctx: RouteContext<"/api/editor/[slug]">)
   const store = await getStore();
   const result = await store.save(slug, { mdx: body.mdx, waypoints: body.waypoints }, { editor, baseVersion: body.baseVersion });
 
+  // A save changes the working copy only; the public pages change on publish (./publish/route.ts).
   if (result.ok) {
-    // The guide's page and the gallery are cached; a save makes the next visit render them fresh.
-    revalidatePath(`/hikes/${slug}`);
-    revalidatePath("/");
-    // From a route, revalidatePath only marks the pages: the next visitor is still handed the old
-    // copy while a fresh one is made. After Publish or Unpublish that visitor is us, so nobody
-    // else is served a guide that was just taken down (or misses one that just went up).
-    if (result.previousStatus !== result.status) {
-      after(() => Promise.allSettled([`/hikes/${slug}`, "/"].map((p) => fetch(new URL(p, req.url), { cache: "no-store" }))));
-    }
     return json({ ok: true, version: result.version, status: result.status, savedAt: new Date().toISOString() }, 200);
   }
   if (result.kind === "invalid") return json({ ok: false, problems: result.problems }, 422);

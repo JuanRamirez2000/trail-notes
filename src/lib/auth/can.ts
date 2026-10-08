@@ -1,6 +1,6 @@
 import type { Editor } from "../store/types";
 
-export type EditorAction = "list" | "read" | "save" | "create" | "delete";
+export type EditorAction = "list" | "read" | "save" | "create" | "delete" | "publish";
 
 /**
  * The one place that decides what a signed-in person may do. Today every editor on the list may
