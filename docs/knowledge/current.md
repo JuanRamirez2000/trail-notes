@@ -1,11 +1,11 @@
 # Current state
 
-_Last updated 2026-10-07. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)**: every milestone (E0–E5) is in `main`, followed on 2026-10-06/07 by a full audit and its fixes ([changelog.md](changelog.md)). The site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). Sign-in, a live save and the page refresh were verified on the live site on 2026-10-06; what's still unchecked is in [e2-go-live.md](e2-go-live.md). What's left before the first tagged release: [todo.md](todo.md). Plan: [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-08. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)**: every milestone (E0–E5) is in `main`, followed on 2026-10-06/07 by a full audit and its fixes ([changelog.md](changelog.md)). The site reads guides from Supabase (`CONTENT_STORE=supabase`) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). Sign-in, a live save and the page refresh were verified on the live site on 2026-10-06; what's still unchecked is in [e2-go-live.md](e2-go-live.md). What's left before the first tagged release (`v0.1.0`): [v0.1-plan.md](v0.1-plan.md) and [todo.md](todo.md). Plan: [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
 - **Live:** https://trail-notes-amber.vercel.app. Every push to `main` deploys to production.
-- **Repo:** github.com/JuanRamirez2000/trail-notes (public). Work happens directly on `main`, by the owner's choice, so every commit must build and pass CI.
+- **Repo:** github.com/JuanRamirez2000/trail-notes (public; MIT for the code, guides and photos all rights reserved: `LICENSE`). Work happens directly on `main`, by the owner's choice, so every commit must build and pass CI.
 - **Vercel:** project `prj_BRkSr8pDopFEqEJGNNNtKhUOaPwl`, team `team_xA3s7AnPMr8p1ZVJafHQupxT`. Use the claude.ai Vercel connector; the plugin connector returns 403 on this team.
 - **Supabase:** project `fstcgdirhssuaevgxptv` ("trail-notes", us-east-2, Postgres 17, **free plan**: pauses after about a week idle).
   - Storage: the public bucket `hikes` (photos).
