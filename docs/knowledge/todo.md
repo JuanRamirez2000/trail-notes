@@ -15,7 +15,6 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
 - [ ] **Nothing watches `/api/health`.** It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
 - [ ] **CI doesn't check the stored guides:** the `SUPABASE_SERVICE_ROLE_KEY` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
 - [ ] **The release itself** is planned step by step in [v0.1-plan.md](v0.1-plan.md) (`v0.1.0`, MIT for the code, decided 2026-10-08).
-- [ ] **Favicon** from the logo badge (`/favicon.ico`, `/icon.svg` and `/apple-touch-icon.png` are 404s).
 - [ ] **Dependencies:** `pnpm audit --prod` reported one high advisory on 2026-10-06 (`source-map-js` through `next > postcss`, build-time); patch releases of next, react, mdxeditor and mapbox-gl were available.
 - [ ] **An orphaned `pnpm start` on port 3101** (started 2026-09-29) was still running on the owner's Mac on 2026-10-07.
 

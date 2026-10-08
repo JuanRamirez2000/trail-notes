@@ -17,6 +17,7 @@ pnpm test        # unit tests (Vitest)
 pnpm lint
 pnpm typecheck   # next typegen + tsc
 pnpm build
+pnpm icons       # rerender favicon.ico and apple-icon.png after editing src/app/icon.svg
 ```
 
 CI (`.github/workflows/ci.yml`) runs `pnpm content check`, lint, typecheck, tests, `pnpm photos check` and `pnpm build` on every push and PR.

@@ -13,6 +13,7 @@
     "content": "tsx scripts/content.ts",
     "ingest": "tsx scripts/ingest-photos.ts",
     "sample:photos": "tsx scripts/make-sample-photos.ts",
+    "icons": "tsx scripts/make-icons.ts",
     "gpx": "tsx scripts/import-gpx.ts",
     "test": "vitest run",
     "test:watch": "vitest",

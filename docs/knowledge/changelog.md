@@ -2,7 +2,14 @@
 
 Newest first. Commit hashes refer to `main`.
 
-## V2 (in progress, from 2026-10-01): editing
+## v0.1.0 (in progress, from 2026-10-08): the first tagged release
+
+Plan: [v0.1-plan.md](v0.1-plan.md).
+
+- **Licence** (`49169d8`): MIT for the code; guides and photos all rights reserved.
+- **App icons:** favicon, SVG icon and Apple touch icon from the logo badge (`src/app/icon.svg`; `pnpm icons` renders the other two).
+
+## V2 (from 2026-10-01): editing
 
 - **Audit and fixes** (2026-10-06/07). Three agents read the whole repo (bugs, refactors, release readiness); everything below came out of that.
   - **Security:**

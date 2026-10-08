@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- The logo badge (components/ui/Logo.tsx): a forest notebook with topo rings and an ochre pencil. -->
+  <defs>
+    <clipPath id="page">
+      <path d="M21 0H80a20 20 0 0 1 20 20V80a20 20 0 0 1-20 20H21V0Z" />
+    </clipPath>
+  </defs>
+  <path d="M12 0H80a20 20 0 0 1 20 20V80a20 20 0 0 1-20 20H12A12 12 0 0 1 0 88V12A12 12 0 0 1 12 0Z" fill="#2f4a36" />
+  <path d="M12 0H9V100H12A12 12 0 0 1 0 88V12A12 12 0 0 1 12 0Z" fill="#1f3124" />
+  <g clip-path="url(#page)" fill="none" stroke="#f4ede0" stroke-width="5">
+    <ellipse cx="34" cy="17.5" rx="43" ry="35.5" transform="rotate(-6 34 17.5)" />
+    <ellipse cx="34" cy="17.5" rx="28" ry="20.5" transform="rotate(4 34 17.5)" />
+    <ellipse cx="76.5" cy="72.5" rx="25.5" ry="20.5" transform="rotate(-8 76.5 72.5)" />
+  </g>
+  <rect x="78" y="28" width="10" height="70" rx="3" fill="#d9a441" stroke="#2a2118" stroke-width="1.5" transform="rotate(30 78 28)" />
+</svg>
