@@ -33,7 +33,8 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       const hike = await store.read(slug);
       expect(hike).not.toBeNull();
       expect(hike!.mdx).toBe(mdx);
-      expect(JSON.parse(hike!.waypoints)).toEqual(JSON.parse(waypoints));
+      // Byte for byte: pins are stored as written, their keys in the order they were written.
+      expect(hike!.waypoints).toBe(waypoints);
       expect(hike!.track).toEqual(track);
       expect(hike!.status).toBe("draft");
       version = hike!.version;

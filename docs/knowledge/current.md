@@ -9,7 +9,7 @@ Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whos
 - **Vercel:** project `prj_BRkSr8pDopFEqEJGNNNtKhUOaPwl`, team `team_xA3s7AnPMr8p1ZVJafHQupxT`. Use the claude.ai Vercel connector; the plugin connector returns 403 on this team.
 - **Supabase:** project `fstcgdirhssuaevgxptv` ("trail-notes", us-east-2, Postgres 17, **free plan**: pauses after about a week idle).
   - Storage: the public bucket `hikes` (photos).
-  - Tables `hikes`, `hike_revisions`, `editors` (migrations in `supabase/migrations/`, applied with the Supabase connector). Row-level security is on with explicit "server only" policies: the public key and signed-in browser sessions can read and write nothing; only the server's service-role key can.
+  - Tables `hikes`, `hike_revisions`, `editors`, defined in TypeScript in `src/db/schema.ts` (Drizzle). Migrations up to 2026-10-08 are the SQL files in `supabase/migrations/`; `drizzle/0000_baseline.sql` describes their result (checked identical with `pg_dump`) and is recorded as applied in the live database (`drizzle.__drizzle_migrations`). New ones come from `pnpm db:generate` into `drizzle/` and are applied before the code that needs them (see Gotchas). Row-level security is on with explicit "server only" policies: the public key and signed-in browser sessions can read and write nothing; only the server's service-role key can.
   - The three guides are seeded. Auth: Google provider on, sign-ups closed, one editor (the owner).
 - **Design source:** Claude Design project `87e465cf-146d-4327-9930-d7562360f28b`. *Trail Guide Branded.dc.html* has the screens: 1 gallery, 2 guide page, 3a authoring view, 4a component sheet. It's readable from a session with the `DesignSync` tool (`list_files` / `get_file`) when the owner asks for it; inline styles map 1:1 onto the tokens in `globals.css`.
 
@@ -28,7 +28,8 @@ Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whos
 ```
 ContentStore (src/lib/store)                      one interface: list, read, save, create, setTrack, deleteDraft, remove
   ├─ local backend     content/hikes/<slug>/{index.mdx, waypoints.json, track.json?}   CONTENT_STORE unset (default)
-  └─ supabase backend  tables hikes / hike_revisions                                    CONTENT_STORE=supabase
+  ├─ postgres backend  tables hikes / hike_revisions, through Drizzle (src/db)       CONTENT_STORE=postgres
+  └─ supabase backend  the same tables, through supabase-js                          CONTENT_STORE=supabase (live until the switch)
         ▲ every write: validateHike (zod schemas + MDX compile + no code), then a version check
         │
 src/lib/content.ts ── read ──► compileGuide (server, src/lib/mdx/compile.ts) ──► /hikes/[slug], cached
@@ -41,7 +42,7 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 - **Content store** (`src/lib/store/`):
   - `types.ts` is the interface. `store.ts` (`createStore(backend)`) holds all the rules once: nothing reaches a backend without `validateHike`, every change names the version it's based on and a stale one is refused, and status (draft/published) follows the guide's `draft` flag so files and database agree. Publishing is therefore a normal `save`; there is no separate publish operation. `deleteDraft` is the editor's delete: drafts only (a published guide is refused, `published`), at the version last seen, with its history rows (no undo; `create_hike` starts every hike at revision 1, so leftover rows would block the address). `remove` deletes a hike and its history whatever its state, for tests and scripts.
   - The address `new` is reserved (`RESERVED_SLUGS` in `schemas.ts`) and refused by `validateHike`, so the scripts can't create it either.
-  - Backends only read and write raw records: `local.ts` (version = hash of the files; an invalid hand-edited guide is still readable, flagged `details: null`; a `track.json` that doesn't validate is flagged `trackUnreadable` and the store refuses to save over it rather than delete it; writes to one hike are queued so two saves from the same version can't both pass) and `supabase.ts` (version = integer column; `save_hike` / `create_hike` database functions update and write the history row in one transaction; `deleteDraft` is plain supabase-js: one conditional delete, then the history).
+  - Backends only read and write raw records: `local.ts` (version = hash of the files; an invalid hand-edited guide is still readable, flagged `details: null`; a `track.json` that doesn't validate is flagged `trackUnreadable` and the store refuses to save over it rather than delete it; writes to one hike are queued so two saves from the same version can't both pass), `postgres.ts` (Drizzle over `DATABASE_URL`; version = integer column; every change is one TypeScript transaction: version check, write and history row) and `supabase.ts` (the same tables through supabase-js and the service-role key; `save_hike` / `create_hike` SQL functions; `deleteDraft` is one conditional delete, then the history). `supabase.ts` and its two SQL functions go once the live site has run on `postgres` (see [v0.1-plan.md](v0.1-plan.md)).
   - `server.ts` (`getStore()`, `server-only`) picks by `CONTENT_STORE`. It is explicit, not "is a key present", so a missing key is a loud error, and so is a mistyped value (`next.config.ts` checks `CONTENT_STORE`, `EDITOR_AUTH` and `NEXT_PUBLIC_PHOTO_STORAGE` at startup).
   - Pins are stored exactly as written (validated, not rewritten); the database columns are `json`, not `jsonb`, because jsonb reorders keys.
 - **Rendering:** `src/lib/content.ts` reads through the store and compiles MDX on the server (`compileGuide`). `/` and `/hikes/[slug]` are static with `revalidate = 3600` and `dynamicParams = true`: refreshed when the editor saves (`revalidatePath`), hourly as a safety net, and a failed refresh keeps the last good page. Drafts show only under `pnpm dev`. `content/hikes` ships in the server bundle (`outputFileTracingIncludes`), and a missing folder is an error rather than "no hikes".
@@ -76,7 +77,9 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Dev server on **port 3100** (3000 is taken by another project on the owner's machine). It listens on `127.0.0.1` only: under dev the editor is an owner with no sign-in, so it must not be reachable from the network (`pnpm dev:lan` listens on all interfaces, for checking on a phone). Guides are read from `content/hikes` on each request, so an edited file shows on reload |
-| `pnpm test` | Vitest (244 tests: new-hike builder, pin operations, frontmatter split/join/edit, store contract on local files, the two editor API routes called as Next calls them, the editor's save loop on jsdom, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom, generated sections) |
+| `pnpm test` | Vitest (266 tests with `TEST_DATABASE_URL`, 244 without: new-hike builder, pin operations, frontmatter split/join/edit, store contract on local files, the two editor API routes called as Next calls them, the editor's save loop on jsdom, save gate and no-code rule, remark passes, manifest, schemas, geo, track, ingest/GPX helpers, editor source helpers, request guards, MDXEditor round trip on jsdom, generated sections) |
+| `TEST_DATABASE_URL=postgres://… pnpm test postgres` | The store contract on Drizzle against a scratch Postgres (tables made by the migrations in `drizzle/`), plus history and lockdown tests. CI runs it against a Postgres service. Refuses a Supabase address |
+| `pnpm db:generate` / `pnpm db:migrate` | Write a migration from changes to `src/db/schema.ts` (no database needed) / apply pending migrations to `DATABASE_URL` |
 | `SUPABASE_CONTRACT_TESTS=1 pnpm test supabase` | The same store contract against the real Supabase project, plus the lockdown test. Uses and removes `zz-contract-*` draft rows. Never in CI |
 | `pnpm typecheck` | `next typegen && tsc --noEmit` |
 | `pnpm build` | `next build` |
@@ -89,9 +92,9 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
 | `pnpm sample:photos [slug]` | Placeholder JPEGs with real EXIF in `fixtures/sample-photos/<slug>/`, for trying the pipeline |
 | `pnpm photos check\|push\|pull [slug]` | Photos referenced by `content/` exist in Supabase (CI runs this) / upload local photos / download for offline dev |
 
-CI (`.github/workflows/ci.yml`) runs `content check`, lint, typecheck, tests, `photos check` and build on every push and PR, with no secrets. If the `SUPABASE_SERVICE_ROLE_KEY` repository secret exists, it also checks every stored guide. On 2026-10-06 that secret was not set, so the step is skipped and CI covers the files in `content/`, not what the live site serves.
+CI (`.github/workflows/ci.yml`) runs `content check`, lint, typecheck, tests (with a Postgres 17 service for the Drizzle store), `photos check` and build on every push and PR, with no secrets. If the `SUPABASE_SERVICE_ROLE_KEY` repository secret exists, it also checks every stored guide. On 2026-10-06 that secret was not set, so the step is skipped and CI covers the files in `content/`, not what the live site serves.
 
-Environment switches: `CONTENT_STORE` (`local` default, `supabase`), `EDITOR_AUTH` (unset, `supabase`, `off`), `NEXT_PUBLIC_PHOTO_STORAGE` (`supabase`; `local` in dev only). See `.env.example`.
+Environment switches: `CONTENT_STORE` (`local` default, `postgres`, `supabase`), `EDITOR_AUTH` (unset, `supabase`, `off`), `NEXT_PUBLIC_PHOTO_STORAGE` (`supabase`; `local` in dev only). See `.env.example`.
 
 ## Decisions (and why)
 
@@ -113,6 +116,8 @@ Environment switches: `CONTENT_STORE` (`local` default, `supabase`), `EDITOR_AUT
 - **MDXEditor deletes a whole block on Backspace in its empty text field.** `WriteView` swallows that keystroke; blocks are removed with the Remove button.
 - **Maps: the Mapbox layer stays `invisible` until it has painted** (`TrailMap.tsx`). Otherwise, while tiles are loading or refused, Mapbox's pins show on top of the sketch map's pins and every pin appears twice.
 - **Stage files explicitly when committing.** `git add -A` once swept an editor autosave of the owner's into a commit; the dev server may be saving while a session works.
+- **`DATABASE_URL` must be Supabase's transaction pooler** (port 6543), with prepared statements off (`src/db/client.ts`). The direct address is IPv6-only on the free plan, which Vercel can't reach, and the pooler doesn't keep prepared statements between transactions. It holds the database password: server and scripts only, a Sensitive variable in Vercel, entered by the owner.
+- **Applying a migration to the live database:** nothing here holds `DATABASE_URL`, so a session applies the generated SQL with the Supabase connector (`apply_migration`) and, in the same call, inserts its row into `drizzle.__drizzle_migrations` (sha256 of the file and the journal's `when`), which is what `pnpm db:migrate` would do. Apply it before pushing the code that needs it.
 - **Postgres `jsonb` reorders object keys.** Use `json` for anything that should read back as written (pins, track).
 - **`tsx` ran scripts as CommonJS until the package became `"type": "module"`;** the MDX compiler's dependencies are ESM-only and can't be `require`d.
 - **Next generates the `PageProps`/`LayoutProps`/`RouteContext` globals.** Run `next typegen` before `tsc` on a fresh checkout (`pnpm typecheck` does this).

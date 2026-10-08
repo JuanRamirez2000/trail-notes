@@ -6,15 +6,19 @@
  *   pnpm content seed [slug] [--force]  copy content/hikes → Supabase, through the store
  *   pnpm content pull [slug]            copy Supabase → content/hikes (refresh the repo's copy on purpose)
  *
+ * The database is reached with supabase-js by default, or with `--store postgres` through Drizzle
+ * (DATABASE_URL); both are the same tables.
+ *
  * `content/hikes` is seed data, fixtures and the test baseline; in production the database is what
  * the site shows. Seeding never overwrites a stored guide that differs unless --force is given.
- * The Supabase commands need NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (.env.local).
+ * The Supabase commands need NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (.env.local);
+ * `--store postgres` needs DATABASE_URL instead.
  */
 import { parseArgs } from "node:util";
 import { localBackend } from "../src/lib/store/local";
 import { createStore } from "../src/lib/store/store";
-import { serviceClient, supabaseBackend } from "../src/lib/store/supabase";
 import type { ContentStore } from "../src/lib/store/types";
+import { scriptStore } from "./lib/stores";
 import { validateHike } from "../src/lib/store/validate";
 
 try {
@@ -30,17 +34,13 @@ const { values, positionals } = parseArgs({
 const [cmd, only] = positionals;
 
 const local = () => createStore(localBackend());
-async function remote(): Promise<ContentStore> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see .env.example)");
-  return createStore(supabaseBackend(await serviceClient(url, key)));
-}
+/** The database, for seed and pull: through supabase-js unless `--store postgres` is given. */
+const remote = () => scriptStore(values.store === "local" ? "supabase" : values.store);
 
 const slugsOf = async (store: ContentStore) => (await store.list()).map((h) => h.slug).filter((s) => !only || s === only);
 
 async function check() {
-  const store = values.store === "supabase" ? await remote() : local();
+  const store = values.store === "local" ? local() : await remote();
   const slugs = await slugsOf(store);
   if (!slugs.length) throw new Error(`No guides found in the ${store.kind} store${only ? ` for "${only}"` : ""}`);
   let bad = 0;
@@ -108,7 +108,7 @@ const commands: Record<string, () => Promise<void>> = {
   pull: async () => copy(await remote(), local()),
 };
 if (!commands[cmd]) {
-  console.error("Usage: pnpm content <check|seed|pull> [slug] [--store supabase] [--force]");
+  console.error("Usage: pnpm content <check|seed|pull> [slug] [--store supabase|postgres] [--force]");
   process.exit(1);
 }
 commands[cmd]().catch((err) => {

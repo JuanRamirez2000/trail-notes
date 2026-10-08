@@ -63,7 +63,7 @@ export type DeleteResult =
   | { ok: false; kind: "published" };
 
 export interface ContentStore {
-  readonly kind: "local" | "supabase";
+  readonly kind: "local" | "supabase" | "postgres";
   list(): Promise<HikeSummary[]>;
   read(slug: string): Promise<HikeRecord | null>;
   save(slug: string, content: HikeContent, opts: WriteOptions): Promise<WriteResult>;
@@ -105,7 +105,7 @@ export type RawWrite = Pick<RawHike, "mdx" | "waypoints" | "track" | "status"> &
 export type BackendResult = { ok: true; version: string } | { ok: false; kind: "conflict"; version: string } | { ok: false; kind: "not_found" } | { ok: false; kind: "exists" };
 
 export interface StoreBackend {
-  readonly kind: "local" | "supabase";
+  readonly kind: "local" | "supabase" | "postgres";
   list(): Promise<Omit<RawHike, "mdx" | "waypoints" | "waypointsText" | "track">[]>;
   get(slug: string): Promise<RawHike | null>;
   /** Insert; fails with "exists" if the slug is taken. */

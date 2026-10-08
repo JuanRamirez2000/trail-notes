@@ -31,7 +31,6 @@ None changes behaviour; each needs the tests named first.
 - [ ] `getHikePage` lists every hike to get one hike's details (a second query per render with Supabase); `HikeRecord` could carry `details`.
 - [ ] Gallery client components take their type from the `server-only` `lib/content.ts`, and the whole frontmatter of every hike is sent to the gallery; a `Pick` of what the cards use would do.
 - [ ] Small numeric helpers are repeated (`round` four times, the 0.05 mi snap distance twice, "renumber in steps of 10" twice).
-- [ ] Generated Supabase types would remove the hand-written `Row` and casts in `store/supabase.ts`.
 - [ ] `pnpm ingest` still uploads photos before the pins are validated; it now checks the stored guide first, but a refused save after that leaves uploads behind.
 
 ## V2: editing (in progress, see [v2-plan.md](v2-plan.md))

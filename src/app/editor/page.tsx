@@ -32,7 +32,7 @@ export default async function EditorIndex() {
         )}
       </div>
       <p className="mt-2 text-bark">
-        {store.kind === "supabase"
+        {store.kind !== "local"
           ? "Saves go to the database and are public within seconds once a guide is published."
           : "Saves write to content/hikes on this machine."}{" "}
         Photos are added with <code>pnpm ingest</code>.

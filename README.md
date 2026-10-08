@@ -72,7 +72,9 @@ src/
   lib/hike-store.tsx   per-page Zustand store (active step, 360° look direction)
   lib/storage.ts       photo key → URL (Supabase, or local in dev)
   app/globals.css      design tokens (Tailwind @theme) from the Claude Design handoff
-supabase/migrations/   tables, row-level security and the save functions
+  db/                  the database tables in TypeScript (Drizzle, schema.ts) and the connection
+drizzle/               migrations generated from src/db/schema.ts (`pnpm db:generate`)
+supabase/migrations/   the SQL migrations up to 2026-10-08 (drizzle/0000_baseline.sql describes their result)
 ```
 
 ---
@@ -228,6 +230,7 @@ Supabase Storage is the source of truth for photos. `public/photos` is gitignore
    NEXT_PUBLIC_PHOTO_STORAGE=supabase
    NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=<service role key>   # secret; used by the scripts and, with CONTENT_STORE=supabase, by the server
+   DATABASE_URL=<transaction pooler connection string>   # secret; with CONTENT_STORE=postgres (see .env.example)
    ```
 
 3. `pnpm ingest <folder> --slug <slug>` now uploads to `hikes/<slug>/...`.

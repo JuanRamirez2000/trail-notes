@@ -17,7 +17,7 @@ if (process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.startsWith("sk.")) {
 // A mistyped switch must stop the build, not quietly fall back to the other backend.
 for (const [name, allowed] of [
   ["NEXT_PUBLIC_PHOTO_STORAGE", ["local", "supabase"]],
-  ["CONTENT_STORE", ["local", "supabase"]],
+  ["CONTENT_STORE", ["local", "supabase", "postgres"]],
   ["EDITOR_AUTH", ["supabase", "off"]],
 ] as const) {
   const value = process.env[name];
