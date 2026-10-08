@@ -60,7 +60,6 @@ None changes behaviour; each needs the tests named first.
   - Commit the pin-editor browser checks as an E2E test.
 - [ ] E5 leftovers:
   - Replace a hike's track from the app (today: `pnpm gpx --slug <slug> --guides supabase`).
-  - No way to delete a hike from the app (drafts made by mistake stay as drafts).
   - The new-hike form doesn't share code with the Details form.
 - [ ] Phone layout for the editor: design 3a is desktop-only (three columns, fixed 290px settings column), and live-site editing is meant to work from the phone.
 

@@ -55,6 +55,13 @@ export type WriteResult =
   | { ok: false; kind: "not_found" }
   | { ok: false; kind: "exists" };
 
+export type DeleteResult =
+  | { ok: true }
+  | { ok: false; kind: "conflict"; version: string }
+  | { ok: false; kind: "not_found" }
+  /** Only drafts can be deleted; a published guide has to be unpublished first. */
+  | { ok: false; kind: "published" };
+
 export interface ContentStore {
   readonly kind: "local" | "supabase";
   list(): Promise<HikeSummary[]>;
@@ -63,7 +70,12 @@ export interface ContentStore {
   /** `track` is checked by the store, so it can be passed as received. */
   create(slug: string, content: HikeContent & { track?: unknown }, opts: { editor: Editor | null }): Promise<WriteResult>;
   setTrack(slug: string, track: Track | null, opts: WriteOptions): Promise<WriteResult>;
-  /** Removes a hike. For tests and scripts; the editor has no delete. */
+  /**
+   * Deletes a draft from the editor, with its history: only while it's a draft, and only at the
+   * version the editor last saw. There's no undo.
+   */
+  deleteDraft(slug: string, opts: WriteOptions): Promise<DeleteResult>;
+  /** Removes a hike and its history, whatever its state. For tests and scripts. */
   remove(slug: string): Promise<void>;
 }
 
@@ -100,5 +112,7 @@ export interface StoreBackend {
   insert(slug: string, data: RawWrite, editor: Editor | null): Promise<BackendResult>;
   /** Replace, only if the stored version is still `baseVersion` (checked atomically where the backend can). */
   update(slug: string, data: RawWrite, baseVersion: string, editor: Editor | null): Promise<BackendResult>;
+  /** Delete, only if it's still a draft at `baseVersion` (checked atomically where the backend can). */
+  deleteDraft(slug: string, baseVersion: string): Promise<DeleteResult>;
   remove(slug: string): Promise<void>;
 }

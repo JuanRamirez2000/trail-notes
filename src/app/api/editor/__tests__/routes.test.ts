@@ -23,7 +23,7 @@ vi.mock("next/cache", () => ({ revalidatePath: (p: string) => void state.revalid
 vi.mock("@/lib/auth/server", () => ({ getEditor: async () => state.editor }));
 vi.mock("@/lib/store/server", () => ({ getStore: async () => createStore(localBackend(root)) }));
 
-const { PUT, GET: getOne } = await import("../[slug]/route");
+const { PUT, DELETE, GET: getOne } = await import("../[slug]/route");
 const { POST, GET: getAll } = await import("../route");
 
 const ORIGIN = "https://trailnotes.example";
@@ -39,6 +39,7 @@ function request(method: string, url: string, body: unknown, headers: Record<str
 }
 const put = (slug: string, body: unknown, headers?: Record<string, string>) => PUT(request("PUT", `/api/editor/${slug}`, body, headers), { params: Promise.resolve({ slug }) });
 const post = (body: unknown, headers?: Record<string, string>) => POST(request("POST", "/api/editor", body, headers));
+const del = (slug: string, body: unknown, headers?: Record<string, string>) => DELETE(request("DELETE", `/api/editor/${slug}`, body, headers), { params: Promise.resolve({ slug }) });
 
 beforeEach(() => {
   state.editor = OWNER;
@@ -129,5 +130,36 @@ describe("POST /api/editor", () => {
   it("is a 404 for anyone who isn't an editor", async () => {
     state.editor = null;
     expect((await post(await draft("zz-nobody"))).status).toBe(404);
+  });
+});
+
+describe("DELETE /api/editor/[slug]", () => {
+  // ridgeline-loop is a draft in content/hikes; strawberry-peak is published.
+  it("is a 404 for anyone who isn't an editor, and a 403 from another site", async () => {
+    const g = await guide("ridgeline-loop");
+    state.editor = null;
+    expect((await del("ridgeline-loop", { baseVersion: g.version })).status).toBe(404);
+    state.editor = OWNER;
+    expect((await del("ridgeline-loop", { baseVersion: g.version }, { origin: "https://evil.example" })).status).toBe(403);
+    expect((await del("../etc", { baseVersion: g.version })).status).toBe(404);
+    expect((await del("no-such-hike", { baseVersion: "x" })).status).toBe(404);
+    for (const bad of ["{ not json", "null", {}, { baseVersion: 3 }]) expect((await del("ridgeline-loop", bad)).status).toBe(400);
+    expect(await store.read("ridgeline-loop")).not.toBeNull();
+  });
+
+  it("refuses a published guide and a stale version", async () => {
+    const published = await guide();
+    const res = await del("strawberry-peak", { baseVersion: published.version });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ problems: [expect.stringMatching(/Unpublish it first/)] });
+    expect(await store.read("strawberry-peak")).not.toBeNull();
+    expect(await (await del("ridgeline-loop", { baseVersion: "stale" })).json()).toMatchObject({ conflict: true });
+  });
+
+  it("deletes a draft at the version last seen", async () => {
+    const g = await guide("ridgeline-loop");
+    expect((await del("ridgeline-loop", { baseVersion: g.version })).status).toBe(200);
+    expect(await store.read("ridgeline-loop")).toBeNull();
+    expect(state.revalidated).toEqual(["/"]);
   });
 });

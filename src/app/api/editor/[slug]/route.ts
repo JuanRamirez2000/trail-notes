@@ -66,5 +66,38 @@ export async function PUT(req: Request, ctx: RouteContext<"/api/editor/[slug]">)
   return notFound();
 }
 
+/**
+ * Deletes a draft. The same checks as a save; the store then refuses a guide that is published
+ * (unpublish it first) or that changed since the editor last saw it.
+ */
+export async function DELETE(req: Request, ctx: RouteContext<"/api/editor/[slug]">) {
+  const { slug } = await ctx.params;
+  if (!SLUG.test(slug)) return notFound();
+
+  const editor = await getEditor();
+  if (!can(editor, "delete", slug)) return notFound();
+  if (!sameOrigin(req)) return json({ ok: false, problems: ["Request must come from the editor."] }, 403);
+  if (!allow(editor.id)) return json({ ok: false, problems: ["Too many requests. Wait a moment and try again."] }, 429);
+
+  let body: { baseVersion?: unknown } | null = null;
+  try {
+    body = JSON.parse((await req.text()).slice(0, 1000));
+  } catch {
+    // handled below
+  }
+  if (typeof body?.baseVersion !== "string") return json({ ok: false, problems: ["Expected { baseVersion } as a string."] }, 400);
+
+  const store = await getStore();
+  const result = await store.deleteDraft(slug, { editor, baseVersion: body.baseVersion });
+  if (result.ok) {
+    // Drafts have no public page, but under `pnpm dev` the gallery lists them.
+    revalidatePath("/");
+    return json({ ok: true }, 200);
+  }
+  if (result.kind === "published") return json({ ok: false, problems: ["Only a draft can be deleted. Unpublish it first."] }, 409);
+  if (result.kind === "conflict") return json({ ok: false, conflict: true, version: result.version }, 409);
+  return notFound();
+}
+
 // Other methods get the same 404 as everything else about the editor (Next would say 405).
-export { notFound as GET, notFound as POST, notFound as PATCH, notFound as DELETE };
+export { notFound as GET, notFound as POST, notFound as PATCH };

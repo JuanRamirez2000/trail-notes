@@ -135,6 +135,30 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       expect(await store.save("zz-no-such-hike", { mdx, waypoints }, { editor, baseVersion: "x" })).toEqual({ ok: false, kind: "not_found" });
     });
 
+    it("deletes a draft only at the version last seen, and never a published guide", async () => {
+      expect(await store.deleteDraft(slug, { editor, baseVersion: "stale-version" })).toEqual({ ok: false, kind: "conflict", version });
+      expect(await store.deleteDraft("zz-no-such-hike", { editor, baseVersion: "x" })).toEqual({ ok: false, kind: "not_found" });
+
+      const doc = splitGuide((await store.read(slug))!.mdx);
+      const pub = await store.save(slug, { mdx: joinGuide({ yaml: setDetail(doc.yaml, ["draft"], false), body: doc.body }), waypoints }, { editor, baseVersion: version });
+      expect(pub).toMatchObject({ ok: true, status: "published" });
+      const published = (await store.read(slug))!;
+      expect(await store.deleteDraft(slug, { editor, baseVersion: published.version })).toEqual({ ok: false, kind: "published" });
+      expect(await store.read(slug)).not.toBeNull();
+
+      const unpub = await store.save(slug, { mdx, waypoints }, { editor, baseVersion: published.version });
+      expect(unpub).toMatchObject({ ok: true, status: "draft" });
+      expect(await store.deleteDraft(slug, { editor, baseVersion: unpub.ok ? unpub.version : "" })).toEqual({ ok: true });
+      expect(await store.read(slug)).toBeNull();
+      expect((await store.list()).some((h) => h.slug === slug)).toBe(false);
+    });
+
+    it("can create a hike again at the address of a deleted draft", async () => {
+      const r = await store.create(slug, { mdx, waypoints, track }, { editor });
+      expect(r).toMatchObject({ ok: true, status: "draft" });
+      expect(r.ok && r.version).toBe((await store.read(slug))!.version);
+    });
+
     it("removes a hike", async () => {
       await store.remove(slug);
       expect(await store.read(slug)).toBeNull();

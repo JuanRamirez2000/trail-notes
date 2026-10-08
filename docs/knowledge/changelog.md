@@ -8,6 +8,7 @@ Plan: [v0.1-plan.md](v0.1-plan.md).
 
 - **Licence** (`49169d8`): MIT for the code; guides and photos all rights reserved.
 - **Dependencies:** next 16.3.6 → 16.3.8 (two high and four lower advisories: image-optimisation SSRF, ISR cache poisoning, metadata-route disclosure), `source-map-js` 1.2.2 (high, build-time), and patch releases of mdxeditor, vitest and jsdom. `pnpm audit --prod` is clean on 2026-10-08. Minor and major releases (next 16.4, react 19.3, mapbox-gl 3.32, TypeScript 7, ESLint 10) are left for later.
+- **Delete a draft** from the editor (end of the Details view). Published guides are refused, and so is a stale version. Its history is deleted with it, so the address can be used again; there's no undo.
 - **App icons:** favicon, SVG icon and Apple touch icon from the logo badge (`src/app/icon.svg`; `pnpm icons` renders the other two).
 
 ## V2 (from 2026-10-01): editing

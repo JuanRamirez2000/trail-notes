@@ -10,6 +10,7 @@ import { COMPONENT_NAMES } from "@/lib/mdx/manifest";
 import { essentialsSchema, type Track } from "@/lib/schemas";
 import { AdvancedView } from "./AdvancedView";
 import { countComponents, countWords, parseWaypoints } from "./compile";
+import { DeleteDraft } from "./DeleteDraft";
 import { DetailsForm } from "./DetailsForm";
 import { EditorAccount } from "./EditorAccount";
 import { PinsView } from "./pins/PinsView";
@@ -287,6 +288,9 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
       {view === "details" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <DetailsForm yaml={doc.yaml} waypoints={pins} onChange={setYaml} />
+          {isDraft && (
+            <DeleteDraft slug={slug} title={typeof details.title === "string" && details.title ? details.title : slug} saved={!dirty && save.kind !== "saving"} version={() => versionRef.current} />
+          )}
         </div>
       )}
 

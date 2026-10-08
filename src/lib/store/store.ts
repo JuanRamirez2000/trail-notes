@@ -84,6 +84,8 @@ export function createStore(backend: StoreBackend): ContentStore {
       return r.ok ? { ok: true, version: r.version, status: p.data.status } : r;
     },
 
+    deleteDraft: (slug, { baseVersion }) => backend.deleteDraft(slug, baseVersion),
+
     remove: (slug) => backend.remove(slug),
   };
 }

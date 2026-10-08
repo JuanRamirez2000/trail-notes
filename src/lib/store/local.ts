@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { frontmatterSchema, SLUG, trackSchema, type Track } from "../schemas";
-import type { BackendResult, RawHike, RawWrite, StoreBackend } from "./types";
+import type { BackendResult, DeleteResult, RawHike, RawWrite, StoreBackend } from "./types";
 import { splitFrontmatter, waypointsText } from "./validate";
 
 /**
@@ -111,6 +111,16 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
         if (!current) return { ok: false, kind: "not_found" };
         if (current.version !== baseVersion) return { ok: false, kind: "conflict", version: current.version };
         return { ok: true, version: await write(slug, data) };
+      }),
+
+    deleteDraft: (slug, baseVersion) =>
+      inTurn(slug, async (): Promise<DeleteResult> => {
+        const current = await load(slug);
+        if (!current) return { ok: false, kind: "not_found" };
+        if (current.status !== "draft") return { ok: false, kind: "published" };
+        if (current.version !== baseVersion) return { ok: false, kind: "conflict", version: current.version };
+        await rm(dir(slug), { recursive: true, force: true });
+        return { ok: true };
       }),
 
     async remove(slug) {

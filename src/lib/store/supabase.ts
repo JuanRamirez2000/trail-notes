@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Frontmatter, Track } from "../schemas";
-import type { BackendResult, Editor, HikeStatus, RawHike, RawWrite, StoreBackend } from "./types";
+import type { BackendResult, DeleteResult, Editor, HikeStatus, RawHike, RawWrite, StoreBackend } from "./types";
 
 /**
  * Guides in Supabase Postgres (tables and functions: supabase/migrations). `client` must be made
@@ -106,6 +106,31 @@ export function supabaseBackend(client: SupabaseClient): StoreBackend {
       if (result === "ok") return { ok: true, version: String(version) };
       if (result === "conflict") return { ok: false, kind: "conflict", version: String(version) };
       return { ok: false, kind: "not_found" };
+    },
+
+    async deleteDraft(slug, baseVersion): Promise<DeleteResult> {
+      const base = Number(baseVersion);
+      // One statement: deleted only if it's still a draft at the version the editor last saw.
+      const { data, error } = await client
+        .from("hikes")
+        .delete()
+        .eq("slug", slug)
+        .eq("status", "draft")
+        .eq("version", Number.isInteger(base) ? base : -1)
+        .select("slug");
+      if (error) throw fail(`delete ${slug}`, error);
+      if (!data?.length) {
+        const { data: current, error: readError } = await client.from("hikes").select("status, version").eq("slug", slug).maybeSingle();
+        if (readError) throw fail(`read ${slug}`, readError);
+        if (!current) return { ok: false, kind: "not_found" };
+        if (current.status !== "draft") return { ok: false, kind: "published" };
+        return { ok: false, kind: "conflict", version: String(current.version) };
+      }
+      // Its history goes too: create_hike starts a new hike at revision 1, so leftover rows would
+      // block that address from being used again.
+      const history = await client.from("hike_revisions").delete().eq("slug", slug);
+      if (history.error) throw fail(`delete history of ${slug} (the draft itself is deleted)`, history.error);
+      return { ok: true };
     },
 
     async remove(slug) {
