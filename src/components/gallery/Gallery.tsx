@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { HikeSummary } from "@/lib/content";
-import { applyFilters, EMPTY_FILTERS, type Filters } from "./filters";
+import { applyFilters, countHikes, EMPTY_FILTERS, type Filters } from "./filters";
 import { FilterBar } from "./FilterBar";
 import { HikeCard } from "./HikeCard";
 import { HikesMap } from "./HikesMap";
@@ -21,9 +21,9 @@ export function Gallery({ hikes }: { hikes: HikeSummary[] }) {
           <HikesMap hikes={shown} selected={selected} onSelect={setSelected} className="absolute inset-0" />
         </div>
         <section className="bg-paper-deep px-4 py-4 sm:px-6 sm:py-5" aria-label="Hikes">
-          <h2 className="mb-2.5 font-display text-lg font-bold sm:hidden">{shown.length} hikes</h2>
+          <h2 className="mb-2.5 font-display text-lg font-bold sm:hidden">{countHikes(shown.length)}</h2>
           {shown.length === 0 ? (
-            <p className="py-12 text-center text-bark">No hikes match these filters.</p>
+            <p className="py-12 text-center text-bark">{hikes.length === 0 ? "No hikes have been published yet." : "No hikes match these filters."}</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-[18px]">
               {shown.map((h, i) => (

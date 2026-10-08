@@ -5,6 +5,7 @@ import { Frame } from "@/components/ui/Frame";
 import { Photo } from "@/components/ui/Photo";
 import { Pin } from "@/components/ui/Pin";
 import { formatMiles } from "@/lib/format";
+import { sectionId } from "@/lib/hike";
 import { useHike } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
 import type { ManifestProps } from "@/lib/mdx/manifest";
@@ -58,7 +59,7 @@ export function StepByStep({ showMeta = true }: StepByStepProps) {
                     {s.caption ?? s.title}
                     <br />
                     <a
-                      href={`#wp-${s.id}`}
+                      href={`#${sectionId(s.id)}`}
                       className="underline"
                       onClick={(e) => {
                         e.preventDefault();

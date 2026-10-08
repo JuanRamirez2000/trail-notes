@@ -10,6 +10,8 @@ import { getHikePage, getHikeSummaries } from "@/lib/content";
 import { DIFFICULTY_LABEL, formatFeet, formatMiles } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { HikeProvider } from "@/lib/hike-store";
+import { SITE_NAME } from "@/lib/site";
+import { photoUrl } from "@/lib/storage";
 
 export async function generateStaticParams() {
   return (await getHikeSummaries()).map((h) => ({ slug: h.slug }));
@@ -25,7 +27,19 @@ export const dynamicParams = true;
 
 export async function generateMetadata({ params }: PageProps<"/hikes/[slug]">): Promise<Metadata> {
   const page = await getHikePage((await params).slug);
-  return page ? { title: page.hike.title, description: page.hike.summary } : {};
+  if (!page) return {};
+  const { hike } = page;
+  const url = `/hikes/${hike.slug}`;
+  const description = `${hike.summary} ${formatMiles(hike.distanceMi)}, ${formatFeet(hike.elevationGainFt)} of climbing. ${hike.region}.`;
+  // The cover photo is the card's image; a hike without one gets a text-only card.
+  const images = hike.cover ? [{ url: photoUrl(hike.cover), alt: hike.title }] : undefined;
+  return {
+    title: hike.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { type: "article", siteName: SITE_NAME, title: hike.title, description, url, images },
+    twitter: { card: images ? "summary_large_image" : "summary", title: hike.title, description, images },
+  };
 }
 
 export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
@@ -46,31 +60,31 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
     <HikeProvider slug={slug} waypoints={waypoints} route={route} essentials={hike.essentials}>
       <GuideScrollSync />
       <article>
-        {/* Hero */}
-        <div className="relative h-[200px] border-b-[1.5px] border-line-strong sm:h-[360px]">
-          <Photo photoKey={hike.cover} alt={hike.title} priority sizes="100vw" className="absolute inset-0" />
-          <Link
-            href="/"
-            className="absolute left-3 top-2.5 rounded-full border border-line bg-card px-2.5 text-[15px] text-graphite sm:hidden"
-          >
-            ← All hikes
-          </Link>
-          <div className="absolute bottom-6 left-8 hidden max-w-[520px] rounded-lg border border-line bg-card px-5 py-3 sm:block">
-            <Link href="/" className="text-sm text-bark">
-              ← All hikes · {hike.region}
+        {/* Hero: the cover photo, with the title as a card over it on wide screens and under it on a phone. */}
+        <div className="relative">
+          <div className="relative h-[200px] border-b-[1.5px] border-line-strong sm:h-[360px]">
+            {/* Decorative here: the title is right beside it. */}
+            <Photo photoKey={hike.cover} alt="" priority sizes="100vw" className="absolute inset-0" />
+            <Link href="/" className="absolute left-3 top-2.5 rounded-full border border-line bg-card px-2.5 text-[15px] text-graphite sm:hidden">
+              ← All hikes
             </Link>
-            <h1 className="font-display text-[38px] leading-[1.1] font-bold">{hike.title}</h1>
-            <p className="text-[17px]">{hike.summary}</p>
+          </div>
+          <div className="px-4 pt-3.5 sm:absolute sm:bottom-6 sm:left-8 sm:max-w-[520px] sm:rounded-lg sm:border sm:border-line sm:bg-card sm:px-5 sm:py-3">
+            <div className="text-sm text-bark">
+              <Link href="/" className="hidden text-bark sm:inline">
+                ← All hikes ·{" "}
+              </Link>
+              {hike.region}
+            </div>
+            <h1 className="font-display text-[30px] leading-[1.1] font-bold sm:text-[38px]">{hike.title}</h1>
+            <p className="mt-1 sm:mt-0 sm:text-[17px]">{hike.summary}</p>
           </div>
         </div>
 
-        {/* Mobile title + stat grid */}
-        <div className="px-4 pt-3.5 sm:hidden">
-          <div className="text-sm text-bark">{hike.region}</div>
-          <h1 className="font-display text-[30px] leading-[1.1] font-bold">{hike.title}</h1>
-          <p className="mt-1">{hike.summary}</p>
+        {/* Mobile stat grid */}
+        <div className="px-4 sm:hidden">
           <dl className="mt-3 grid grid-cols-2 gap-2">
-            {stats.slice(0, 4).map((s) => (
+            {stats.map((s) => (
               <div key={s.k} className="rounded-lg border border-line-strong px-2.5 py-1.5">
                 <dt className="text-xs text-bark uppercase">{s.k}</dt>
                 <dd className="text-[19px]">{s.v}</dd>

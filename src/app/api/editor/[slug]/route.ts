@@ -1,7 +1,9 @@
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { can } from "@/lib/auth/can";
 import { rateLimiter, sameOrigin } from "@/lib/auth/request";
 import { getEditor } from "@/lib/auth/server";
+import { SLUG } from "@/lib/schemas";
 import { getStore } from "@/lib/store/server";
 import { MAX_MDX_BYTES, MAX_WAYPOINTS_BYTES } from "@/lib/store/validate";
 
@@ -15,15 +17,15 @@ const json = (body: unknown, status: number) => Response.json(body, { status });
 
 /**
  * Saves a guide. The order of the checks is the point:
- *   1. the request comes from our own pages (not another site driving an editor's browser)
- *   2. the caller is a signed-in editor allowed to save this hike; anyone else gets a plain 404
+ *   1. the caller is a signed-in editor allowed to save this hike; anyone else gets a plain 404
+ *   2. the request comes from our own pages (not another site driving an editor's browser)
  *   3. size and rate limits
  *   4. the store validates (schemas + MDX compile + no code) and refuses a stale version
  * Only then is anything written, with who and when, and the public pages are refreshed.
  */
 export async function PUT(req: Request, ctx: RouteContext<"/api/editor/[slug]">) {
   const { slug } = await ctx.params;
-  if (!/^[a-z0-9-]+$/.test(slug)) return notFound();
+  if (!SLUG.test(slug)) return notFound();
 
   const editor = await getEditor();
   if (!can(editor, "save", slug)) return notFound();
@@ -51,9 +53,18 @@ export async function PUT(req: Request, ctx: RouteContext<"/api/editor/[slug]">)
     // The guide's page and the gallery are cached; a save makes the next visit render them fresh.
     revalidatePath(`/hikes/${slug}`);
     revalidatePath("/");
+    // From a route, revalidatePath only marks the pages: the next visitor is still handed the old
+    // copy while a fresh one is made. After Publish or Unpublish that visitor is us, so nobody
+    // else is served a guide that was just taken down (or misses one that just went up).
+    if (result.previousStatus !== result.status) {
+      after(() => Promise.allSettled([`/hikes/${slug}`, "/"].map((p) => fetch(new URL(p, req.url), { cache: "no-store" }))));
+    }
     return json({ ok: true, version: result.version, status: result.status, savedAt: new Date().toISOString() }, 200);
   }
   if (result.kind === "invalid") return json({ ok: false, problems: result.problems }, 422);
   if (result.kind === "conflict") return json({ ok: false, conflict: true, version: result.version }, 409);
   return notFound();
 }
+
+// Other methods get the same 404 as everything else about the editor (Next would say 405).
+export { notFound as GET, notFound as POST, notFound as PATCH, notFound as DELETE };

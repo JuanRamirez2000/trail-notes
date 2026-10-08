@@ -4,6 +4,34 @@ Newest first. Commit hashes refer to `main`.
 
 ## V2 (in progress, from 2026-10-01): editing
 
+- **Audit and fixes** (2026-10-06/07). Three agents read the whole repo (bugs, refactors, release readiness); everything below came out of that.
+  - **Security:**
+    - The no-code rule accepted `{/* a */ code /* b */}` as a comment, so a saved guide could run code during page render; the same pattern took exponential time. Replaced with a linear scan, with the hostile inputs as tests.
+    - Links and images can only point to `http(s)`, `mailto`, `tel` or this site.
+    - Pin labels are escaped in the 360° viewer's markers (they were inserted as HTML).
+    - `<RouteMap __proto__=…>` no longer slips past the unknown-prop check.
+    - `/sign-in?error=__proto__` no longer returns a 500.
+    - The editor API answers 404 to every method; `/api/health` no longer reports the number of drafts.
+    - Security headers on every response; `pnpm dev` listens on this machine only.
+  - **Privacy:** pins no longer carry the photo's capture time (`takenAt`). It was in the public page's data. Removed from the schema, from `pnpm ingest` and from `content/`.
+  - **Editor:**
+    - One save at a time: a slow save no longer makes the editor conflict with itself.
+    - Leaving with unsaved text asks first.
+    - The Write view steps aside for Markdown it can't show instead of silently dropping edits.
+    - Clearing a pin's label or title, or typing an out-of-range position, no longer throws you out of the Pins view.
+    - A YAML error in the details is shown instead of a form that does nothing, and Publish says why it can't.
+    - Pin rename and "used by" see every way a reference can be written.
+    - After Publish or Unpublish the server refreshes the page itself, so no visitor is served the old one.
+  - **Data:**
+    - The local store no longer deletes a `track.json` it can't read, and queues writes so two saves from one version can't both pass.
+    - GPX: signed and exponent coordinates, namespaced tags and route points are read; a missing elevation is filled from its neighbours; day-long recordings no longer overflow the stack; coordinates are range-checked.
+    - A new hike's summary can contain `{` or `<`; a very short recording gets a distance above zero.
+    - Snapping no longer pulls a pin from one switchback leg to the one below.
+    - `new` is refused as an address everywhere, not only in the form; a mistyped `CONTENT_STORE` stops the build.
+  - **Site:** `robots.txt`, `sitemap.xml`, Open Graph and Twitter cards, canonical links, an error page, a footer, a skip link, reduced-motion scrolling, one `<h1>` on the guide page, dark ink on turn pins (contrast), "1 hike", an empty state for no hikes, the gallery map hidden until painted, Best season in the phone's stats.
+  - **Cleanup:** the store's unused `setStatus` and the `publish` action removed; one frontmatter regex and one slug pattern; stale comments and the README brought up to date.
+  - **Tests:** 169 → 235, including the two editor API routes and the editor's save loop.
+
 - **E5: New hike in the app** (2026-10-05): a form with an optional GPX read in the browser creates a draft hike and opens it in the editor.
 - **E4: Pins view** (2026-10-05): pins on an interactive map (drag, aim the photo direction, add by clicking), a list in route order, and a form per pin; renaming a pin updates the guide.
 - **E3: Write view, guide details form, Publish** (2026-10-05):

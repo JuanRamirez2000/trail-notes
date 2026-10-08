@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { formatIssues, frontmatterSchema, trackSchema, waypointSchema, waypointsFileSchema } from "../schemas";
 import { wp } from "./fixtures";
@@ -65,5 +66,29 @@ describe("trackSchema", () => {
     expect(trackSchema.safeParse({ ...base, points: [[-118, 34, 100]] }).success).toBe(false);
     expect(trackSchema.safeParse({ ...base, points: [[-118, 34], [-118, 34.1]] }).success).toBe(false);
     expect(trackSchema.safeParse({ ...base, points: [[-118, 34, 100], [-118, 34.1, 120]] }).success).toBe(true);
+  });
+});
+
+describe("what a pin may carry", () => {
+  const pin = { id: "a", order: 10, type: "note", label: "A", title: "A", lat: 34, lng: -118 };
+
+  it("drops a stored capture time when the pin is read (timestamps stay private)", () => {
+    const read = waypointsFileSchema.parse({ waypoints: [{ ...pin, takenAt: "2026-04-19T14:14:04.000Z" }] });
+    expect(read.waypoints[0]).not.toHaveProperty("takenAt");
+    expect(JSON.stringify(read)).not.toContain("2026-04-19");
+  });
+
+  it("has no capture times in the guides in content/", () => {
+    for (const slug of ["strawberry-peak", "granite-saddle", "ridgeline-loop"]) {
+      expect(readFileSync(`content/hikes/${slug}/waypoints.json`, "utf8")).not.toContain("takenAt");
+    }
+  });
+});
+
+describe("trackSchema", () => {
+  const track = { distanceMi: 1, elevationGainFt: 0, maxElevationFt: 0, minElevationFt: 0 };
+  it("refuses points that aren't on Earth", () => {
+    expect(trackSchema.safeParse({ ...track, points: [[-118, 34, 100], [-118, 34.1, 120]] }).success).toBe(true);
+    expect(trackSchema.safeParse({ ...track, points: [[999, 999, 1e308], [-118, 34.1, 120]] }).success).toBe(false);
   });
 });

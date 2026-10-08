@@ -4,7 +4,7 @@
  *   pnpm ingest <photo-folder> --slug <hike-slug> [--storage local|supabase] [--guides local|supabase] [--force] [--dry-run]
  *
  * 1. Reads GPS, capture time and compass heading from EXIF (exifr).
- * 2. Sorts by capture time and fills missing headings:
+ * 2. Sorts by capture time (used for ordering only, never stored) and fills missing headings:
  *      EXIF heading → bearing to the next photo ("inferred") → null (set by hand).
  * 3. Writes 2 webp variants per photo with ALL metadata stripped (originals never leave your machine).
  * 4. Uploads to /public/photos or Supabase Storage.
@@ -23,9 +23,10 @@ import { parseArgs } from "node:util";
 import exifr from "exifr";
 import sharp from "sharp";
 import { cumulativeMiles } from "../src/lib/geo";
-import { formatIssues, waypointsFileSchema, type Waypoint } from "../src/lib/schemas";
+import { formatIssues, RESERVED_SLUGS, SLUG, waypointsFileSchema, type Waypoint } from "../src/lib/schemas";
 import { photoObjectPath, type PhotoVariant } from "../src/lib/storage";
 import { existingNumbering, inferHeadings, kebab, mergeWaypoints, round, SNAP_MAX_MI } from "./lib/ingest";
+import { validateHike } from "../src/lib/store/validate";
 import { mustWrite, scriptStore } from "./lib/stores";
 
 try {
@@ -67,7 +68,7 @@ const slug = values.slug ?? "";
 const storage = (values.storage ?? process.env.NEXT_PUBLIC_PHOTO_STORAGE ?? "local") as "local" | "supabase";
 const dryRun = values["dry-run"];
 
-if (!dir || !slug || !/^[a-z0-9-]+$/.test(slug) || !["local", "supabase"].includes(storage)) {
+if (!dir || !SLUG.test(slug) || RESERVED_SLUGS.includes(slug) || !["local", "supabase"].includes(storage)) {
   console.error("Usage: pnpm ingest <photo-folder> --slug <kebab-slug> [--storage local|supabase] [--guides local|supabase] [--force] [--dry-run]");
   process.exit(1);
 }
@@ -146,7 +147,7 @@ title: TODO hike title
 slug: ${slug}
 region: TODO region
 summary: TODO one-line summary.
-distanceMi: ${miles.toFixed(1)}
+distanceMi: ${Math.max(miles, 0.1).toFixed(1)}
 elevationGainFt: 0
 difficulty: moderate
 estTime: TODO
@@ -191,6 +192,10 @@ async function main() {
     const parsed = waypointsFileSchema.safeParse(JSON.parse(record.waypoints));
     if (!parsed.success) throw new Error(`The hike's stored pins are invalid; fix them in the editor first:\n${formatIssues(parsed.error).join("\n")}`);
     existing = parsed.data.waypoints;
+    // Photos are uploaded before the pins are saved, so find out now whether the save can go
+    // through: a guide that's already invalid would be refused after the uploads.
+    const stored = await validateHike(slug, record.mdx, record.waypoints);
+    if (!stored.ok) throw new Error(`The stored guide "${slug}" doesn't pass the save gate; fix it in the editor first:\n  ${stored.problems.join("\n  ")}`);
   }
   const track = record?.track ?? null;
   const { next, names } = existingNumbering(existing ?? []);
@@ -231,7 +236,6 @@ async function main() {
         width: dims.width,
         height: dims.height,
       },
-      takenAt: p.takenAt?.toISOString(),
     });
     console.log(`  ✓ ${path.basename(p.file)} → ${photoKey}${p.pano ? " (360°)" : ""}`);
   }

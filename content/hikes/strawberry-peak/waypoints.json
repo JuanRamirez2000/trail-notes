@@ -16,8 +16,7 @@
         "kind": "flat",
         "width": 1800,
         "height": 2400
-      },
-      "takenAt": "2026-04-19T14:14:04.000Z"
+      }
     },
     {
       "id": "mountain-curve",
@@ -35,8 +34,7 @@
         "kind": "flat",
         "width": 1800,
         "height": 2400
-      },
-      "takenAt": "2026-04-19T14:50:06.000Z"
+      }
     },
     {
       "id": "saddle",
@@ -54,8 +52,7 @@
         "kind": "flat",
         "width": 1800,
         "height": 2400
-      },
-      "takenAt": "2026-04-19T15:15:58.000Z"
+      }
     },
     {
       "id": "rocky-climb",
@@ -73,8 +70,7 @@
         "kind": "flat",
         "width": 1800,
         "height": 2400
-      },
-      "takenAt": "2026-04-19T15:31:00.000Z"
+      }
     },
     {
       "id": "steepest-pitch",
@@ -92,8 +88,7 @@
         "kind": "flat",
         "width": 1800,
         "height": 2400
-      },
-      "takenAt": "2026-04-19T16:06:01.000Z"
+      }
     },
     {
       "id": "high-point",
@@ -111,8 +106,7 @@
         "kind": "flat",
         "width": 1800,
         "height": 2400
-      },
-      "takenAt": "2026-04-19T16:20:10.000Z"
+      }
     }
   ]
 }

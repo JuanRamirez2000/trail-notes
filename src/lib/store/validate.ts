@@ -1,13 +1,11 @@
 import { parse as parseYaml } from "yaml";
 import { checkMdx } from "../mdx/check";
-import { FRONTMATTER } from "../mdx/plugins";
-import { formatIssues, frontmatterSchema, waypointsFileSchema, type Frontmatter, type WaypointsFile } from "../schemas";
+import { FRONTMATTER } from "../frontmatter";
+import { formatIssues, frontmatterSchema, RESERVED_SLUGS, SLUG, waypointsFileSchema, type Frontmatter, type WaypointsFile } from "../schemas";
 
 /** Size limits for one save. Generous for a guide, small enough that a request can't be abused. */
 export const MAX_MDX_BYTES = 200_000;
 export const MAX_WAYPOINTS_BYTES = 500_000;
-
-export const SLUG = /^[a-z0-9-]+$/;
 
 export function splitFrontmatter(source: string): { data: unknown; body: string } {
   const m = FRONTMATTER.exec(source);
@@ -32,6 +30,7 @@ export type Validated =
 export async function validateHike(slug: string, mdx: string, waypointsJson: string): Promise<Validated> {
   const problems: string[] = [];
   if (!SLUG.test(slug)) return { ok: false, problems: [`slug "${slug}" must be lowercase letters, digits and dashes`] };
+  if (RESERVED_SLUGS.includes(slug)) return { ok: false, problems: [`"${slug}" can't be used as an address`] };
   if (Buffer.byteLength(mdx) > MAX_MDX_BYTES) problems.push(`index.mdx: larger than ${MAX_MDX_BYTES / 1000} kB`);
   if (Buffer.byteLength(waypointsJson) > MAX_WAYPOINTS_BYTES) problems.push(`waypoints.json: larger than ${MAX_WAYPOINTS_BYTES / 1000} kB`);
   if (problems.length) return { ok: false, problems };
@@ -62,15 +61,6 @@ export async function validateHike(slug: string, mdx: string, waypointsJson: str
 
   if (problems.length || !details || !waypoints) return { ok: false, problems };
   return { ok: true, details, waypoints: written, mdx: mdx.endsWith("\n") ? mdx : `${mdx}\n` };
-}
-
-/** `draft: true|false` in the frontmatter, rewritten in place (added before the closing `---` if absent). */
-export function setDraftFlag(mdx: string, draft: boolean): string {
-  const m = FRONTMATTER.exec(mdx);
-  if (!m) return mdx;
-  const yaml = m[1];
-  const next = /^draft:.*$/m.test(yaml) ? yaml.replace(/^draft:.*$/m, `draft: ${draft}`) : `${yaml}\ndraft: ${draft}`;
-  return mdx.replace(yaml, next);
 }
 
 /** Pins as the house JSON text. */

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { sectionId } from "@/lib/hike";
 import { useHike, useHikeApi } from "@/lib/hike-store";
+import { scrollBehavior } from "@/lib/motion";
 
 /** Scroll position (fraction of viewport height) that counts as "reading this section". */
 const READING_LINE = 0.3;
@@ -26,7 +27,7 @@ export function GuideScrollSync() {
     const target = findSection(reveal.id, api.getState().waypoints.map((w) => w.id));
     if (!target) return;
     lockUntil.current = Date.now() + LOCK_MS;
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
   }, [reveal, api]);
 
   useEffect(() => {

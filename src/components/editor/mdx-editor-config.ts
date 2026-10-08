@@ -20,7 +20,7 @@ import { COMPONENT_NAMES, manifest, propFields } from "@/lib/mdx/manifest";
  * the output in the house style; what's left is normalised once and then stable:
  *   - children of block components are indented by 2 spaces (mdast-util-mdx-jsx; MDX strips it)
  *   - `_emphasis_` becomes `*emphasis*`
- *   - the trailing newline is dropped (writeHikeFiles adds it back)
+ *   - the trailing newline is dropped (the save gate adds it back)
  */
 export const toMarkdownOptions = { bullet: "-", rule: "-", emphasis: "*", strong: "*" } as const;
 

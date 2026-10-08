@@ -3,25 +3,18 @@ import type { Root } from "mdast";
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
 import { describe, expect, it } from "vitest";
 import { COMPONENT_NAMES, propFields } from "../mdx/manifest";
-import { attributeValue, remarkComponentProps } from "../mdx/remark-component-props";
-import { remarkDefaultBlocks } from "../mdx/remark-default-blocks";
-import { remarkStepSections } from "../mdx/remark-step-sections";
+import { guideRemarkPlugins } from "../mdx/plugins";
+import { attributeValue } from "../mdx/remark-component-props";
+import { isComment } from "../mdx/remark-no-code";
 import { frontmatterSchema } from "../schemas";
 import { wp } from "./fixtures";
 
 const WAYPOINTS = [wp("trailhead", 10, "start"), wp("saddle", 20, "note")];
 
-/** Same plugin order as velite.config.ts and the editor preview. */
+/** The passes every guide goes through (the one list in mdx/plugins.ts), then a look at the result. */
 async function build(source: string) {
   let tree: Root | undefined;
-  await compile(source, {
-    remarkPlugins: [
-      [remarkStepSections, { getWaypoints: () => WAYPOINTS }],
-      remarkDefaultBlocks,
-      [remarkComponentProps, { getWaypoints: () => WAYPOINTS }],
-      () => (t: Root) => void (tree = t),
-    ],
-  });
+  await compile(source, { remarkPlugins: [...guideRemarkPlugins(WAYPOINTS), () => (t: Root) => void (tree = t)] });
   return tree!.children.filter((n): n is MdxJsxFlowElement => n.type === "mdxJsxFlowElement").map((n) => n.name);
 }
 
@@ -74,12 +67,17 @@ describe("remarkComponentProps", () => {
     await expect(build(src)).rejects.toThrow(message);
   });
 
-  it("skips props written as non-literal expressions", async () => {
-    await expect(build("<RouteMap height={2 * 200} />")).resolves.toBeDefined();
+  it("refuses a prop named like an Object member instead of letting it past the unknown-prop check", async () => {
+    await expect(build('<RouteMap __proto__={{"zzz":1}} />')).rejects.toThrow(/unknown prop "__proto__"/);
+    await expect(build("<RouteMap constructor={1} />")).rejects.toThrow(/unknown prop "constructor"/);
   });
 
-  it("ignores plain HTML tags", async () => {
-    await expect(build('<div className="note">hi</div>')).resolves.toBeDefined();
+  it("reads a pin reference written as a literal in braces", async () => {
+    expect(await build('<Step waypoint={"saddle"}>\n\nNotes.\n\n</Step>')).toContain("Step");
+  });
+
+  it("refuses a <Step> in the middle of a line", async () => {
+    await expect(build('Text <Step waypoint="saddle" /> more')).rejects.toThrow(/own line/);
   });
 });
 
@@ -131,6 +129,53 @@ describe("remarkNoCode (guides can't carry code)", () => {
     ["attributes on an allowed tag", '<details open onToggle="x()">\n\nhi\n\n</details>', /can't have attributes/],
   ])("refuses %s", async (_what, src, message) => {
     expect(await gate(src)).toMatch(message);
+  });
+
+  // A comment check that backtracks reads `/* a */ code /* b */` as one comment and runs the code.
+  it.each([
+    ["code between two comments", 'Hello {/* x */ globalThis.__pwned = "gate" /* y */}'],
+    ["code between two comments, as a block", "{/* a */ globalThis.__pwned = 2 /* b */}"],
+    ["code after a comment", "{/* a */ process.exit()}"],
+    ["code before a comment", "{process.exit() /* a */}"],
+    ["an unclosed comment", "{/* a */ /* b}"],
+    ["a line comment", "{// a\n}"],
+    ["an expression in a heading", "## Total {1 + 1}"],
+    ["an expression in a link", "[x {1 + 1}](https://example.com)"],
+    ["an expression inside an allowed tag", "<kbd>{globalThis.x}</kbd>"],
+    ["an expression inside a component", '<Step waypoint="saddle">\n\n{globalThis.x}\n\n</Step>'],
+  ])("refuses %s", async (_what, src) => {
+    expect(await gate(src)).toMatch(/can't contain \{…\} expressions|Could not parse/);
+  });
+
+  it.each([
+    ["a comment sandwich in a prop", "<RouteMap height={/* a */ 2 * 200 /* b */} />", /only plain values/],
+    ["a template literal prop", "<RouteMap height={`${1}`} />", /only plain values/],
+    ["a function prop", "<RouteMap labels={() => 1} />", /only plain values/],
+    ["dangerouslySetInnerHTML", '<RouteMap dangerouslySetInnerHTML={{"__html":"<b>x</b>"}} />', /unknown prop/],
+    ["a fragment with a member name", "<a.b />", /isn't allowed/],
+    ["a plain HTML tag", '<div className="note">hi</div>', /<div> isn't allowed/],
+    ["an img tag", '<img src="x" onerror="alert(1)" />', /<img> isn't allowed/],
+    ["a javascript: link", "[x](javascript:alert(1))", /Links can only point to web pages/],
+    ["a javascript: link with a tab in the scheme", "[x](java&#x09;script:alert(1))", /Links can only point to web pages/],
+    ["a data: image", "![x](data:text/html,<script>alert(1)</script>)", /Links can only point to web pages/],
+    ["a javascript: link definition", "[x][1]\n\n[1]: javascript:alert(1)", /Links can only point to web pages/],
+  ])("refuses %s", async (_what, src, message) => {
+    expect(await gate(src)).toMatch(message);
+  });
+
+  it("allows ordinary links", async () => {
+    expect(await gate("[a](https://example.com) [b](/hikes/x) [c](#step-saddle) [d](mailto:a@example.com) [e](tel:+15551234)")).toBeNull();
+  });
+
+  it("decides what is a comment in time proportional to its length", () => {
+    expect(isComment("/* a */ /* b */\n")).toBe(true);
+    expect(isComment("")).toBe(true);
+    expect(isComment("/* a */ x /* b */")).toBe(false);
+    // 40 comments then code: the old pattern doubled its time with each one (hours at this size).
+    const started = performance.now();
+    expect(isComment(`${"/**/".repeat(40)} x`)).toBe(false);
+    expect(isComment(`${"/**/".repeat(200_000)} x`)).toBe(false);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   it("allows comments, literal props and the harmless tags", async () => {

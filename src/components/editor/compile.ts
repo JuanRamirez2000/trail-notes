@@ -2,12 +2,11 @@ import { evaluate } from "@mdx-js/mdx";
 import type { MDXContent } from "mdx/types";
 import * as runtime from "react/jsx-runtime";
 import { parse as parseYaml } from "yaml";
+import { FRONTMATTER } from "@/lib/frontmatter";
 import { deriveWaypoints, type HikeWaypoint } from "@/lib/hike";
 import { guideRemarkPlugins } from "@/lib/mdx/plugins";
 import { formatIssues, waypointsFileSchema, type Track } from "@/lib/schemas";
 import { remarkSourceMarkers } from "./remark-source-markers";
-
-const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
 export type CompiledPreview =
   | { ok: true; Content: MDXContent; frontmatter: Record<string, unknown> }

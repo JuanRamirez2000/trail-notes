@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { deriveWaypoints, routeCoords, type HikeWaypoint, type RouteCoords } from "./hike";
 import { compileGuide } from "./mdx/compile";
-import { waypointsFileSchema, type Frontmatter, type Track } from "./schemas";
+import { SLUG, waypointsFileSchema, type Frontmatter, type Track } from "./schemas";
 import { getStore } from "./store/server";
 import type { HikeStatus } from "./store/types";
 
@@ -38,7 +38,7 @@ export type HikePage = {
 
 /** Everything a guide page needs, or null if there's no such (visible) hike. */
 export const getHikePage = cache(async (slug: string): Promise<HikePage | null> => {
-  if (!/^[a-z0-9-]+$/.test(slug)) return null;
+  if (!SLUG.test(slug)) return null;
   const record = await (await getStore()).read(slug);
   if (!record || !isVisible(record.status)) return null;
   const summary = (await getHikeSummaries()).find((h) => h.slug === slug);

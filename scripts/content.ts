@@ -90,7 +90,14 @@ async function copy(from: ContentStore, to: ContentStore) {
       }
       version = r.version;
     }
-    if (!sameTrack) await to.setTrack(slug, src.track, { editor: null, baseVersion: version });
+    if (!sameTrack) {
+      const r = await to.setTrack(slug, src.track, { editor: null, baseVersion: version });
+      if (!r.ok) {
+        console.log(`  ✗ ${slug}: track not copied: ${r.kind === "invalid" ? r.problems.join("; ") : r.kind}`);
+        process.exitCode = 1;
+        continue;
+      }
+    }
     console.log(`  ↻ ${slug} overwritten`);
   }
 }

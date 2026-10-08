@@ -33,6 +33,18 @@ describe("buildNewHike", () => {
     expect(hike.mdx).toContain("<RouteMap />");
   });
 
+  it("accepts a summary with characters that mean something in MDX", async () => {
+    const hike = buildNewHike({ ...FORM, summary: "{steep} <b>and</b> exposed" }, TRACK);
+    const v = await validateHike(hike.slug, hike.mdx, hike.waypoints);
+    expect(v.ok ? [] : v.problems).toEqual([]);
+    expect(v.ok && v.details.summary).toBe("{steep} <b>and</b> exposed");
+  });
+
+  it("gives a hike made from a very short recording a distance the gate accepts", async () => {
+    const hike = buildNewHike(FORM, { ...TRACK, distanceMi: 0.01 });
+    expect((await validateHike(hike.slug, hike.mdx, hike.waypoints)).ok).toBe(true);
+  });
+
   it("works without a track, from the numbers typed in", async () => {
     const hike = buildNewHike({ ...FORM, distanceMi: 4.2, elevationGainFt: 900, trailhead: { lat: 34.25, lng: -118.1 } }, null);
     const v = await validateHike(hike.slug, hike.mdx, hike.waypoints);

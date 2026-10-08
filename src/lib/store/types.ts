@@ -49,7 +49,7 @@ export type WriteOptions = {
 };
 
 export type WriteResult =
-  | { ok: true; version: string; status: HikeStatus }
+  | { ok: true; version: string; status: HikeStatus; /** The status before a save, when there was one. */ previousStatus?: HikeStatus }
   | { ok: false; kind: "invalid"; problems: string[] }
   | { ok: false; kind: "conflict"; version: string }
   | { ok: false; kind: "not_found" }
@@ -60,9 +60,8 @@ export interface ContentStore {
   list(): Promise<HikeSummary[]>;
   read(slug: string): Promise<HikeRecord | null>;
   save(slug: string, content: HikeContent, opts: WriteOptions): Promise<WriteResult>;
-  create(slug: string, content: HikeContent & { track?: Track | null }, opts: { editor: Editor | null }): Promise<WriteResult>;
-  /** Publish or unpublish. Today this flips the guide's `draft` flag; it is its own operation so that can change. */
-  setStatus(slug: string, status: HikeStatus, opts: WriteOptions): Promise<WriteResult>;
+  /** `track` is checked by the store, so it can be passed as received. */
+  create(slug: string, content: HikeContent & { track?: unknown }, opts: { editor: Editor | null }): Promise<WriteResult>;
   setTrack(slug: string, track: Track | null, opts: WriteOptions): Promise<WriteResult>;
   /** Removes a hike. For tests and scripts; the editor has no delete. */
   remove(slug: string): Promise<void>;
@@ -79,6 +78,8 @@ export type RawHike = {
   /** The pins' exact stored text, when the backend keeps text (files). Preserved so a read never reformats or loses it. */
   waypointsText?: string;
   track: Track | null;
+  /** True when a track is stored but doesn't validate (hand-edited files); `track` is then null. */
+  trackUnreadable?: boolean;
   /** Null when what's stored doesn't validate (hand-edited files). */
   details: Frontmatter | null;
   status: HikeStatus;

@@ -13,7 +13,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
-import { formatIssues } from "../src/lib/schemas";
+import { formatIssues, RESERVED_SLUGS, SLUG } from "../src/lib/schemas";
 import { buildTrack, parseGpx } from "../src/lib/gpx";
 import { mustWrite, scriptStore } from "./lib/stores";
 
@@ -29,7 +29,7 @@ const { values, positionals } = parseArgs({
 });
 const file = positionals[0];
 const slug = values.slug ?? "";
-if (!file || !/^[a-z0-9-]+$/.test(slug)) {
+if (!file || !SLUG.test(slug) || RESERVED_SLUGS.includes(slug)) {
   console.error("Usage: pnpm gpx <file.gpx> --slug <kebab-slug> [--tolerance 0.00003] [--guides local|supabase]");
   process.exit(1);
 }

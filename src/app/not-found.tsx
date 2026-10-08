@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/ui/SiteHeader";
+import { SkipLink } from "@/components/ui/SkipLink";
 import { getHikeSummaries } from "@/lib/content";
 
 export const metadata: Metadata = { title: "Off the map" };
@@ -11,8 +12,9 @@ export default async function NotFound() {
   const hikes = (await getHikeSummaries().catch(() => [])).slice(0, 3);
   return (
     <>
+      <SkipLink />
       <SiteHeader />
-      <main className="bg-contour relative flex flex-1 items-center justify-center overflow-hidden px-4 py-16">
+      <main id="main" className="bg-contour relative flex flex-1 items-center justify-center overflow-hidden px-4 py-16">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full" aria-hidden>
           <polyline
             points="4,92 18,78 26,80 38,62 50,58 58,44"

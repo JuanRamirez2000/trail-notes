@@ -1,9 +1,10 @@
 import type { Root, RootContent } from "mdast";
-import type { MdxJsxAttribute, MdxJsxFlowElement } from "mdast-util-mdx-jsx";
+import type { MdxJsxAttribute, MdxJsxFlowElement, MdxJsxTextElement } from "mdast-util-mdx-jsx";
 import { visit } from "unist-util-visit";
 import type { VFile } from "vfile";
 import { requiresSection } from "../pins";
 import type { Waypoint } from "../schemas";
+import { attributeValue } from "./remark-component-props";
 
 type Parent = { children: RootContent[] };
 type Authored = { node: MdxJsxFlowElement; parent: Parent; wp: Waypoint };
@@ -25,7 +26,9 @@ const stub = (id: string): MdxJsxFlowElement => ({
 
 const waypointAttr = (node: MdxJsxFlowElement) => {
   const attr = node.attributes.find((a): a is MdxJsxAttribute => a.type === "mdxJsxAttribute" && a.name === "waypoint");
-  return typeof attr?.value === "string" ? attr.value : undefined;
+  // `waypoint="a"` or the literal `waypoint={"a"}`; both are accepted by the no-code pass.
+  const value = attr ? attributeValue(attr) : undefined;
+  return typeof value === "string" ? value : undefined;
 };
 
 /**
@@ -43,6 +46,12 @@ export function remarkStepSections({ getWaypoints }: StepSectionsOptions) {
     const waypoints = getWaypoints(file);
     if (!waypoints) return;
     const byId = new Map(waypoints.map((w) => [w.id, w]));
+
+    // A <Step> in the middle of a line isn't a section; it would render inside the paragraph and
+    // its pin would get a second, generated section with the same id.
+    visit(tree, "mdxJsxTextElement", (node: MdxJsxTextElement) => {
+      if (node.name === "Step") file.fail("<Step> must be on its own line, not inside a paragraph", node);
+    });
 
     const authored: Authored[] = [];
     let routeMap: { node: RootContent; parent: Parent } | undefined;

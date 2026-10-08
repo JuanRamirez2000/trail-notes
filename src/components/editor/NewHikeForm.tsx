@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { buildTrack, parseGpx } from "@/lib/gpx";
 import { buildNewHike, slugify, type NewHikeForm as Form } from "@/lib/new-hike";
-import { DIFFICULTIES, type Difficulty, type Track } from "@/lib/schemas";
+import { DIFFICULTIES, RESERVED_SLUGS, SLUG, type Difficulty, type Track } from "@/lib/schemas";
 
 const input = "w-full rounded-md border border-line-strong bg-card px-2 py-1.5 text-[15px] text-graphite";
 
@@ -35,7 +35,7 @@ export function NewHikeForm({ taken }: { taken: string[] }) {
   const [busy, setBusy] = useState(false);
 
   const slug = slugEdited ?? slugify(title);
-  const slugProblem = !slug ? null : !/^[a-z0-9-]+$/.test(slug) ? "Use lowercase letters, digits and dashes." : taken.includes(slug) || slug === "new" ? "That address is already used." : null;
+  const slugProblem = !slug ? null : !SLUG.test(slug) ? "Use lowercase letters, digits and dashes." : taken.includes(slug) || RESERVED_SLUGS.includes(slug) ? "That address is already used." : null;
 
   const num = (v: string) => (v.trim() === "" || Number.isNaN(Number(v)) ? undefined : Number(v));
   const form: Form = useMemo(

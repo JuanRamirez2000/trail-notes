@@ -1,11 +1,14 @@
 import { z } from "zod";
 
 /**
- * Single source of truth for content shape. Used by:
- *  - velite.config.ts (build-time validation of content/)
- *  - scripts/ingest-photos.ts (draft waypoint generation)
- *  - /api/editor (validation before writing to disk)
+ * Single source of truth for content shape. Used by the save gate every write passes
+ * (lib/store/validate.ts), the public pages, the editor's forms and the scripts.
  */
+
+/** What a hike's address and a pin's id look like: lowercase letters, digits and dashes. */
+export const SLUG = /^[a-z0-9-]+$/;
+/** Addresses the app uses itself: `/editor/new` is the New hike form. */
+export const RESERVED_SLUGS = ["new"];
 
 export const DIFFICULTIES = ["easy", "moderate", "hard", "strenuous"] as const;
 export const difficultySchema = z.enum(DIFFICULTIES);
@@ -37,7 +40,7 @@ export const photoSchema = z.object({
 export type Photo = z.infer<typeof photoSchema>;
 
 export const waypointSchema = z.object({
-  id: z.string().regex(/^[a-z0-9-]+$/, "id must be kebab-case"),
+  id: z.string().regex(SLUG, "id must be kebab-case"),
   order: z.number().int().nonnegative(),
   type: waypointTypeSchema,
   /** Short map label, e.g. "Ridge junction". */
@@ -55,7 +58,8 @@ export const waypointSchema = z.object({
   /** Override for trail mileage; otherwise estimated from straight-line segments. */
   mile: z.number().nonnegative().optional(),
   photo: photoSchema.optional(),
-  takenAt: z.iso.datetime({ offset: true }).optional(),
+  // No capture time: position plus time per pin gives away pace, and timestamps stay private.
+  // A stored pin that still has `takenAt` validates, and the field is dropped when it's read.
 });
 export type Waypoint = z.infer<typeof waypointSchema>;
 
@@ -94,7 +98,7 @@ export const sidebarSchema = z
 /** `.describe()` is the field's label in the editor's guide details form (components/editor/DetailsForm.tsx). */
 export const frontmatterSchema = z.object({
   title: z.string().min(1).describe("Title"),
-  slug: z.string().regex(/^[a-z0-9-]+$/).describe("Address"),
+  slug: z.string().regex(SLUG).describe("Address"),
   region: z.string().min(1).describe("Region"),
   summary: z.string().min(1).describe("Summary"),
   distanceMi: z.number().positive().describe("Distance (mi)"),
@@ -119,7 +123,7 @@ export type Frontmatter = z.infer<typeof frontmatterSchema>;
  */
 export const trackSchema = z.object({
   /** [lng, lat, elevationMeters] in route order. */
-  points: z.array(z.tuple([z.number(), z.number(), z.number()])).min(2),
+  points: z.array(z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90), z.number().min(-1000).max(10000)])).min(2),
   distanceMi: z.number().positive(),
   elevationGainFt: z.number().nonnegative(),
   maxElevationFt: z.number(),

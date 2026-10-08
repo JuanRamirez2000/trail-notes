@@ -16,23 +16,25 @@ export type PinStyle = {
   label: string;
   glyph: string;
   color: string;
+  /** Colour of the glyph on `color`, chosen for contrast (at least 4.5:1). */
+  ink: string;
   radius: string;
   safety: boolean;
   section: SectionKind;
 };
 
 export const PIN_STYLES: Record<WaypointType, PinStyle> = {
-  start: { label: "Trailhead", glyph: "S", color: "var(--color-pin-start)", radius: "50%", safety: false, section: "required" },
-  turn: { label: "Turn", glyph: "↰", color: "var(--color-pin-turn)", radius: "50%", safety: false, section: "required" },
+  start: { label: "Trailhead", glyph: "S", color: "var(--color-pin-start)", ink: "var(--color-paper)", radius: "50%", safety: false, section: "required" },
+  turn: { label: "Turn", glyph: "↰", color: "var(--color-pin-turn)", ink: "var(--color-graphite)", radius: "50%", safety: false, section: "required" },
   // Flex note: a guide section for anything that isn't a turn (scree, slick bridge, no signal…).
-  note: { label: "Note", glyph: "✎", color: "var(--color-pin-note)", radius: "50%", safety: false, section: "required" },
-  bailout: { label: "Bail-out", glyph: "!", color: "var(--color-pin-bailout)", radius: "4px", safety: true, section: "required" },
-  viewpoint: { label: "Viewpoint", glyph: "◎", color: "var(--color-pin-viewpoint)", radius: "5px", safety: false, section: "optional" },
+  note: { label: "Note", glyph: "✎", color: "var(--color-pin-note)", ink: "var(--color-pin-ink)", radius: "50%", safety: false, section: "required" },
+  bailout: { label: "Bail-out", glyph: "!", color: "var(--color-pin-bailout)", ink: "var(--color-pin-ink)", radius: "4px", safety: true, section: "required" },
+  viewpoint: { label: "Viewpoint", glyph: "◎", color: "var(--color-pin-viewpoint)", ink: "var(--color-pin-ink)", radius: "5px", safety: false, section: "optional" },
   // Cabins, signposts, ruins: things you'll pass that help you know where you are.
-  landmark: { label: "Landmark", glyph: "◆", color: "var(--color-pin-landmark)", radius: "5px", safety: false, section: "optional" },
-  water: { label: "Water", glyph: "W", color: "var(--color-pin-water)", radius: "50%", safety: true, section: "optional" },
+  landmark: { label: "Landmark", glyph: "◆", color: "var(--color-pin-landmark)", ink: "var(--color-pin-ink)", radius: "5px", safety: false, section: "optional" },
+  water: { label: "Water", glyph: "W", color: "var(--color-pin-water)", ink: "var(--color-pin-ink)", radius: "50%", safety: true, section: "optional" },
   // Staffed stations / emergency contact points. A safety resource, so it gets the halo.
-  ranger: { label: "Ranger station", glyph: "R", color: "var(--color-pin-ranger)", radius: "50%", safety: true, section: "optional" },
+  ranger: { label: "Ranger station", glyph: "R", color: "var(--color-pin-ranger)", ink: "var(--color-pin-ink)", radius: "50%", safety: true, section: "optional" },
 };
 
 export const LEGEND_ORDER: WaypointType[] = ["start", "turn", "note", "viewpoint", "landmark", "water", "ranger", "bailout"];

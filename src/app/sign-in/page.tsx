@@ -19,7 +19,8 @@ export default async function SignIn({ searchParams }: PageProps<"/sign-in">) {
   if (authMode() !== "supabase") notFound();
   if (can(await getEditor(), "list")) redirect("/editor");
   const error = (await searchParams).error;
-  const message = typeof error === "string" ? ERRORS[error] : undefined;
+  // Own keys only: `?error=constructor` must not find Object's.
+  const message = typeof error === "string" && Object.hasOwn(ERRORS, error) ? ERRORS[error] : undefined;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6 py-10">

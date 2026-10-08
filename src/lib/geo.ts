@@ -19,7 +19,7 @@ export function distanceMi(a: Pt, b: Pt): number {
 
 /**
  * Cumulative straight-line mileage along ordered points. Underestimates real
- * trail distance (no GPX in phase 1), which is why waypoints allow a `mile` override.
+ * trail distance (used when the hike has no recorded track), which is why waypoints allow a `mile` override.
  */
 export function cumulativeMiles(points: Pt[]): number[] {
   let total = 0;

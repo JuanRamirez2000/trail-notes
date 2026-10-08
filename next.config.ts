@@ -14,6 +14,16 @@ if (process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.startsWith("sk.")) {
   );
 }
 
+// A mistyped switch must stop the build, not quietly fall back to the other backend.
+for (const [name, allowed] of [
+  ["NEXT_PUBLIC_PHOTO_STORAGE", ["local", "supabase"]],
+  ["CONTENT_STORE", ["local", "supabase"]],
+  ["EDITOR_AUTH", ["supabase", "off"]],
+] as const) {
+  const value = process.env[name];
+  if (value && !(allowed as readonly string[]).includes(value)) throw new Error(`${name} must be ${allowed.map((a) => `"${a}"`).join(" or ")} (or unset), not "${value}".`);
+}
+
 // Photos live in Supabase; /public/photos is a gitignored dev-only copy, so a production build
 // on the local backend would ship broken images.
 if (!isDev && process.env.NEXT_PUBLIC_PHOTO_STORAGE !== "supabase") {
@@ -26,9 +36,20 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : undefined;
 
+// Sent with every response. No Content-Security-Policy yet: the editor's preview evaluates
+// compiled MDX and Mapbox needs blob: workers, so one has to be introduced report-only first.
+const securityHeaders = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+];
+
 const nextConfig: NextConfig = {
-  // While guides are read from files (CONTENT_STORE unset), pages are re-rendered on the server
-  // after deploy, so content/hikes must ship inside the server bundle, not just exist at build.
+  poweredByHeader: false,
+  headers: async () => [{ source: "/:path*", headers: securityHeaders }],
+  // When guides are read from files (CONTENT_STORE unset or "local"), pages are re-rendered on the
+  // server after deploy, so content/hikes must ship inside the server bundle, not just exist at build.
   outputFileTracingIncludes: { "/**": ["./content/hikes/**/*"] },
   images: {
     remotePatterns: supabaseHost

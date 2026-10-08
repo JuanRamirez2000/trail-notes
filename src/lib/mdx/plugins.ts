@@ -17,8 +17,3 @@ export function guideRemarkPlugins(waypoints: Waypoint[] | null): NonNullable<Co
   const getWaypoints = () => waypoints;
   return [remarkNoCode, [remarkStepSections, { getWaypoints }], remarkDefaultBlocks, [remarkComponentProps, { getWaypoints }]];
 }
-
-export const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
-
-/** The MDX body with the frontmatter blanked out (newlines kept), so error line numbers match the file. */
-export const blankFrontmatter = (source: string) => source.replace(FRONTMATTER, (m) => m.replace(/[^\n]/g, ""));

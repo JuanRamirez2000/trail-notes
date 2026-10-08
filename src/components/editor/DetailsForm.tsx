@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
-import { readDetails, setDetail } from "@/lib/frontmatter";
+import { readDetails, setDetail, yamlProblems } from "@/lib/frontmatter";
 import type { HikeWaypoint } from "@/lib/hike";
 import { formatIssues, frontmatterSchema, SIDEBAR_CARDS, type SidebarCardId } from "@/lib/schemas";
 
@@ -55,6 +55,23 @@ export function DetailsForm({ yaml, waypoints, onChange }: Props) {
 
   const set = (path: (string | number)[], value: unknown) => onChange(setDetail(yaml, path, value));
   const photos = waypoints.filter((w) => w.photo);
+
+  // With a YAML error the details can't be read reliably, and rewriting one entry could lose the
+  // rest. Say what's wrong and where to fix it, rather than showing a form that does nothing.
+  const broken = yamlProblems(yaml);
+  if (broken.length) {
+    return (
+      <div role="alert" className="mx-auto mt-6 w-full max-w-[720px] rounded-lg border-2 border-dashed border-pin-bailout bg-card p-4">
+        <p className="font-semibold text-pin-bailout">The guide&rsquo;s details can&rsquo;t be shown as a form.</p>
+        <p className="mt-1 text-graphite">The block between the two <code>---</code> lines at the top of the guide has a mistake. Fix it under Advanced → Markdown, then come back here.</p>
+        <ul className="mt-2 font-mono text-xs text-pin-bailout">
+          {broken.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <form className="mx-auto flex w-full max-w-[720px] flex-col gap-4 px-6 py-6" onSubmit={(e) => e.preventDefault()}>

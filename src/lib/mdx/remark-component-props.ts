@@ -52,14 +52,17 @@ export function remarkComponentProps({ getWaypoints }: ComponentPropsOptions) {
       const entry = manifest[name];
       const shape: z.ZodObject = entry.props;
 
-      const props: Record<string, unknown> = {};
+      // Collected as entries: assigning `props["__proto__"]` would set the prototype instead of a
+      // key, and the prop would slip past the unknown-prop check.
+      const entries: [string, unknown][] = [];
       const opaque = new Set<string>();
       for (const attr of el.attributes) {
         if (attr.type !== "mdxJsxAttribute") file.fail(`<${name}>: spread props ({...x}) aren't supported`, el);
         const value = attributeValue(attr);
         if (value === OPAQUE) opaque.add(attr.name);
-        else props[attr.name] = value;
+        else entries.push([attr.name, value]);
       }
+      const props: Record<string, unknown> = Object.fromEntries(entries);
 
       // Props written as non-literal expressions can't be checked here; still check the rest.
       const known = Object.keys(shape.shape);

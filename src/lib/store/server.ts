@@ -6,13 +6,18 @@ import type { ContentStore } from "./types";
 
 /**
  * Which store this server uses, from CONTENT_STORE:
- *   local    → files in content/hikes (the default: `pnpm dev`, and production until it's switched)
+ *   local    → files in content/hikes (the default: `pnpm dev`, tests)
  *   supabase → the database; needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
  *
  * Chosen explicitly rather than by "is the key present", so a missing key is a loud error at
  * build or request time instead of the site quietly serving the files baked into the deploy.
+ * A value that is neither (a typo) is an error for the same reason.
  */
-export const contentStoreKind = (): "local" | "supabase" => (process.env.CONTENT_STORE === "supabase" ? "supabase" : "local");
+export function contentStoreKind(): "local" | "supabase" {
+  const kind = process.env.CONTENT_STORE || "local";
+  if (kind !== "local" && kind !== "supabase") throw new Error(`CONTENT_STORE must be "local" or "supabase", not "${kind}".`);
+  return kind;
+}
 
 let store: Promise<ContentStore> | undefined;
 

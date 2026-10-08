@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { hasMapbox } from "@/components/map/config";
+import { cn } from "@/lib/cn";
 import { SketchHikesMap } from "./SketchHikesMap";
 import type { HikesMapProps } from "./types";
 
@@ -15,7 +16,15 @@ export function HikesMap(props: HikesMapProps) {
   return (
     <>
       {status !== "loaded" && <SketchHikesMap {...props} />}
-      {useMapbox && <MapboxHikesMap {...props} onLoad={() => setStatus("loaded")} onFail={() => setStatus("failed")} />}
+      {useMapbox && (
+        <MapboxHikesMap
+          {...props}
+          onLoad={() => setStatus("loaded")}
+          onFail={() => setStatus("failed")}
+          // Hidden until it has painted, like TrailMap: otherwise its pins show on top of the sketch's.
+          className={cn(props.className, status !== "loaded" && "invisible")}
+        />
+      )}
     </>
   );
 }

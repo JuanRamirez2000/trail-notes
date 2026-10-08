@@ -1,6 +1,7 @@
 import { compile } from "@mdx-js/mdx";
 import type { Waypoint } from "../schemas";
-import { blankFrontmatter, guideRemarkPlugins } from "./plugins";
+import { blankFrontmatter } from "../frontmatter";
+import { guideRemarkPlugins } from "./plugins";
 
 type MdxError = Error & { line?: number; place?: { line?: number; start?: { line?: number } } };
 

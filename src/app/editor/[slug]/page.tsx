@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Editor } from "@/components/editor/Editor";
 import { can } from "@/lib/auth/can";
 import { authMode, getEditor } from "@/lib/auth/server";
+import { SLUG } from "@/lib/schemas";
 import { getStore } from "@/lib/store/server";
 
 export const metadata: Metadata = { title: "Editor", robots: { index: false } };
@@ -13,7 +14,7 @@ export default async function EditHike({ params }: PageProps<"/editor/[slug]">) 
   const { slug } = await params;
   const editor = await getEditor();
   // Same answer for "not signed in", "not an editor" and "no such hike": a 404 that reveals nothing.
-  if (!can(editor, "read", slug) || !/^[a-z0-9-]+$/.test(slug)) notFound();
+  if (!can(editor, "read", slug) || !SLUG.test(slug)) notFound();
   const hike = await (await getStore()).read(slug);
   if (!hike) notFound();
   return (

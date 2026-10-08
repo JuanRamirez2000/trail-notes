@@ -1,19 +1,15 @@
 # E2 go-live: owner steps and what to check
 
-_Written 2026-10-05. E2's code is built and deployed, but the live site still reads guides from files and its editor is closed, because switching over needs keys and settings only the owner can provide. This page is the hand-off: what to do, in order, and what to verify afterwards._
+_Written 2026-10-05, switched on the same day. The live site reads guides from Supabase and the editor is open to the owner through Google sign-in. This page keeps the steps that were taken (they are how to set the project up again, or add an editor) and the list of what has and hasn't been verified on the live site._
 
 ## Where things stand
 
-| Piece | State on 2026-10-05 |
+| Piece | State on 2026-10-07 |
 | --- | --- |
-| Database tables, lockdown rules, history | **Live** in Supabase project `fstcgdirhssuaevgxptv`. Security advisor: no findings. |
-| The three guides | **Seeded** into the database (`pnpm content seed`); identical to `content/hikes`. |
-| Site reading from the database | **Built, switched off.** The live site uses `CONTENT_STORE=local` (the files in the deploy). Verified locally with a production build on `CONTENT_STORE=supabase`. |
-| Editor through the store, conflict detection, save guards | **Built and verified** under `pnpm dev`. |
-| Google sign-in, editors list, session refresh | **Built, never run end to end.** Needs the Google client and Supabase Auth settings below. |
-| Editor on the live site | **Closed** (404) until `EDITOR_AUTH=supabase` is set on Vercel. |
-
-Nothing below is urgent: the live site works as before until you flip the switches.
+| Database tables, lockdown rules, history | **Live** in Supabase project `fstcgdirhssuaevgxptv`. |
+| Site reading from the database | **Live** (`CONTENT_STORE=supabase`). |
+| Google sign-in, editors list | **Live** (`EDITOR_AUTH=supabase`); sign-in, a save and the page refresh without a deploy were verified on 2026-10-06. |
+| Still unverified | See the checklist further down: session refresh with a real token, the conflict banner on the live site, a new hike's page without a deploy, an unreachable database. |
 
 ## Owner steps
 
@@ -101,7 +97,7 @@ These are the parts that could not be exercised without your keys, or that depen
 - [ ] **Sign-in page** is plain: a heading and a "Continue with Google" button in brand colours. There's no design for it.
 - [ ] **After Google, you land on `/editor`.** If you land on `/sign-in?error=failed` instead, the callback couldn't complete: check the redirect URLs in step 2.
 - [ ] **Your name and "Sign out"** appear in the editor's top bar and on the hike list.
-- [ ] **Saving on the live site** shows "Saved …", and the public page shows the change. The first visit after a save may still get the old page while the new one is rendered; the next visit gets the new one.
+- [ ] **Saving on the live site** shows "Saved …", and the public page shows the change. The first visit after a save may still get the old page while the new one is rendered; the next visit gets the new one. After Publish or Unpublish the server makes that first visit itself (since 2026-10-07), so check that an unpublished guide is a 404 on the very next load.
 - [ ] **A draft has no public page.** "Preview page ↗" on a draft opens a 404 on the live site; the editor's own preview pane is the only preview of a draft.
 - [ ] **Conflict banner:** open the same hike in two tabs, save in one, then edit in the other. The second tab must say the guide changed and must not save. "Reload" discards that tab's unsaved text, so copy it first.
 - [ ] **Signed out mid-edit:** if the session ends while you type, the next save reports that you're no longer signed in. Your text stays in the tab; sign in in another tab and press Save.

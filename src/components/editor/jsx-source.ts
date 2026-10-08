@@ -1,6 +1,7 @@
 import { createProcessor } from "@mdx-js/mdx";
 import type { MdxJsxFlowElement, MdxJsxTextElement } from "mdast-util-mdx-jsx";
 import { visit } from "unist-util-visit";
+import { blankFrontmatter } from "@/lib/frontmatter";
 import { isComponentName, propFields, type ComponentName } from "@/lib/mdx/manifest";
 import { attributeValue } from "@/lib/mdx/remark-component-props";
 
@@ -22,11 +23,6 @@ export type SourceComponent = {
   /** Props written as expressions we can't evaluate, kept verbatim: name → expression source. */
   raw: Record<string, string>;
 };
-
-const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
-
-/** Frontmatter isn't MDX; blank it out (keeping newlines) so parse offsets match the source. */
-const blankFrontmatter = (source: string) => source.replace(FRONTMATTER, (m) => m.replace(/[^\n]/g, " "));
 
 /** End offset (exclusive) of the opening tag starting at `start`, skipping `>` inside quotes and braces. */
 export function openingTagEnd(source: string, start: number): number {

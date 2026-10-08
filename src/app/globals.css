@@ -52,7 +52,7 @@
 
   --shadow-sketch: 3px 3px 0 rgb(0 0 0 / 0.15);
   --shadow-pin: 0 0 0 1.5px var(--color-graphite);
-  --shadow-pin-halo: 0 0 0 2px #fff, 0 0 0 4px var(--color-graphite);
+  --shadow-pin-halo: 0 0 0 2px var(--color-pin-ink), 0 0 0 4px var(--color-graphite);
 }
 
 @layer base {
@@ -126,9 +126,8 @@
   height: 20px;
   align-items: center;
   justify-content: center;
-  border: 2px solid #fff;
+  border: 2px solid var(--color-pin-ink);
   box-sizing: border-box;
-  color: var(--color-pin-ink);
   font: 600 10px var(--font-mono);
 }
 

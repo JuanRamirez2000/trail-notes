@@ -34,7 +34,7 @@ export function SketchMap({ waypoints, route, activeId, heading, labels, safety,
   const pts = waypoints.map((w) => ({ w, ...project(box, w) }));
 
   return (
-    <div className={cn("bg-contour relative overflow-hidden", className)} role="img" aria-label="Route sketch">
+    <div className={cn("bg-contour relative overflow-hidden", className)} role={onSelect ? "group" : "img"} aria-label={onSelect ? "Route map: pins" : "Route sketch"}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full">
         <polyline
           points={line

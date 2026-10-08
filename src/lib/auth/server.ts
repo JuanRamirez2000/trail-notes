@@ -13,7 +13,7 @@ import type { Editor, EditorRole } from "../store/types";
  *   supabase → Supabase Auth (Google sign-in). A signed-in person is an editor only if they're in
  *              the `editors` table; anyone else is treated exactly like a signed-out visitor.
  *   (unset)  → under `pnpm dev`: a fixed local owner, no sign-in. Anywhere else: nobody, so the
- *              editor is a 404. This is the state of the live site until sign-in is switched on.
+ *              editor is a 404.
  *   off      → nobody, even in dev (for testing the signed-out behaviour).
  */
 export type AuthMode = "supabase" | "local" | "off";

@@ -1,6 +1,7 @@
 import { compile } from "@mdx-js/mdx";
 import type { Waypoint } from "../schemas";
-import { blankFrontmatter, guideRemarkPlugins } from "./plugins";
+import { blankFrontmatter } from "../frontmatter";
+import { guideRemarkPlugins } from "./plugins";
 
 /**
  * Compiles a guide's MDX to the function body that components/mdx/MDXContent.tsx evaluates.

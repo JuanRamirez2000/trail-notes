@@ -159,7 +159,7 @@ Done when: Strawberry Peak on the live site is served from the database; the own
 *E2.3 The site reads from the store.*
 - `src/lib/content.ts` reads through the store: the database in production, `content/` files in `pnpm dev` by default (so dev works offline), switchable to the database with an env variable.
 - **MDX is compiled on the server at render time and cached; compiled output isn't stored.** Compiled output depends on our code (the remark passes, the manifest), so stored output would go stale on a deploy. It also means the checks run on every compile: a row that somehow got around the save gate fails to render instead of running.
-- The guide page and gallery are cached per hike and refreshed when that hike is saved or published (Next 16 has `cacheTag` with `revalidateTag`/`updateTag`; read `node_modules/next/dist/docs` before building). The page stops being limited to hikes known at build time (`dynamicParams = false` today).
+- The guide page and gallery are cached per hike and refreshed when that hike is saved or published (Next 16 has `cacheTag` with `revalidateTag`/`updateTag`; read `node_modules/next/dist/docs` before building). The page stops being limited to hikes known at build time (done in E2: `dynamicParams = true`).
 - **If the database can't be reached, keep serving the last good render.** The project is on Supabase's free plan (checked 2026-10-05), which pauses a project after about a week without activity. Guard: a small daily scheduled request from Vercel that reads from the database, plus the cached pages. Moving to a paid plan removes the risk; that is the owner's call.
 - **Velite leaves the render path** (see "Open questions" for retiring it): dev and production render through the same store and the same server compile, so there is one render path, not two.
 - `pnpm ingest` and `pnpm gpx` write through the store: to files by default, to the database with a flag.
@@ -196,7 +196,7 @@ Done when: Strawberry Peak on the live site is served from the database; the own
 The plan as written (the primary way to write):
 - **"Write" is the default view:** rich text with headings, bold and italic, lists, links, and an "insert component" button. Components show as live blocks; clicking one opens the E1 settings panel. `<Step>` blocks show their pin's number, photo and caption, with editable notes inside.
 - **A "Guide details" form generated from `frontmatterSchema`** (`src/lib/schemas.ts`), the way component forms are generated from the manifest: title, region, summary, distance, elevation gain, difficulty, time, best season, cover photo, trailhead, date, the "Before you go" essentials, and the sidebar order as a reorderable list. The slug is shown but not editable. Nobody types YAML.
-- **Draft/published is a "Publish" button and a status**, backed by the store's `publish`, with "Autosaved … ago" beside it (both are in design 3a; see [todo.md](todo.md)).
+- **Draft/published is a "Publish" button and a status**, saved like any other change (it flips the guide's `draft` flag; the separate store operation was removed on 2026-10-07 because nothing used it), with "Autosaved … ago" beside it (both are in design 3a; see [todo.md](todo.md)).
 - **"Advanced" holds the Markdown source** (today's CodeMirror view). Both views edit the same document; autosave and validation are unchanged.
 - Apply E0's one-time normalisations (2-space indent inside blocks, `*em*`) to the stored guides once first, so the first Write-mode save of a guide isn't a noisy diff.
 - Done when Strawberry Peak's text and details can be rewritten without opening the source view.
@@ -246,7 +246,7 @@ Not built in V2, but cheap now and expensive to retrofit. Each of these is in E2
 
 - **Identity on every save.** `save` takes the editor and the store records who and when. The local store may ignore it, but the interface requires it.
 - **Roles from the start**, even with one: `can(editor, action, slug)` is the only place that decides, and it takes the slug so per-hike permissions can be added without touching callers. Today it returns true for the owner.
-- **Draft and published are data, not only a frontmatter flag.** `publish` is its own operation in the store, separate from `save`, so "edit a published guide without changing what's live until Publish" can be added behind it. In the database this would be a working copy next to the published revision.
+- **Draft and published are data, not only a frontmatter flag.** Today publishing is a `save` that flips the guide's `draft` flag (the store's separate `setStatus` was removed on 2026-10-07: nothing called it). "Edit a published guide without changing what's live until Publish" needs its own store operation again when it's built. In the database this would be a working copy next to the published revision.
 - **Optimistic concurrency, not last-write-wins.** A save is rejected if the hike changed since it was loaded (the `version` in E2), so two tabs, or later two people, can't silently overwrite each other.
 - **Revision history.** The `hike_revisions` table, so a bad save can be undone.
 - **No single-user assumptions in URLs or the interface.** `/editor/[slug]` names a hike, never "my draft". The store never reads a global "current user"; the editor is passed in.

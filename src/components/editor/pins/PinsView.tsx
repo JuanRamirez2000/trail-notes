@@ -189,13 +189,9 @@ function PinForm({ pin, pins, track, references, mileOverride, onChange, onRenam
         </select>
       </Field>
 
-      <Field id="pin-label" label="Map label" hint="Short, shown next to the pin.">
-        <input id="pin-label" className={input} value={pin.label} onChange={(e) => onChange({ label: e.target.value })} />
-      </Field>
+      <RequiredText id="pin-label" label="Map label" hint="Short, shown next to the pin." value={pin.label} onCommit={(label) => onChange({ label })} />
 
-      <Field id="pin-title" label="Section title" hint="The instruction for this part of the trail.">
-        <input id="pin-title" className={input} value={pin.title} onChange={(e) => onChange({ title: e.target.value })} />
-      </Field>
+      <RequiredText id="pin-title" label="Section title" hint="The instruction for this part of the trail." value={pin.title} onCommit={(title) => onChange({ title })} />
 
       <Field id="pin-caption" label="Caption">
         <textarea id="pin-caption" rows={3} className={input} value={pin.caption ?? ""} onChange={(e) => onChange({ caption: e.target.value })} />
@@ -258,8 +254,8 @@ function PinForm({ pin, pins, track, references, mileOverride, onChange, onRenam
       <fieldset>
         <legend className="mb-[3px] text-[13px] text-bark">Position</legend>
         <div className="grid grid-cols-2 gap-2">
-          <input aria-label="Latitude" type="number" step="any" className={input} value={pin.lat} onChange={(e) => num(e.target.value) !== undefined && onChange({ lat: num(e.target.value) })} />
-          <input aria-label="Longitude" type="number" step="any" className={input} value={pin.lng} onChange={(e) => num(e.target.value) !== undefined && onChange({ lng: num(e.target.value) })} />
+          <NumberDraft label="Latitude" min={-90} max={90} value={pin.lat} onCommit={(lat) => lat !== undefined && onChange({ lat })} />
+          <NumberDraft label="Longitude" min={-180} max={180} value={pin.lng} onCommit={(lng) => lng !== undefined && onChange({ lng })} />
         </div>
         <span className="mt-[3px] block text-[13px] text-bark">
           {pin.mile.toFixed(2)} mi along the route.{offTrack ? " This pin is off the recorded trail." : track ? " On the recorded trail." : ""}
@@ -267,7 +263,7 @@ function PinForm({ pin, pins, track, references, mileOverride, onChange, onRenam
       </fieldset>
 
       <Field id="pin-mile" label="Trail mileage override" hint="Leave empty to measure it along the route.">
-        <input id="pin-mile" type="number" min={0} step="any" className={input} value={mileOverride ?? ""} placeholder={pin.mile.toFixed(2)} onChange={(e) => onChange({ mile: num(e.target.value) })} />
+        <NumberDraft id="pin-mile" label="Trail mileage override" min={0} optional value={mileOverride} placeholder={pin.mile.toFixed(2)} onCommit={(mile) => onChange({ mile })} />
       </Field>
 
       <Field id="pin-id" label="Id" hint={references ? `Used by ${references} block${references > 1 ? "s" : ""} in the guide; renaming updates ${references > 1 ? "them" : "it"} too.` : "How blocks in the guide refer to this pin."} problem={idProblem}>
@@ -286,6 +282,78 @@ function PinForm({ pin, pins, track, references, mileOverride, onChange, onRenam
         {references > 0 && <span className="mt-1 block text-[13px] text-bark">Remove its block from the guide (Write view) first; the guide can&rsquo;t point at a pin that doesn&rsquo;t exist.</span>}
       </div>
     </form>
+  );
+}
+
+/**
+ * A field the pin can't be without (its label, its title). What's typed stays in the field; the
+ * pin only changes once there's something to keep, so clearing the field to retype it doesn't
+ * leave the pins invalid halfway through.
+ */
+function RequiredText({ id, label, hint, value, onCommit }: { id: string; label: string; hint: string; value: string; onCommit: (value: string) => void }) {
+  const [text, setText] = useState(value);
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    setText(value);
+  }
+  return (
+    <Field id={id} label={label} hint={hint} problem={text.trim() ? null : "Can't be empty. The pin keeps its last value until you type one."}>
+      <input
+        id={id}
+        className={input}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          if (e.target.value.trim()) {
+            setSeen(e.target.value);
+            onCommit(e.target.value);
+          }
+        }}
+      />
+    </Field>
+  );
+}
+
+/** A number field that holds back anything the pins can't keep (empty where a number is needed, or out of range). */
+function NumberDraft({ id, label, value, min, max, optional, placeholder, onCommit }: { id?: string; label: string; value: number | undefined; min: number; max?: number; optional?: boolean; placeholder?: string; onCommit: (value: number | undefined) => void }) {
+  const show = (v: number | undefined) => (v === undefined ? "" : String(v));
+  const parse = (t: string) => (t.trim() === "" || Number.isNaN(Number(t)) ? undefined : Number(t));
+  const [text, setText] = useState(show(value));
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    // Moved from outside (a pin dragged on the map). Typing "34." mustn't be rewritten as "34".
+    if (parse(text) !== value) setText(show(value));
+  }
+  const n = parse(text);
+  const range = max === undefined ? `${min} or more` : `between ${min} and ${max}`;
+  const inRange = (v: number) => v >= min && (max === undefined || v <= max);
+  const problem = text.trim() === "" ? (optional ? null : "Needs a number.") : n === undefined ? "Not a number." : inRange(n) ? null : `Must be ${range}.`;
+  return (
+    <div>
+      <input
+        id={id}
+        aria-label={id ? undefined : label}
+        type="number"
+        step="any"
+        min={min}
+        max={max}
+        className={input}
+        value={text}
+        placeholder={placeholder}
+        onChange={(e) => {
+          setText(e.target.value);
+          const v = parse(e.target.value);
+          const ok = v === undefined ? optional && e.target.value.trim() === "" : inRange(v);
+          if (ok) {
+            setSeen(v);
+            onCommit(v);
+          }
+        }}
+      />
+      {problem && <span className="mt-[3px] block text-[13px] text-pin-bailout">{problem}</span>}
+    </div>
   );
 }
 

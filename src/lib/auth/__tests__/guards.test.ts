@@ -34,7 +34,7 @@ describe("rateLimiter", () => {
 describe("can", () => {
   const owner: Editor = { id: "1", name: "O", role: "owner" };
   it("refuses nobody for everything", () => {
-    for (const action of ["list", "read", "save", "create", "publish"] as const) expect(can(null, action, "x")).toBe(false);
+    for (const action of ["list", "read", "save", "create"] as const) expect(can(null, action, "x")).toBe(false);
   });
   it("lets an editor on the list act", () => {
     expect(can(owner, "save", "strawberry-peak")).toBe(true);

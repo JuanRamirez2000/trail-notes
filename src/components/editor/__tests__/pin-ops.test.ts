@@ -102,3 +102,19 @@ describe("pin operations on the baseline hike", () => {
     expect(freeId(JSON_TEXT, "saddle")).toBe("saddle-2");
   });
 });
+
+describe("pin references, however the guide writes them", () => {
+  const doc = [`<Step waypoint="a">`, `<PhotoCard waypoint='a' />`, `<Minimap waypoint = "a" />`, `<PanoViewer waypoint={"a"} />`, `<Step waypoint="ab">`].join("\n\n");
+  const pinsJson = JSON.stringify({ waypoints: [{ id: "a", order: 10, type: "note", label: "A", title: "A", lat: 34, lng: -118 }] });
+
+  it("counts all of them", () => {
+    expect(referencesTo(doc, "a")).toBe(4);
+    expect(referencesTo(doc, "ab")).toBe(1);
+  });
+
+  it("renames all of them, keeping how each was written", () => {
+    const r = renamePin(pinsJson, doc, "a", "b");
+    expect(r.ok && r.mdx).toBe(doc.replace(`"a">`, `"b">`).replace(`'a'`, `'b'`).replace(`= "a"`, `= "b"`).replace(`{"a"}`, `{"b"}`));
+    expect(r.ok && referencesTo(r.mdx, "a")).toBe(0);
+  });
+});

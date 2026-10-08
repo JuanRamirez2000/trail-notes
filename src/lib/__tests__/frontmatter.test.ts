@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { joinGuide, readDetails, setDetail, splitGuide } from "../frontmatter";
+import { blankFrontmatter, joinGuide, readDetails, setDetail, splitGuide, yamlProblems } from "../frontmatter";
 import { frontmatterSchema } from "../schemas";
 
 const YAML = `title: Strawberry Peak
@@ -63,5 +63,48 @@ describe("setDetail", () => {
     const { yaml } = splitGuide(readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8"));
     const edited = setDetail(setDetail(yaml, ["sidebar"], ["steps", "minimap"]), ["draft"], true);
     expect(frontmatterSchema.parse(readDetails(edited))).toMatchObject({ sidebar: ["steps", "minimap"], draft: true, title: "Strawberry Peak" });
+  });
+});
+
+describe("frontmatter that isn't valid YAML", () => {
+  it.each([
+    ["a tab indent", "title: T\nessentials:\n\tparking: lot"],
+    ["a duplicate key", "title: A\ntitle: B"],
+    ["an unclosed quote", 'title: "A'],
+    ["a second colon", "title: A: B"],
+    ["a list", "- one\n- two"],
+  ])("is reported, not rewritten: %s", (_what, yaml) => {
+    expect(yamlProblems(yaml).length).toBeGreaterThan(0);
+    expect(() => setDetail(yaml, ["draft"], false)).toThrow(/can't be edited/);
+  });
+
+  it("reads as no details rather than as half of them", () => {
+    expect(readDetails("title: A: B")).toEqual({});
+  });
+
+  it("has no problems when it's fine, or empty", () => {
+    expect(yamlProblems(YAML)).toEqual([]);
+    expect(yamlProblems("")).toEqual([]);
+    expect(setDetail("", ["draft"], true)).toBe("draft: true");
+  });
+});
+
+describe("Windows line endings", () => {
+  const crlf = "---\r\ntitle: T\r\n---\r\n\r\nBody.\r\n";
+  it("splits and joins without mixing line endings", () => {
+    const doc = splitGuide(crlf);
+    expect(doc).toEqual({ yaml: "title: T", body: "Body.\r\n" });
+    expect(joinGuide(doc)).toBe(crlf);
+  });
+});
+
+describe("blankFrontmatter", () => {
+  it("keeps every line and offset where it was", () => {
+    const src = "---\ntitle: T\n---\n\nBody.";
+    const out = blankFrontmatter(src);
+    expect(out).toHaveLength(src.length);
+    expect(out.indexOf("Body.")).toBe(src.indexOf("Body."));
+    expect(out.split("\n")).toHaveLength(src.split("\n").length);
+    expect(out.slice(0, src.indexOf("Body.")).trim()).toBe("");
   });
 });

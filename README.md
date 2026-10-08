@@ -2,7 +2,7 @@
 
 Photo-by-photo trail guides. Each hike is an MDX guide with embedded map components; the route, turning points and view directions come from the EXIF data in your photos (GPS, timestamp, compass heading).
 
-**Stack:** Next.js 16 (App Router) · Tailwind CSS v4 · MDX · Mapbox GL JS (via react-map-gl) · Photo Sphere Viewer · Turf · Zod · Zustand · Supabase Storage
+**Stack:** Next.js 16 (App Router) · Tailwind CSS v4 · MDX · Mapbox GL JS (via react-map-gl) · Photo Sphere Viewer · Turf · Zod · Zustand · Supabase (database, Auth, Storage)
 
 ```bash
 pnpm install
@@ -35,7 +35,7 @@ exifr (GPS · time · heading) → sort by time → fill headings (EXIF → bear
    │  you review and edit (by hand or in /editor)
    ▼
 Content store (src/lib/store): validates the guide + pins with the Zod schemas in src/lib/schemas.ts and compiles the MDX
-   (files in content/hikes by default; Supabase in production once switched on, see docs/knowledge/e2-go-live.md)
+   (files in content/hikes under `pnpm dev`; the Supabase database in production)
    ▼
 /hikes/[slug] (static) → MDX rendered with the component registry
    → <HikeProvider> store shared by RouteMap · Minimap · StepByStep · PhotoCard · PanoViewer · SafetyPins
@@ -49,20 +49,29 @@ scripts/
   ingest-photos.ts     EXIF → waypoints draft + web images
   import-gpx.ts        GPX → track.json
   photos.ts            check / push / pull photos between Supabase and public/photos
+  content.ts           check guides against the save gate; copy guides files ↔ database
+  editors.ts           the editors allow-list
   lib/                 pure helpers shared by the scripts (unit-tested)
   make-sample-photos.ts  placeholder JPEGs with real EXIF, for trying the pipeline
 src/
   app/(site)/          gallery (/) and hike guide (/hikes/[slug])
-  app/editor/          local-only authoring view
-  app/api/editor/      save endpoint (404 outside `next dev`)
+  app/editor/          the editor (a local owner under `pnpm dev`; Google sign-in on the live site)
+  app/api/editor/      create and save endpoints (404 for anyone who isn't an editor)
+  app/robots.ts, sitemap.ts, error.tsx, not-found.tsx   crawler files and error pages
+  proxy.ts             refreshes the sign-in session on editor routes
   components/mdx/      guide components + registry.tsx
   components/map/      TrailMap (Mapbox, lazy) + SketchMap fallback
   components/gallery/  filters, all-hikes map, cards
-  components/editor/   CodeMirror + live MDX preview
+  components/sidebar/  the guide's sidebar cards
+  components/editor/   Write, Details, Pins and Advanced views
+  lib/store/           the content store: one interface over files and Supabase, with the save gate
+  lib/auth/            who may edit (getEditor, can) and request guards
+  lib/mdx/             component manifest, remark passes (no code, step sections, props), compile
   lib/schemas.ts       single source of truth for content shape
   lib/hike-store.tsx   per-page Zustand store (active step, 360° look direction)
   lib/storage.ts       photo key → URL (Supabase, or local in dev)
   app/globals.css      design tokens (Tailwind @theme) from the Claude Design handoff
+supabase/migrations/   tables, row-level security and the save functions
 ```
 
 ---
@@ -112,7 +121,7 @@ Your notes for this part of the trail. The step number, pin, mileage, photo and 
 </Step>
 ```
 
-A `<Step>` pointing at an unknown waypoint id, or two `<Step>` blocks for the same waypoint, fails the build. The stub generator lives in `src/lib/mdx/remark-step-sections.ts`. Under `pnpm dev`, editing `waypoints.json` or `track.json` recompiles the hike's `index.mdx` too (`next.config.ts` touches it), so stub sections stay in sync.
+A `<Step>` pointing at an unknown waypoint id, two `<Step>` blocks for the same waypoint, or a `<Step>` in the middle of a line is refused when the guide is saved (and by `pnpm content check`). The stub generator lives in `src/lib/mdx/remark-step-sections.ts`. Under `pnpm dev`, guides are read from the files on every request, so an edited `waypoints.json` or `track.json` shows on reload.
 
 Water, ranger stations and bail-outs are the **safety** pins (larger, double halo). They make up the Safety points list and the `<SafetyPins />` map.
 
@@ -120,7 +129,7 @@ Water, ranger stations and bail-outs are the **safety** pins (larger, double hal
 
 ### Before you go
 
-Optional `essentials` in the frontmatter render as a "Before you go" card at the top of the guide:
+Optional `essentials` in the frontmatter render as a "Before you go" card. It comes first unless the guide places `<BeforeYouGo />` somewhere else:
 
 ```yaml
 essentials:
@@ -179,11 +188,16 @@ This writes `content/hikes/<slug>/track.json` and prints the distance, gain and 
 
 ## The editor (`/editor`)
 
-`pnpm dev`, then open http://localhost:3100/editor (a local owner, no sign-in). It gives you a split view with CodeMirror for `index.mdx` / `waypoints.json` on one side and a live preview using the real components on the other. Put the cursor inside a component tag and a settings panel opens next to the source, with a form generated from the component's props. Autosave runs 1.5s after you stop typing (or press ⌘S). It validates with the same schemas as the build and refuses to write invalid content. The insert menu adds components at the cursor, pre-filled with a matching waypoint id.
+`pnpm dev`, then open http://localhost:3100/editor (a local owner, no sign-in; the dev server only listens on this machine, use `pnpm dev:lan` to reach it from a phone). On the live site the editor is behind Google sign-in, and only people on the editors list (`pnpm editors add <email>`) can open it; everyone else gets a 404.
 
-Each save names the version it was based on, so if the guide changed in the meantime (another tab, a script, another editor) the editor says so and writes nothing.
+One guide, four views:
 
-On the live site the editor is closed (a 404) until Google sign-in is switched on with `EDITOR_AUTH=supabase`; then only people on the editors list (`pnpm editors add <email>`) can open it. See [docs/knowledge/e2-go-live.md](docs/knowledge/e2-go-live.md).
+- **Write** (default): the guide as a document. Text is edited in place and every component is a live block; click one to change its settings beside it. A guide that uses Markdown this view can't show (an image, a code block, a reference-style link, a footnote) is sent to Advanced instead of being shown cut short.
+- **Details**: title, stats, "Before you go" and the sidebar order, as a form.
+- **Pins**: the pins on a map (drag to move, drag the yellow dot to aim the photo, click to add), a list in route order and a form per pin.
+- **Advanced**: the raw Markdown and pins JSON with a live preview.
+
+Autosave runs 1.5 s after you stop typing (or press ⌘S), one save at a time. Every save passes the same gate as the scripts (schemas, MDX compile, no code) and nothing invalid is written. Each save names the version it was based on, so if the guide changed in the meantime (another tab, a script, another editor) the editor says so and writes nothing. Leaving the page with unsaved text asks first. Publish and Unpublish flip the guide's `draft` flag.
 
 ---
 
@@ -192,7 +206,7 @@ On the live site the editor is closed (a 404) until Google sign-in is switched o
 The sample hike (`ridgeline-loop`) was generated this way:
 
 ```bash
-pnpm sample:photos [slug]   # placeholder JPEGs with GPS/time/heading EXIF → fixtures/<slug>/
+pnpm sample:photos [slug]   # placeholder JPEGs with GPS/time/heading EXIF → fixtures/sample-photos/<slug>/
 pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop --force
 ```
 
@@ -212,7 +226,7 @@ Supabase Storage is the source of truth for photos. `public/photos` is gitignore
    ```bash
    NEXT_PUBLIC_PHOTO_STORAGE=supabase
    NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
-   SUPABASE_SERVICE_ROLE_KEY=<service role key>   # local only, used by `pnpm ingest`
+   SUPABASE_SERVICE_ROLE_KEY=<service role key>   # secret; used by the scripts and, with CONTENT_STORE=supabase, by the server
    ```
 
 3. `pnpm ingest <folder> --slug <slug>` now uploads to `hikes/<slug>/...`.
@@ -234,6 +248,7 @@ Only the two web-sized, metadata-free webp copies are uploaded. Your originals (
    - `NEXT_PUBLIC_MAPBOX_TOKEN`
    - `NEXT_PUBLIC_PHOTO_STORAGE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_BUCKET` (required: the build fails without them)
    - To serve guides from the database and open the editor on the live site, also add `CONTENT_STORE=supabase`, `EDITOR_AUTH=supabase`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` (**Sensitive**, never `NEXT_PUBLIC_`). The full steps, including Google sign-in, are in [docs/knowledge/e2-go-live.md](docs/knowledge/e2-go-live.md). Without them the site reads the guides committed in `content/hikes` and the editor is closed.
+   - Optional: `NEXT_PUBLIC_SITE_URL` once the site has its own domain (the sitemap and social cards use it; it defaults to the project's production domain).
 3. In your Mapbox account, add the Vercel domain(s) to the token's URL restrictions.
 4. Deploy. Hike pages are rendered once and cached. With guides in files, adding a hike means committing its folder and pushing; with guides in the database, a saved guide is live within seconds and needs no deploy.
 
@@ -246,5 +261,5 @@ With the CLI: `npm i -g vercel`, `vercel link`, `vercel env add NEXT_PUBLIC_MAPB
 - **Backlog:** unscheduled feature ideas live in [docs/knowledge/backlog.md](docs/knowledge/backlog.md).
 
 - **Mapbox costs:** each map counts as a map load. Maps only mount when scrolled near the viewport, and the small inset maps skip 3D terrain. The free tier is 50k loads/month.
-- **Timestamps:** EXIF `DateTimeOriginal` has no timezone, so `takenAt` is interpreted in your machine's timezone. It's only used for ordering.
+- **Timestamps:** a photo's capture time is only used to put the photos in order during `pnpm ingest`. It is never stored or published.
 - **Panos:** a 2:1 image (or GPano `ProjectionType=equirectangular`) is treated as 360°. `heading` for a pano is the compass direction of the image centre (`PoseHeadingDegrees` or `GPSImgDirection`).

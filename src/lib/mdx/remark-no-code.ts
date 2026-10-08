@@ -6,7 +6,30 @@ import type { VFile } from "vfile";
 /** Plain HTML tags a guide may use. Everything else must be a component from the manifest. */
 const SAFE_TAGS = new Set(["br", "sub", "sup", "kbd", "mark", "details", "summary"]);
 
-const isComment = (source: string) => /^\s*(\/\*[\s\S]*?\*\/\s*)*$/.test(source);
+/**
+ * True when an expression holds nothing but block comments and whitespace. A scan, not a regex:
+ * a pattern that lets `[\s\S]*?` backtrack accepts `/* a *\/ code /* b *\/` as one comment, and
+ * takes exponential time on a run of them.
+ */
+export function isComment(source: string): boolean {
+  let i = 0;
+  while (i < source.length) {
+    if (/\s/.test(source[i])) i++;
+    else if (source.startsWith("/*", i)) {
+      const end = source.indexOf("*/", i + 2);
+      if (end === -1) return false;
+      i = end + 2;
+    } else return false;
+  }
+  return true;
+}
+
+/** Where a link or image may point: the web, mail, phone, or somewhere on this site. */
+function isSafeUrl(url: string): boolean {
+  // Browsers ignore tabs, newlines and other control characters inside a scheme (`java\tscript:`).
+  const u = url.replace(/[\u0000-\u0020]/g, "");
+  return /^(https?:|mailto:|tel:)/i.test(u) || !/^[a-z][a-z0-9+.-]*:/i.test(u);
+}
 
 /** A literal the prop checker can read: number, boolean, null, quoted string, or JSON array/object. */
 function isLiteral(source: string): boolean {
@@ -27,6 +50,7 @@ function isLiteral(source: string): boolean {
  *  - `{…}` expressions in the text (comments are fine)
  *  - props written as expressions (`a={x}`, `{...spread}`); literals like `{420}` or `{false}` are fine
  *  - raw HTML tags other than a few harmless ones, and any attribute on those
+ *  - links and images that point anywhere but http(s), mailto, tel or this site (`javascript:` etc.)
  * Components come only from lib/mdx/manifest.ts and ship with the site's code.
  */
 export function remarkNoCode() {
@@ -39,6 +63,11 @@ export function remarkNoCode() {
         case "mdxFlowExpression":
         case "mdxTextExpression":
           if (!isComment(node.value)) file.fail(`Guides can't contain {…} expressions (found {${node.value.trim().slice(0, 40)}})`, node);
+          break;
+        case "link":
+        case "image":
+        case "definition":
+          if (!isSafeUrl(node.url)) file.fail(`Links can only point to web pages (found ${node.url.trim().slice(0, 40)})`, node);
           break;
         case "mdxJsxFlowElement":
         case "mdxJsxTextElement": {

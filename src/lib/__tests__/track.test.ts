@@ -57,3 +57,25 @@ describe("locateOnTrack", () => {
     expect(second.mile).toBeGreaterThanOrEqual(first.mile);
   });
 });
+
+describe("switchbacks", () => {
+  // Two legs about 11 m apart: east along 34.0000, then back west along 34.0001.
+  const points: [number, number, number][] = [
+    [-118, 34, 0],
+    [-117.99, 34, 0],
+    [-117.99, 34.0001, 0],
+    [-118, 34.0001, 0],
+  ];
+  const line = trackLine({ points, distanceMi: cumulativeMiles(points.map(([lng, lat]) => ({ lat, lng }))).at(-1)! });
+
+  it("keeps a point that lies on the upper leg on the upper leg", () => {
+    const p = locateOnTrack(line, { lat: 34.0001, lng: -117.995 });
+    expect(p.index).toBe(2);
+    expect(p.lat).toBeCloseTo(34.0001, 6);
+    expect(p.offMi).toBeCloseTo(0, 6);
+  });
+
+  it("still takes the first pass when the two passes coincide", () => {
+    expect(locateOnTrack(trackLine(OUT_AND_BACK), { lat: 34.005, lng: -118 }).index).toBe(0);
+  });
+});

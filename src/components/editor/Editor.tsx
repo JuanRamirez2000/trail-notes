@@ -3,10 +3,10 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { registry } from "@/components/mdx/registry";
 import { cn } from "@/lib/cn";
-import { joinGuide, readDetails, setDetail, splitGuide } from "@/lib/frontmatter";
+import { joinGuide, readDetails, setDetail, splitGuide, yamlProblems } from "@/lib/frontmatter";
 import { routeCoords } from "@/lib/hike";
+import { COMPONENT_NAMES } from "@/lib/mdx/manifest";
 import { essentialsSchema, type Track } from "@/lib/schemas";
 import { AdvancedView } from "./AdvancedView";
 import { countComponents, countWords, parseWaypoints } from "./compile";
@@ -32,7 +32,7 @@ type Props = {
   canSignOut: boolean;
 };
 type View = "write" | "details" | "pins" | "advanced";
-type SaveState = { kind: "idle" | "saving" | "saved" | "error" | "conflict"; at?: Date; problems?: string[] };
+type SaveState = { kind: "idle" | "saving" | "conflict" } | { kind: "saved"; at: Date } | { kind: "error"; problems: string[] };
 
 const AUTOSAVE_MS = 1500;
 const VIEWS: { id: View; label: string; hint: string }[] = [
@@ -44,8 +44,8 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
 
 /**
  * The editor shell: holds the guide being edited (its MDX and its pins), saves it, and switches
- * between three views of the same document. Write and Details are how guides are meant to be
- * made; Advanced is the raw source underneath them.
+ * between four views of the same document. Write, Details and Pins are how guides are meant to
+ * be made; Advanced is the raw source underneath them.
  */
 export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, track, editorName, canSignOut }: Props) {
   const [mdx, setMdx] = useState(initialMdx);
@@ -65,31 +65,58 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
   const route = useMemo(() => routeCoords(pins, track), [pins, track]);
   const essentials = useMemo(() => essentialsSchema.safeParse(details.essentials).data, [details.essentials]);
 
+  // What a save sends is read from here, so the save function itself never changes and a save
+  // that was asked for while another is on its way can pick up the newest text when its turn comes.
+  const latest = useRef({ mdx, waypoints });
+  useEffect(() => {
+    latest.current = { mdx, waypoints };
+  }, [mdx, waypoints]);
+  const saving = useRef(false);
+  const saveAgain = useRef(false);
+
+  // One save at a time. Each save names the version it's based on, and that version only arrives
+  // with the previous save's answer: two overlapping saves would both name the old one, and the
+  // second would be refused as a conflict with the editor's own first.
   const doSave = useCallback(async () => {
-    const snapshot = { mdx, waypoints };
-    setSave({ kind: "saving" });
-    const res = await fetch(`/api/editor/${slug}`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...snapshot, baseVersion: versionRef.current }),
-    }).catch(() => null);
-    if (!res) {
-      setSave({ kind: "error", problems: ["Couldn't reach the server. Your text is still here; it will retry when you edit or press Save."] });
+    if (saving.current) {
+      saveAgain.current = true;
       return;
     }
-    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; problems?: string[]; version?: string; conflict?: boolean };
-    if (res.ok && data.ok && data.version) {
-      versionRef.current = data.version;
-      setSaved(snapshot);
-      setSave({ kind: "saved", at: new Date() });
-    } else if (res.status === 409) {
-      setSave({ kind: "conflict" });
-    } else if (res.status === 404) {
-      setSave({ kind: "error", problems: ["You're no longer signed in (or this hike was removed). Open the sign-in page in another tab, then press Save."] });
-    } else {
-      setSave({ kind: "error", problems: data.problems ?? [`HTTP ${res.status}`] });
+    saving.current = true;
+    // Loops while there is newer text that was asked to be saved during the save just finished.
+    for (;;) {
+      saveAgain.current = false;
+      const snapshot = latest.current;
+      setSave({ kind: "saving" });
+      let next: SaveState;
+      const res = await fetch(`/api/editor/${slug}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...snapshot, baseVersion: versionRef.current }),
+      }).catch(() => null);
+      if (!res) {
+        next = { kind: "error", problems: ["Couldn't reach the server. Your text is still here; it will retry when you edit or press Save."] };
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; problems?: string[]; version?: string; conflict?: boolean };
+        if (res.ok && data.ok && data.version) {
+          versionRef.current = data.version;
+          setSaved(snapshot);
+          next = { kind: "saved", at: new Date() };
+        } else if (res.status === 409) {
+          next = { kind: "conflict" };
+        } else if (res.status === 404) {
+          next = { kind: "error", problems: ["You're no longer signed in (or this hike was removed). Open the sign-in page in another tab, then press Save."] };
+        } else {
+          next = { kind: "error", problems: data.problems ?? [`HTTP ${res.status}`] };
+        }
+      }
+      setSave(next);
+      // Never again after a conflict: retrying could only fail.
+      const changed = latest.current.mdx !== snapshot.mdx || latest.current.waypoints !== snapshot.waypoints;
+      if (next.kind === "conflict" || !saveAgain.current || !changed) break;
     }
-  }, [mdx, waypoints, slug]);
+    saving.current = false;
+  }, [slug]);
 
   // Autosave after a pause in typing. Invalid content is rejected server-side and shown, never written.
   // A conflict stops autosave: retrying would only fail again, and must never overwrite the newer version.
@@ -98,7 +125,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
     if (!dirty || conflicted) return;
     const t = setTimeout(doSave, AUTOSAVE_MS);
     return () => clearTimeout(t);
-  }, [dirty, conflicted, doSave]);
+  }, [mdx, waypoints, dirty, conflicted, doSave]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -111,12 +138,26 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
     return () => window.removeEventListener("keydown", onKey);
   }, [doSave]);
 
+  // Leaving with text that isn't saved (still typing, a save on its way, or a save that was
+  // refused) asks first; the browser shows its own "Leave site?" dialog.
+  useEffect(() => {
+    if (!dirty) return;
+    const onLeave = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", onLeave);
+    return () => window.removeEventListener("beforeunload", onLeave);
+  }, [dirty]);
+
   // The Write view edits the body and the Details form edits the frontmatter; each change is put
   // back together with the other half as it is right now.
   const setBody = useCallback((body: string) => setMdx((prev) => joinGuide({ yaml: splitGuide(prev).yaml, body })), []);
   const setYaml = useCallback((yaml: string) => setMdx((prev) => joinGuide({ yaml, body: splitGuide(prev).body })), []);
   // Publishing is a change like any other (the guide's `draft` flag), saved by the same autosave.
-  const setDraft = (draft: boolean) => setYaml(setDetail(doc.yaml, ["draft"], draft));
+  const setDraft = (draft: boolean) => {
+    // A frontmatter with a YAML error can't be rewritten safely; say so instead of doing nothing.
+    const problems = yamlProblems(doc.yaml);
+    if (problems.length) setSave({ kind: "error", problems: [`Can't ${draft ? "unpublish" : "publish"} yet. The guide's details have a problem (see Details): ${problems[0]}`] });
+    else setYaml(setDetail(doc.yaml, ["draft"], draft));
+  };
 
   // Where the selected block in the Write view renders its settings form.
   const [panel, setPanel] = useState<HTMLDivElement | null>(null);
@@ -127,7 +168,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
     save.kind === "saving"
       ? "Saving…"
       : save.kind === "saved"
-        ? `Saved ${save.at!.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+        ? `Saved ${save.at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
         : save.kind === "error"
           ? "Not saved: fix the errors below"
           : save.kind === "conflict"
@@ -196,8 +237,8 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
         </div>
       )}
 
-      {save.kind === "error" && save.problems && (
-        <ul className="border-b border-pin-bailout bg-card px-5 py-2 font-mono text-xs text-pin-bailout">
+      {save.kind === "error" && (
+        <ul role="alert" className="border-b border-pin-bailout bg-card px-5 py-2 font-mono text-xs text-pin-bailout">
           {save.problems.map((p) => (
             <li key={p}>{p}</li>
           ))}
@@ -209,7 +250,18 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
           <div className="min-h-0 overflow-y-auto">
             {parsed.ok ? (
               // Remounted when the pins change (Advanced view), so the blocks see the new pins.
-              <WriteView key={waypoints} body={doc.body} onChange={setBody} waypoints={pins} route={route} essentials={essentials} panel={panel} onSelectionChange={setHasSelection} deselect={deselect} />
+              <WriteView
+                key={waypoints}
+                body={doc.body}
+                onChange={setBody}
+                waypoints={pins}
+                route={route}
+                essentials={essentials}
+                panel={panel}
+                onSelectionChange={setHasSelection}
+                deselect={deselect}
+                onOpenAdvanced={() => setView("advanced")}
+              />
             ) : (
               <p className="m-6 rounded-lg border-2 border-dashed border-pin-bailout bg-card p-3 text-pin-bailout">
                 The pins have a problem, so the guide can&rsquo;t be shown here. Fix it under Advanced → Pins (JSON): {parsed.error}
@@ -263,7 +315,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, tra
       {/* Status bar */}
       <div className="flex gap-[18px] border-t border-line bg-frame px-5 py-1.5 text-caption text-bark">
         <span>{countWords(mdx)} words</span>
-        <span>{countComponents(mdx, Object.keys(registry))} blocks</span>
+        <span>{countComponents(mdx, COMPONENT_NAMES)} blocks</span>
         {view === "advanced" && (
           <span>
             Line {cursor.line}, col {cursor.col}

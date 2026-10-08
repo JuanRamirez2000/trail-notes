@@ -35,3 +35,6 @@ export const isActive = {
   distance: (f: Filters) => f.distance[0] > 0 || f.distance[1] < DISTANCE_MAX,
   elevation: (f: Filters) => f.elevation[0] > 0 || f.elevation[1] < ELEVATION_MAX,
 };
+
+/** "1 hike", "3 hikes" */
+export const countHikes = (n: number) => `${n} ${n === 1 ? "hike" : "hikes"}`;

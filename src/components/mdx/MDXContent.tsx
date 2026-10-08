@@ -5,8 +5,11 @@ import { mdxComponents } from "./registry";
 type MDXContentFn = (props: { components?: Record<string, unknown> }) => React.ReactNode;
 
 /**
- * Velite compiles MDX to a function body at build time; evaluate it with the JSX runtime.
- * Runs during static generation only, on code compiled from our own content/ folder.
+ * Evaluates a guide compiled on the server (lib/mdx/compile.ts) with the JSX runtime. This runs
+ * the compiled guide as code, on the server while a page renders and in the visitor's browser.
+ * The guide comes from the content store (the database in production), so what keeps this safe
+ * is the no-code rule every guide passes before it is stored or compiled (lib/mdx/remark-no-code.ts):
+ * a guide can hold text and the manifest's components, never code of its own.
  */
 function getMDXContent(code: string): MDXContentFn {
   return new Function(code)({ ...runtime }).default;

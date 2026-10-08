@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DIFFICULTY_LABEL } from "@/lib/format";
 import { DIFFICULTIES } from "@/lib/schemas";
-import { DISTANCE_MAX, ELEVATION_MAX, EMPTY_FILTERS, isActive, type Filters } from "./filters";
+import { countHikes, DISTANCE_MAX, ELEVATION_MAX, EMPTY_FILTERS, isActive, type Filters } from "./filters";
 import { RangeSlider } from "./RangeSlider";
 
 type Props = { value: Filters; onChange: (f: Filters) => void; shown: number; total: number };
@@ -44,7 +44,7 @@ export function FilterBar({ value, onChange, shown, total }: Props) {
         </button>
       )}
       <span className="ml-auto text-bark">
-        {shown} of {total} hikes
+        {shown === total ? countHikes(total) : `${shown} of ${countHikes(total)}`}
       </span>
     </div>
   );

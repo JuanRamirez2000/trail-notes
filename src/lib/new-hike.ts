@@ -40,14 +40,17 @@ export function buildNewHike(form: NewHikeForm, track: Track | null): { slug: st
     slug: form.slug,
     region: form.region.trim(),
     summary: form.summary.trim(),
-    distanceMi: track ? round(track.distanceMi, 1) : form.distanceMi,
+    // A very short recording still needs a distance above zero.
+    distanceMi: track ? Math.max(round(track.distanceMi, 1), 0.1) : form.distanceMi,
     elevationGainFt: track ? track.elevationGainFt : form.elevationGainFt,
     difficulty: form.difficulty,
     trailhead: start,
     date: form.date,
     draft: true,
   };
-  const body = `${form.summary.trim()}\n\n<RouteMap />\n\n## The route\n`;
+  // The summary isn't repeated in the body: the page shows it under the title, and as body text
+  // it would have to be valid MDX (a `{` or `<` in it would refuse the whole hike).
+  const body = "<RouteMap />\n\n## The route\n";
   const pins = start
     ? [
         {

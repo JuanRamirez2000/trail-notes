@@ -1,5 +1,5 @@
 import { bearing } from "@/lib/geo";
-import type { Track, WaypointType } from "@/lib/schemas";
+import { SLUG, type Track, type WaypointType } from "@/lib/schemas";
 import { locateAllOnTrack, locateOnTrack, trackLine } from "@/lib/track";
 
 /**
@@ -34,7 +34,11 @@ export function snapToTrack(p: { lat: number; lng: number }, track: TrackLike): 
   return { lat: round(p.lat), lng: round(p.lng), snapped: false };
 }
 
-/** Sets fields on one pin. `undefined`, `""` or `null` removes an optional field. */
+/**
+ * Sets fields on one pin. `undefined` or `""` removes an optional field. Required fields (label,
+ * title, position) must be given a value: the form holds an empty or out-of-range entry back
+ * until it's one the pins can keep.
+ */
 export function updatePin(json: string, id: string, patch: Record<string, unknown>): string {
   const file = read(json);
   file.waypoints = file.waypoints.map((w) => {
@@ -111,10 +115,14 @@ export function reorderPin(json: string, id: string, by: -1 | 1): string {
   return write(file);
 }
 
-const ID = /^[a-z0-9-]+$/;
+/**
+ * `waypoint="id"` as a guide may write it: either quote, spaces around `=`, or the literal
+ * `waypoint={"id"}`. Group 1 is everything before the id, group 2 everything after it.
+ */
+const reference = (id: string) => new RegExp(`(\\bwaypoint\\s*=\\s*(?:\\{\\s*)?["'])${id}(["'])`, "g");
 
-/** Blocks in the guide that point at this pin (`waypoint="id"`). */
-export const referencesTo = (mdx: string, id: string) => (mdx.match(new RegExp(`\\bwaypoint="${id}"`, "g")) ?? []).length;
+/** Blocks in the guide that point at this pin. */
+export const referencesTo = (mdx: string, id: string) => (SLUG.test(id) ? (mdx.match(reference(id)) ?? []).length : 0);
 
 /**
  * Renames a pin and every block in the guide that refers to it, so the guide keeps working.
@@ -122,11 +130,11 @@ export const referencesTo = (mdx: string, id: string) => (mdx.match(new RegExp(`
  */
 export function renamePin(json: string, mdx: string, id: string, nextId: string): { ok: true; json: string; mdx: string } | { ok: false; problem: string } {
   if (nextId === id) return { ok: true, json, mdx };
-  if (!ID.test(nextId)) return { ok: false, problem: "Use lowercase letters, digits and dashes." };
+  if (!SLUG.test(nextId)) return { ok: false, problem: "Use lowercase letters, digits and dashes." };
   const file = read(json);
   if (file.waypoints.some((w) => w.id === nextId)) return { ok: false, problem: `Another pin is already called "${nextId}".` };
   file.waypoints = file.waypoints.map((w) => (w.id === id ? { ...w, id: nextId } : w));
-  return { ok: true, json: write(file), mdx: mdx.replace(new RegExp(`\\bwaypoint="${id}"`, "g"), `waypoint="${nextId}"`) };
+  return { ok: true, json: write(file), mdx: mdx.replace(reference(id), (_m, before: string, after: string) => `${before}${nextId}${after}`) };
 }
 
 export type { RawPin };

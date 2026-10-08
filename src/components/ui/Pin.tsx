@@ -19,14 +19,13 @@ export function Pin({ type, size = 22, active, dimmed, className, style }: Props
   return (
     <span
       className={cn(
-        "box-border flex flex-none items-center justify-center border-2 border-white font-mono font-semibold text-white transition-opacity",
+        "box-border flex flex-none items-center justify-center border-2 border-white font-mono font-semibold transition-opacity",
         s.safety ? "shadow-[var(--shadow-pin-halo)]" : "shadow-[var(--shadow-pin)]",
         active && "outline-2 outline-offset-3 outline-graphite",
         dimmed && "opacity-30",
-        type === "start" && "text-paper",
         className,
       )}
-      style={{ width: px, height: px, background: s.color, borderRadius: s.radius, fontSize: px * 0.5, ...style }}
+      style={{ width: px, height: px, background: s.color, color: s.ink, borderRadius: s.radius, fontSize: px * 0.5, ...style }}
       aria-label={s.label}
       role="img"
     >

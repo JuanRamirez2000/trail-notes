@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { formatMiles } from "@/lib/format";
 import type { HikeWaypoint } from "@/lib/hike";
 import { useHike } from "@/lib/hike-store";
+import { scrollBehavior } from "@/lib/motion";
 
 export type WaypointLinksProps = {
   title: string;
@@ -36,7 +37,7 @@ export function WaypointLinks({ title, waypoints, primary = (wp) => wp.title, de
     if (!list || !row) return;
     const top = row.offsetTop - list.offsetTop;
     if (top < list.scrollTop || top + row.offsetHeight > list.scrollTop + list.clientHeight) {
-      list.scrollTo({ top: top - list.clientHeight / 3, behavior: "smooth" });
+      list.scrollTo({ top: top - list.clientHeight / 3, behavior: scrollBehavior() });
     }
   }, [activeId]);
 

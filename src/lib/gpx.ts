@@ -9,18 +9,45 @@ const SMOOTH = 5;
 
 export type RawPoint = [lng: number, lat: number, ele: number];
 
+const NUMBER = "[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?";
+
+/**
+ * Points of a GPX file as [lng, lat, ele]. Track points (`<trkpt>`) if the file has any, else the
+ * points of a planned route (`<rtept>`). Points without a usable position are skipped.
+ */
 export function parseGpx(xml: string): RawPoint[] {
   // GPX is simple enough that a targeted regex beats pulling in an XML parser. Attribute order
-  // isn't fixed (some apps write lon first) and a point may be self-closing with no <ele>.
-  const out: RawPoint[] = [];
-  const re = /<trkpt\b([^>]*?)(?:\/>|>([\s\S]*?)<\/trkpt>)/g;
-  const attr = (attrs: string, name: string) => new RegExp(`\\b${name}\\s*=\\s*["']([-\\d.]+)["']`).exec(attrs)?.[1];
-  for (const m of xml.matchAll(re)) {
-    const lat = attr(m[1], "lat");
-    const lon = attr(m[1], "lon");
-    if (lat === undefined || lon === undefined) continue;
-    const ele = /<ele>\s*([-\d.]+)\s*<\/ele>/.exec(m[2] ?? "");
-    out.push([Number(lon), Number(lat), ele ? Number(ele[1]) : NaN]);
+  // isn't fixed (some apps write lon first), tags may carry a namespace prefix (`<gpx:trkpt>`)
+  // and a point may be self-closing with no <ele>.
+  const attr = (attrs: string, name: string) => new RegExp(`\\b${name}\\s*=\\s*["']\\s*(${NUMBER})\\s*["']`).exec(attrs)?.[1];
+  const read = (tag: string) => {
+    const out: RawPoint[] = [];
+    const re = new RegExp(`<(?:\\w+:)?${tag}\\b([^>]*?)(?:/>|>([\\s\\S]*?)</(?:\\w+:)?${tag}>)`, "g");
+    for (const m of xml.matchAll(re)) {
+      const lat = Number(attr(m[1], "lat"));
+      const lon = Number(attr(m[1], "lon"));
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+      const ele = new RegExp(`<(?:\\w+:)?ele>\\s*(${NUMBER})\\s*</(?:\\w+:)?ele>`).exec(m[2] ?? "");
+      out.push([lon, lat, ele ? Number(ele[1]) : NaN]);
+    }
+    return out;
+  };
+  const track = read("trkpt");
+  return track.length ? track : read("rtept");
+}
+
+/** Elevations with the gaps filled from the nearest point that has one (0 if none does). */
+export function fillElevations(eles: number[]): number[] {
+  const out = [...eles];
+  let last = NaN;
+  for (let i = 0; i < out.length; i++) {
+    if (Number.isFinite(out[i])) last = out[i];
+    else out[i] = last;
+  }
+  let next = NaN;
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (Number.isFinite(out[i])) next = out[i];
+    else out[i] = Number.isFinite(next) ? next : 0;
   }
   return out;
 }
@@ -34,7 +61,14 @@ export function elevationStats(eles: number[]) {
   });
   let gain = 0;
   for (let i = 1; i < smooth.length; i++) gain += Math.max(0, smooth[i] - smooth[i - 1]);
-  return { gainFt: gain * M_TO_FT, maxFt: Math.max(...valid) * M_TO_FT, minFt: Math.min(...valid) * M_TO_FT };
+  // Not Math.max(...valid): spreading a day-long recording overflows the call stack.
+  let max = -Infinity;
+  let min = Infinity;
+  for (const e of valid) {
+    if (e > max) max = e;
+    if (e < min) min = e;
+  }
+  return { gainFt: gain * M_TO_FT, maxFt: max * M_TO_FT, minFt: min * M_TO_FT };
 }
 
 const round = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
@@ -44,12 +78,14 @@ const round = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
  * only the stored line is simplified (Douglas-Peucker), so the stats stay accurate.
  */
 export function buildTrack(raw: RawPoint[], tolerance = 0.00003) {
-  if (raw.length < 2) throw new Error("No track points (<trkpt>) found in the GPX file.");
+  if (raw.length < 2) throw new Error("No track points (<trkpt> or <rtept>) found in the GPX file.");
   const distanceMi = turfLength(lineString(raw.map(([lng, lat]) => [lng, lat])), { units: "miles" });
   const { gainFt, maxFt, minFt } = elevationStats(raw.map((p) => p[2]));
 
-  // Simplify on [lng, lat, ele]; turf keeps the 3rd coordinate on retained vertices.
-  const simplified = turfSimplify(lineString(raw.map(([lng, lat, ele]) => [lng, lat, Number.isFinite(ele) ? ele : 0])), {
+  // Simplify on [lng, lat, ele]; turf keeps the 3rd coordinate on retained vertices. A point
+  // recorded without an elevation takes its neighbour's, not 0 (a pit in the middle of a climb).
+  const eles = fillElevations(raw.map((p) => p[2]));
+  const simplified = turfSimplify(lineString(raw.map(([lng, lat], i) => [lng, lat, eles[i]])), {
     tolerance,
     highQuality: true,
   });
@@ -57,7 +93,8 @@ export function buildTrack(raw: RawPoint[], tolerance = 0.00003) {
 
   return trackSchema.safeParse({
     points,
-    distanceMi: round(distanceMi, 2),
+    // A recording too short to round to anything still has a distance.
+    distanceMi: Math.max(round(distanceMi, 2), 0.01),
     elevationGainFt: Math.round(gainFt),
     maxElevationFt: Math.round(maxFt),
     minElevationFt: Math.round(minFt),

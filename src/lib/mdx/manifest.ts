@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { SLUG } from "../schemas";
 
 /**
  * What every MDX component accepts: the single definition behind
- *  - build-time prop validation (lib/mdx/remark-component-props.ts, run by Velite and the editor preview)
+ *  - build-time prop validation (lib/mdx/remark-component-props.ts, run by the save gate, the page compile and the editor preview)
  *  - the editor's settings forms, insert menu and rich-text blocks (components/editor)
  *  - the components' own prop types (components/mdx/registry.tsx checks they match)
  *
@@ -16,7 +17,7 @@ import { z } from "zod";
  */
 
 /** Id of a waypoint in the hike's waypoints.json. */
-export const waypointRef = () => z.string().regex(/^[a-z0-9-]+$/, "must be a waypoint id").meta({ input: "waypoint" });
+export const waypointRef = () => z.string().regex(SLUG, "must be a waypoint id").meta({ input: "waypoint" });
 const internal = () => z.boolean().optional().meta({ internal: true });
 
 export type ComponentCategory = "Guide" | "Maps" | "Photos" | "Trip info";

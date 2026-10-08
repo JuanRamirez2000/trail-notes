@@ -3,7 +3,8 @@ import { can } from "@/lib/auth/can";
 import { rateLimiter, sameOrigin } from "@/lib/auth/request";
 import { getEditor } from "@/lib/auth/server";
 import { getStore } from "@/lib/store/server";
-import { MAX_MDX_BYTES, MAX_WAYPOINTS_BYTES, SLUG } from "@/lib/store/validate";
+import { RESERVED_SLUGS, SLUG } from "@/lib/schemas";
+import { MAX_MDX_BYTES, MAX_WAYPOINTS_BYTES } from "@/lib/store/validate";
 
 /** A recorded track is the big part of a new hike: a long day out simplifies to a few hundred points. */
 const MAX_TRACK_BYTES = 1_000_000;
@@ -37,14 +38,14 @@ export async function POST(req: Request) {
     return json({ ok: false, problems: ["Expected { slug, mdx, waypoints } as strings, with a lowercase-and-dashes slug."] }, 400);
   }
   // `/editor/new` is this form's own page, so a hike can't have that address.
-  if (body.slug === "new") return json({ ok: false, problems: ['"new" can\'t be used as an address.'] }, 400);
+  if (RESERVED_SLUGS.includes(body.slug)) return json({ ok: false, problems: ['"new" can\'t be used as an address.'] }, 400);
   if (body.track != null && Buffer.byteLength(JSON.stringify(body.track)) > MAX_TRACK_BYTES) {
     return json({ ok: false, problems: ["That recording is too large. Export a shorter or lower-resolution GPX."] }, 413);
   }
 
   const store = await getStore();
   // The store checks the track's shape; anything that isn't a valid track is refused there.
-  const result = await store.create(body.slug, { mdx: body.mdx, waypoints: body.waypoints, track: (body.track ?? null) as never }, { editor });
+  const result = await store.create(body.slug, { mdx: body.mdx, waypoints: body.waypoints, track: body.track ?? null }, { editor });
 
   if (result.ok) {
     revalidatePath("/");
@@ -54,3 +55,8 @@ export async function POST(req: Request) {
   if (result.kind === "exists") return json({ ok: false, problems: [`There's already a hike at "${body.slug}". Choose a different address.`] }, 409);
   return json({ ok: false, problems: ["Couldn't create the hike."] }, 500);
 }
+
+// Anything else about this address answers like the rest of the editor does to outsiders: 404
+// (Next would say 405, which confirms the route exists).
+const notFound = () => new Response("Not found", { status: 404 });
+export { notFound as GET, notFound as PUT, notFound as PATCH, notFound as DELETE };

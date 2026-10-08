@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { joinGuide, setDetail, splitGuide } from "../../frontmatter";
 import type { ContentStore, Editor } from "../types";
 
 /**
@@ -88,19 +89,31 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       expect((await store.read(slug))!.mdx).toBe(before.mdx);
     });
 
-    it("publishes and unpublishes, in the list and in the guide's own draft flag", async () => {
-      const pub = await store.setStatus(slug, "published", { editor, baseVersion: version });
-      expect(pub).toMatchObject({ ok: true, status: "published" });
+    // Publishing is a save like any other: the editor flips the guide's `draft` flag.
+    it("publishes and unpublishes through the guide's own draft flag, in the list too", async () => {
+      const flip = (text: string, draft: boolean) => {
+        const doc = splitGuide(text);
+        return joinGuide({ yaml: setDetail(doc.yaml, ["draft"], draft), body: doc.body });
+      };
       let hike = (await store.read(slug))!;
+      const pub = await store.save(slug, { mdx: flip(hike.mdx, false), waypoints }, { editor, baseVersion: version });
+      expect(pub).toMatchObject({ ok: true, status: "published" });
+      hike = (await store.read(slug))!;
       expect(hike.status).toBe("published");
       expect(hike.mdx).toMatch(/^draft: false$/m);
       expect((await store.list()).find((h) => h.slug === slug)?.status).toBe("published");
 
-      const unpub = await store.setStatus(slug, "draft", { editor, baseVersion: hike.version });
+      const unpub = await store.save(slug, { mdx: flip(hike.mdx, true), waypoints }, { editor, baseVersion: hike.version });
       expect(unpub).toMatchObject({ ok: true, status: "draft" });
       hike = (await store.read(slug))!;
       expect(hike.mdx).toMatch(/^draft: true$/m);
       version = hike.version;
+    });
+
+    it("refuses the address the app keeps for itself", async () => {
+      const r = await store.create("new", { mdx: mdx.replace(`slug: ${slug}`, "slug: new"), waypoints }, { editor });
+      expect(r).toMatchObject({ ok: false, kind: "invalid" });
+      expect(await store.read("new")).toBeNull();
     });
 
     it("replaces and removes the track without touching the text", async () => {

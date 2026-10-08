@@ -30,6 +30,9 @@ const DEG = Math.PI / 180;
 const yawToHeading = (wp: HikeWaypoint, yawRad: number) => normalizeHeading((wp.heading ?? 0) + yawRad / DEG);
 const headingToYaw = (wp: HikeWaypoint, heading: number) => (heading - (wp.heading ?? 0)) * DEG;
 
+/** Pin labels are the author's text. Photo Sphere Viewer inserts marker content as HTML, so they're escaped. */
+const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 function markersFor(wp: HikeWaypoint, all: HikeWaypoint[], radiusMi: number): MarkerConfig[] {
   return all
     .filter((o) => o.id !== wp.id && distanceMi(wp, o) <= radiusMi)
@@ -38,9 +41,9 @@ function markersFor(wp: HikeWaypoint, all: HikeWaypoint[], radiusMi: number): Ma
       return {
         id: o.id,
         position: { yaw: headingToYaw(wp, bearing(wp, o)), pitch: -0.12 },
-        html: `<span class="pano-marker"><span class="pano-marker-pin" style="background:${s.color};border-radius:${s.radius}">${s.glyph}</span>${o.label}</span>`,
+        html: `<span class="pano-marker"><span class="pano-marker-pin" style="background:${s.color};color:${s.ink};border-radius:${s.radius}">${s.glyph}</span>${escapeHtml(o.label)}</span>`,
         anchor: "center center",
-        tooltip: `${o.label} · ${distanceMi(wp, o).toFixed(1)} mi`,
+        tooltip: `${escapeHtml(o.label)} · ${distanceMi(wp, o).toFixed(1)} mi`,
       };
     });
 }

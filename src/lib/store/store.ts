@@ -1,6 +1,9 @@
 import { trackSchema, formatIssues } from "../schemas";
 import type { ContentStore, HikeRecord, HikeStatus, RawHike, RawWrite, StoreBackend, WriteResult } from "./types";
-import { setDraftFlag, validateHike, waypointsText } from "./validate";
+
+/** A stored track that can't be read is never written back as "no track": that would delete it. */
+const unreadableTrack: WriteResult = { ok: false, kind: "invalid", problems: ["track.json: the stored track is invalid. Fix the file, or import the recording again with `pnpm gpx`."] };
+import { validateHike, waypointsText } from "./validate";
 
 const toRecord = (h: RawHike): HikeRecord => ({
   slug: h.slug,
@@ -45,10 +48,11 @@ export function createStore(backend: StoreBackend): ContentStore {
     async save(slug, content, { editor, baseVersion }): Promise<WriteResult> {
       const current = await backend.get(slug);
       if (!current) return { ok: false, kind: "not_found" };
+      if (current.trackUnreadable) return unreadableTrack;
       const p = await prepare(slug, content.mdx, content.waypoints);
       if (!p.ok) return { ok: false, kind: "invalid", problems: p.problems };
       const r = await backend.update(slug, { ...p.data, track: current.track }, baseVersion, editor);
-      return r.ok ? { ok: true, version: r.version, status: p.data.status } : r;
+      return r.ok ? { ok: true, version: r.version, status: p.data.status, previousStatus: current.status } : r;
     },
 
     async create(slug, content, { editor }): Promise<WriteResult> {
@@ -61,15 +65,6 @@ export function createStore(backend: StoreBackend): ContentStore {
         track = t.data;
       }
       const r = await backend.insert(slug, { ...p.data, track }, editor);
-      return r.ok ? { ok: true, version: r.version, status: p.data.status } : r;
-    },
-
-    async setStatus(slug, status, { editor, baseVersion }): Promise<WriteResult> {
-      const current = await backend.get(slug);
-      if (!current) return { ok: false, kind: "not_found" };
-      const p = await prepare(slug, setDraftFlag(current.mdx, status === "draft"), current.waypointsText ?? waypointsText(current.waypoints));
-      if (!p.ok) return { ok: false, kind: "invalid", problems: p.problems };
-      const r = await backend.update(slug, { ...p.data, track: current.track }, baseVersion, editor);
       return r.ok ? { ok: true, version: r.version, status: p.data.status } : r;
     },
 

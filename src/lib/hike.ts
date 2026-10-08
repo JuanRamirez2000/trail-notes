@@ -3,7 +3,11 @@ import { isSafetyType, requiresSection } from "./pins";
 import type { Track, Waypoint } from "./schemas";
 import { locateAllOnTrack, trackLine } from "./track";
 
-/** Waypoint enriched with values derived from its neighbours. Safe to send to the client. */
+/**
+ * Waypoint enriched with values derived from its neighbours. This is what a guide page sends to
+ * every visitor's browser, so it carries only the fields of `waypointSchema`: anything else a
+ * stored pin has (an old `takenAt`, say) is dropped when the pins are parsed.
+ */
 export type HikeWaypoint = Waypoint & {
   /** Trail mileage: authored `mile` if present, else straight-line estimate. */
   mile: number;

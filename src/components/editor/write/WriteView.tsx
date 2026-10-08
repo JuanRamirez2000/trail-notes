@@ -54,6 +54,8 @@ type Props = {
   onSelectionChange: (hasSelection: boolean) => void;
   /** Bump to clear the selection from outside (the settings sheet's "Done" on a phone). */
   deselect?: number;
+  /** Where to send the author when this view can't show the guide. */
+  onOpenAdvanced: () => void;
 };
 
 type WriteContext = {
@@ -72,7 +74,7 @@ const useWrite = () => {
   return ctx;
 };
 
-export default function WriteView({ body, onChange, waypoints, route, essentials, panel, onSelectionChange, deselect }: Props) {
+export default function WriteView({ body, onChange, waypoints, route, essentials, panel, onSelectionChange, deselect, onOpenAdvanced }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [seenDeselect, setSeenDeselect] = useState(deselect);
   if (deselect !== seenDeselect) {
@@ -81,6 +83,11 @@ export default function WriteView({ body, onChange, waypoints, route, essentials
   }
   const latest = useRef(body);
   const [initial] = useState(body);
+  // MDXEditor can't show everything a guide may contain (images, code blocks, reference links,
+  // footnotes). When it meets one it stops there: the rest of the guide is missing from the
+  // screen and edits are no longer reported. Nothing typed in that state would be saved, so the
+  // view steps aside instead.
+  const [unsupported, setUnsupported] = useState<string | null>(null);
 
   useEffect(() => onSelectionChange(selectedId !== null), [selectedId, onSelectionChange]);
 
@@ -91,7 +98,7 @@ export default function WriteView({ body, onChange, waypoints, route, essentials
       panel,
       waypoints,
       pickWaypoint: (name) => {
-        const used = new Set([...latest.current.matchAll(/<Step\s+waypoint="([^"]+)"/g)].map((m) => m[1]));
+        const used = new Set([...latest.current.matchAll(/<Step\s+waypoint\s*=\s*\{?\s*["']([^"']+)["']/g)].map((m) => m[1]));
         if (name === "Step") return (waypoints.find((w) => w.stepIndex !== null && !used.has(w.id)) ?? waypoints.find((w) => !used.has(w.id)) ?? waypoints[0])?.id;
         if (name === "PanoViewer") return (waypoints.find((w) => w.photo?.kind === "pano") ?? waypoints[0])?.id;
         return (waypoints.find((w) => w.photo?.kind === "flat" && w.type !== "start") ?? waypoints[0])?.id;
@@ -101,6 +108,22 @@ export default function WriteView({ body, onChange, waypoints, route, essentials
   );
 
   const plugins = useMemo(() => [...editorPlugins(Block), linkDialogPlugin(), toolbarPlugin({ toolbarContents: () => <Toolbar />, toolbarClassName: "write-toolbar" })], []);
+
+  if (unsupported) {
+    return (
+      <div role="alert" className="m-6 rounded-lg border-2 border-dashed border-pin-bailout bg-card p-4">
+        <p className="font-semibold text-pin-bailout">This guide can&rsquo;t be edited in the Write view.</p>
+        <p className="mt-1 text-graphite">
+          It contains Markdown this view doesn&rsquo;t support (an image, a code block, a reference-style link or a footnote), so part of it wouldn&rsquo;t be shown and changes made here
+          wouldn&rsquo;t be saved. Nothing has been changed. Edit it under Advanced, or remove that part there to use this view again.
+        </p>
+        <p className="mt-2 font-mono text-xs text-bark">{unsupported}</p>
+        <button type="button" onClick={onOpenAdvanced} className="mt-3 cursor-pointer rounded-lg bg-forest px-3.5 py-1 text-paper">
+          Open Advanced
+        </button>
+      </div>
+    );
+  }
 
   return (
     // The blocks are the real guide components, so they need the same shared state as a guide page.
@@ -131,7 +154,7 @@ export default function WriteView({ body, onChange, waypoints, route, essentials
               // Loading a document can reformat it slightly (see mdx-editor-config). That isn't an edit.
               if (!initialNormalize) onChange(clean);
             }}
-            onError={({ error }) => console.error("Write view:", error)}
+            onError={({ error }) => setUnsupported(error)}
           />
         </div>
       </Ctx.Provider>
@@ -196,9 +219,8 @@ function Block({ mdastNode }: JsxEditorProps) {
     syncTimer.current = setTimeout(() => nested.dispatchCommand(NESTED_EDITOR_UPDATED_COMMAND, undefined), 500);
   };
 
-
   if (!isComponentName(name)) {
-    return <div className="my-4 rounded-lg border-2 border-dashed border-pin-bailout bg-card p-3 text-pin-bailout">Unknown component &lt;{name}&gt;. Remove it in the Markdown view.</div>;
+    return <div className="my-4 rounded-lg border-2 border-dashed border-pin-bailout bg-card p-3 text-pin-bailout">Unknown component &lt;{name}&gt;. Remove it under Advanced.</div>;
   }
 
   const props: Record<string, unknown> = {};
