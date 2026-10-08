@@ -108,6 +108,25 @@ export function supabaseBackend(client: SupabaseClient): StoreBackend {
       return { ok: false, kind: "not_found" };
     },
 
+    async history(slug, limit) {
+      const { data, error } = await client.from("hike_revisions").select("version, saved_at, saved_by_label, status").eq("slug", slug).order("version", { ascending: false }).limit(limit);
+      if (error) throw fail(`history of ${slug}`, error);
+      return (data as { version: number; saved_at: string; saved_by_label: string | null; status: HikeStatus }[]).map((r) => ({
+        version: String(r.version),
+        savedAt: new Date(r.saved_at).toISOString(),
+        savedBy: r.saved_by_label,
+        status: r.status,
+      }));
+    },
+
+    async revision(slug, version) {
+      const v = Number(version);
+      if (!Number.isInteger(v)) return null;
+      const { data, error } = await client.from("hike_revisions").select("mdx, waypoints").eq("slug", slug).eq("version", v).maybeSingle();
+      if (error) throw fail(`revision ${version} of ${slug}`, error);
+      return (data as { mdx: string; waypoints: unknown } | null) ?? null;
+    },
+
     async deleteDraft(slug, baseVersion): Promise<DeleteResult> {
       const base = Number(baseVersion);
       // One statement: deleted only if it's still a draft at the version the editor last saw.

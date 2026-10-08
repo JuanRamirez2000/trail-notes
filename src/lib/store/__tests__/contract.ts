@@ -77,6 +77,24 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       expect((await store.read(slug))!.version).toBe(version);
     });
 
+    it("keeps every saved version in the history, newest first (databases only)", async () => {
+      const history = await store.history(slug);
+      if (store.kind === "local") {
+        expect(history).toEqual([]);
+        expect(await store.revision(slug, "1")).toBeNull();
+        return;
+      }
+      expect(history.map((r) => r.version)).toEqual([version, ...history.slice(1).map((r) => r.version)]);
+      expect(history).toHaveLength(2);
+      expect(history[0]).toMatchObject({ status: "draft", savedBy: editor.name });
+      expect(Date.parse(history[0].savedAt)).not.toBeNaN();
+      const first = await store.revision(slug, history[1].version);
+      expect(first).toEqual({ mdx, waypoints });
+      expect(await store.revision(slug, "999")).toBeNull();
+      expect(await store.revision(slug, "not-a-version")).toBeNull();
+      expect((await store.history(slug, 1)).map((r) => r.version)).toEqual([version]);
+    });
+
     it("refuses invalid pins", async () => {
       const r = await store.save(slug, { mdx: (await store.read(slug))!.mdx, waypoints: '{"waypoints":[{"id":"Bad Id"}]}' }, { editor, baseVersion: version });
       expect(r).toMatchObject({ ok: false, kind: "invalid" });

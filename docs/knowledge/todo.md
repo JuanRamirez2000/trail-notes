@@ -42,7 +42,6 @@ None changes behaviour; each needs the tests named first.
 - [ ] **E2 live checks (owner):** what's still unverified on the live site is in [e2-go-live.md](e2-go-live.md).
 - [ ] E2 leftovers once it's live:
   - An E2E suite (`@playwright/test`): signed out and signed-in non-editor get 404 on `/editor` and the save API; an editor can save; the conflict banner. Today these were checked by hand with ad hoc Playwright scripts and curl.
-  - History is written but has no UI: no list of revisions, no restore button (rows are in `hike_revisions`).
   - Every autosave writes a revision row; prune or coarsen later.
   - `pnpm photos check` reads `content/`, not the database.
   - The editors can't preview a draft as a full page on the live site (drafts have no public page).
@@ -53,7 +52,7 @@ None changes behaviour; each needs the tests named first.
   - The editor's top bar on a phone wraps to three rows.
 - [ ] E4 leftovers:
   - The pin form's photo picker only offers photos the hike's pins already use. Listing everything uploaded for the hike needs a small server route over the Supabase bucket.
-  - No undo in the Pins view (the Write view has it); history rows exist but have no restore UI.
+  - No undo in the Pins view (the Write view has it); the History tab can restore an earlier saved version.
   - Out-and-back hikes: a new pin on a stretch walked twice is placed on the first pass; a "which way" choice would be clearer than moving it in the list.
   - Commit the pin-editor browser checks as an E2E test.
 - [ ] E5 leftovers:

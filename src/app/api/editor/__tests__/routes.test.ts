@@ -25,6 +25,8 @@ vi.mock("@/lib/store/server", () => ({ getStore: async () => createStore(localBa
 
 const { PUT, DELETE, GET: getOne } = await import("../[slug]/route");
 const { POST, GET: getAll } = await import("../route");
+const { GET: getHistory } = await import("../[slug]/history/route");
+const { GET: getRevision } = await import("../[slug]/history/[version]/route");
 
 const ORIGIN = "https://trailnotes.example";
 const store = createStore(localBackend(root));
@@ -161,5 +163,30 @@ describe("DELETE /api/editor/[slug]", () => {
     expect((await del("ridgeline-loop", { baseVersion: g.version })).status).toBe(200);
     expect(await store.read("ridgeline-loop")).toBeNull();
     expect(state.revalidated).toEqual(["/"]);
+  });
+});
+
+describe("GET /api/editor/[slug]/history and /history/[version]", () => {
+  const history = (slug: string) => getHistory(new Request(`${ORIGIN}/api/editor/${slug}/history`), { params: Promise.resolve({ slug }) });
+  const revision = (slug: string, version: string) => getRevision(new Request(`${ORIGIN}/api/editor/${slug}/history/${version}`), { params: Promise.resolve({ slug, version }) });
+
+  it("is a 404 for anyone who isn't an editor", async () => {
+    for (const who of [null, { id: "x", name: "X", role: "viewer" }]) {
+      state.editor = who;
+      expect((await history("strawberry-peak")).status).toBe(404);
+      expect((await revision("strawberry-peak", "1")).status).toBe(404);
+    }
+  });
+
+  it("answers bad addresses with a 404", async () => {
+    expect((await history("../etc")).status).toBe(404);
+    for (const v of ["x", "-1", "1e3", "1234567890"]) expect((await revision("strawberry-peak", v)).status).toBe(404);
+  });
+
+  it("lists nothing for guides in files, which keep no history (git does)", async () => {
+    const res = await history("strawberry-peak");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ revisions: [], kept: false });
+    expect((await revision("strawberry-peak", "1")).status).toBe(404);
   });
 });

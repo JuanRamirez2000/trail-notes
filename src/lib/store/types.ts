@@ -42,6 +42,9 @@ export type HikeRecord = {
 
 export type HikeContent = { mdx: string; waypoints: string };
 
+/** One saved version of a guide, from its history. */
+export type Revision = { version: string; savedAt: string; savedBy: string | null; status: HikeStatus };
+
 export type WriteOptions = {
   editor: Editor | null;
   /** The version the change is based on. A save is refused if the hike has moved on since. */
@@ -70,6 +73,13 @@ export interface ContentStore {
   /** `track` is checked by the store, so it can be passed as received. */
   create(slug: string, content: HikeContent & { track?: unknown }, opts: { editor: Editor | null }): Promise<WriteResult>;
   setTrack(slug: string, track: Track | null, opts: WriteOptions): Promise<WriteResult>;
+  /**
+   * A guide's saved versions, newest first (at most `limit`). Only the database keeps history;
+   * guides in files have git instead, so the local store has none.
+   */
+  history(slug: string, limit?: number): Promise<Revision[]>;
+  /** The text and pins of one saved version, or null if there's no such version. */
+  revision(slug: string, version: string): Promise<HikeContent | null>;
   /**
    * Deletes a draft from the editor, with its history: only while it's a draft, and only at the
    * version the editor last saw. There's no undo.
@@ -112,6 +122,9 @@ export interface StoreBackend {
   insert(slug: string, data: RawWrite, editor: Editor | null): Promise<BackendResult>;
   /** Replace, only if the stored version is still `baseVersion` (checked atomically where the backend can). */
   update(slug: string, data: RawWrite, baseVersion: string, editor: Editor | null): Promise<BackendResult>;
+  history(slug: string, limit: number): Promise<Revision[]>;
+  /** `waypoints` parsed, as stored. */
+  revision(slug: string, version: string): Promise<{ mdx: string; waypoints: unknown } | null>;
   /** Delete, only if it's still a draft at `baseVersion` (checked atomically where the backend can). */
   deleteDraft(slug: string, baseVersion: string): Promise<DeleteResult>;
   remove(slug: string): Promise<void>;

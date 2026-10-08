@@ -113,6 +113,10 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
         return { ok: true, version: await write(slug, data) };
       }),
 
+    // Files keep no history of their own; git does.
+    history: async () => [],
+    revision: async () => null,
+
     deleteDraft: (slug, baseVersion) =>
       inTurn(slug, async (): Promise<DeleteResult> => {
         const current = await load(slug);

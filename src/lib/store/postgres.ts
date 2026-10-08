@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import type { Database } from "../../db/client";
 import { hikeRevisions, hikes } from "../../db/schema";
 import type { BackendResult, DeleteResult, Editor, RawHike, RawWrite, StoreBackend } from "./types";
@@ -78,6 +78,24 @@ export function postgresBackend(db: Database): StoreBackend {
         const now = await current(tx, slug);
         return now ? { ok: false, kind: "conflict", version: String(now.version) } : { ok: false, kind: "not_found" };
       }),
+
+    async history(slug, limit) {
+      const rows = await db
+        .select({ version: hikeRevisions.version, savedAt: hikeRevisions.savedAt, savedBy: hikeRevisions.savedByLabel, status: hikeRevisions.status })
+        .from(hikeRevisions)
+        .where(eq(hikeRevisions.slug, slug))
+        .orderBy(desc(hikeRevisions.version))
+        .limit(limit);
+      return rows.map((r) => ({ ...r, version: String(r.version), savedAt: r.savedAt.toISOString() }));
+    },
+
+    async revision(slug, version) {
+      const [r] = await db
+        .select({ mdx: hikeRevisions.mdx, waypoints: hikeRevisions.waypoints })
+        .from(hikeRevisions)
+        .where(and(eq(hikeRevisions.slug, slug), eq(hikeRevisions.version, asVersion(version))));
+      return r ?? null;
+    },
 
     deleteDraft: (slug, baseVersion) =>
       db.transaction(async (tx): Promise<DeleteResult> => {

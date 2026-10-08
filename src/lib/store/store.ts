@@ -84,6 +84,13 @@ export function createStore(backend: StoreBackend): ContentStore {
       return r.ok ? { ok: true, version: r.version, status: p.data.status } : r;
     },
 
+    history: (slug, limit = 100) => backend.history(slug, limit),
+
+    async revision(slug, version) {
+      const r = await backend.revision(slug, version);
+      return r ? { mdx: r.mdx, waypoints: waypointsText(r.waypoints) } : null;
+    },
+
     deleteDraft: (slug, { baseVersion }) => backend.deleteDraft(slug, baseVersion),
 
     remove: (slug) => backend.remove(slug),
