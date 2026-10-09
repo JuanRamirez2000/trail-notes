@@ -30,7 +30,10 @@ function gridFeet(minFt: number, maxFt: number): number[] {
 /**
  * `<ElevationProfile />`: the climb along the recorded track, with the hike's pins on the line.
  * It shares the page's selection with the maps and step lists: the active pin is marked here, and
- * choosing a pin here moves the maps and scrolls the guide to its section.
+ * clicking the plot selects the pin nearest along the trail, which moves the maps and scrolls the
+ * guide to its section. The pins are marks, not buttons: on a phone they sit a few pixels apart,
+ * too close to be separate touch targets. The step list and the minimap's Prev/Next do the same
+ * job from the keyboard.
  */
 export function ElevationProfile({ height = 180 }: ElevationProfileProps) {
   const profile = useHike((s) => s.profile);
@@ -54,15 +57,29 @@ export function ElevationProfile({ height = 180 }: ElevationProfileProps) {
   const active = pins.find((p) => p.wp.id === activeId);
   const hover = hoverMi === null ? null : { mile: hoverMi, ft: elevationAt(profile, hoverMi) };
 
-  const onMove = (e: PointerEvent<HTMLDivElement>) => {
+  const mileAt = (e: { clientX: number; currentTarget: HTMLDivElement }) => {
     const box = e.currentTarget.getBoundingClientRect();
-    setHoverMi(Math.min(extent.totalMi, Math.max(0, ((e.clientX - box.left) / box.width) * extent.totalMi)));
+    return Math.min(extent.totalMi, Math.max(0, ((e.clientX - box.left) / box.width) * extent.totalMi));
   };
+  const nearestPin = (mile: number) => pins.reduce<(typeof pins)[number] | null>((best, p) => (!best || Math.abs(p.wp.mile - mile) < Math.abs(best.wp.mile - mile) ? p : best), null);
+  const onMove = (e: PointerEvent<HTMLDivElement>) => setHoverMi(mileAt(e));
+  // The pin a click would select, named in the readout once the pointer is within a twentieth of the plot of it.
+  const near = hover && nearestPin(hover.mile);
+  const nearName = near && Math.abs(near.wp.mile - hover.mile) <= extent.totalMi / 20 ? near.wp.label : null;
 
   return (
     <Frame title="Elevation" meta={`${formatFeet(extent.minFt)} to ${formatFeet(extent.maxFt)}`} expandable={false}>
       <div className="px-3 pt-3 pb-2">
-        <div className="relative" style={{ height }} onPointerMove={onMove} onPointerLeave={() => setHoverMi(null)}>
+        <div
+          className={cn("relative", pins.length > 0 && "cursor-pointer")}
+          style={{ height }}
+          onPointerMove={onMove}
+          onPointerLeave={() => setHoverMi(null)}
+          onClick={(e) => {
+            const pin = nearestPin(mileAt(e));
+            if (pin) select(pin.wp.id, { reveal: true });
+          }}
+        >
           <svg
             viewBox={`0 0 ${W} ${H}`}
             preserveAspectRatio="none"
@@ -103,23 +120,20 @@ export function ElevationProfile({ height = 180 }: ElevationProfileProps) {
                 aria-hidden
               >
                 {formatMiles(hover.mile)} · {formatFeet(Math.round(hover.ft))}
+                {nearName && ` · ${nearName}`}
               </span>
             </>
           )}
 
           {pins.map(({ wp, ft }) => (
-            <button
+            <span
               key={wp.id}
-              type="button"
-              onClick={() => select(wp.id, { reveal: true })}
-              aria-pressed={wp.id === activeId}
-              aria-label={`${wp.title}: mile ${wp.mile.toFixed(1)}, ${formatFeet(Math.round(ft))}`}
-              title={`${wp.title} · ${formatMiles(wp.mile)} · ${formatFeet(Math.round(ft))}`}
-              className={cn("absolute flex size-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full", wp.id === activeId && "z-[5]")}
+              className={cn("pointer-events-none absolute -translate-x-1/2 -translate-y-1/2", wp.id === activeId && "z-[5]")}
               style={{ left: `${(x(wp.mile) / W) * 100}%`, top: `${y(ft)}%` }}
+              aria-hidden
             >
               <Pin type={wp.type} size={wp.id === activeId ? 18 : 14} active={wp.id === activeId} />
-            </button>
+            </span>
           ))}
         </div>
 

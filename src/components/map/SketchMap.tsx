@@ -71,7 +71,8 @@ export function SketchMap({ waypoints, route, activeId, heading, labels, safety,
             key={w.id}
             type="button"
             onClick={() => onSelect(w.id)}
-            className={cn(pos, "cursor-pointer")}
+            // At least 24 px square, the smallest touch target WCAG 2.2 allows, whatever the pin size.
+            className={cn(pos, "grid min-h-6 min-w-6 cursor-pointer place-items-center")}
             style={{ left: `${x}%`, top: `${y}%` }}
             aria-label={w.label}
           >

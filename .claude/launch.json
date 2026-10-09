@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "dev", "runtimeExecutable": "pnpm", "runtimeArgs": ["dev"], "port": 3100 }
+    { "name": "dev", "runtimeExecutable": "pnpm", "runtimeArgs": ["dev"], "port": 3100 },
+    { "name": "prod", "runtimeExecutable": "pnpm", "runtimeArgs": ["start", "--port", "3111", "--hostname", "127.0.0.1"], "port": 3111 }
   ]
 }

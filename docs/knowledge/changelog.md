@@ -8,6 +8,13 @@ Plan: [v0.1-plan.md](v0.1-plan.md).
 
 - **Licence** (`49169d8`): MIT for the code; guides and photos all rights reserved.
 - **Dependencies:** next 16.3.6 → 16.3.8 (two high and four lower advisories: image-optimisation SSRF, ISR cache poisoning, metadata-route disclosure), `source-map-js` 1.2.2 (high, build-time), and patch releases of mdxeditor, vitest and jsdom. `pnpm audit --prod` is clean on 2026-10-08. Minor and major releases (next 16.4, react 19.3, mapbox-gl 3.32, TypeScript 7, ESLint 10) are left for later.
+- **Accessibility pass** (2026-10-08): axe is clean on the gallery, a guide page and every editor view; Lighthouse accessibility is 100 (scores in [current.md](current.md)). Fixed on the way:
+  - the gallery had no page heading on a phone;
+  - the editor had no `<main>` and no heading, and its "⌘S" hint and line numbers were too faint;
+  - the Write view's toolbar wasn't picking up the site's colours at all (MDXEditor's defaults won), leaving a 1.9:1 placeholder;
+  - the Markdown and pins editors had no accessible name;
+  - map pins were 22 px touch targets, now 24;
+  - the elevation profile's pins overlapped as buttons on a phone, so the plot now selects the nearest pin instead.
 - **Elevation profile:** `<ElevationProfile />` draws the climb along the recorded track with the hike's pins on it; hovering reads off mile and elevation, and choosing a pin selects it on the maps and scrolls to its section. On Strawberry Peak, under the route map.
 - **Fresh Green theme** (2026-10-08): the palette from the design project's *Trailnotes Design System* replaces the paper theme: green primary, white cards on an off-white page, slate secondary text, a yellow accent. Only the token values changed, plus the app icons and the last-resort error page. Text pairs were checked at 4.5:1 or better (the lowest is primary on highlight, 4.54).
 - **Live on Drizzle** (2026-10-08): migrations `0001` and `0002` applied to the live database with `pnpm db:migrate`, then `fd626b3` and `4d66750` went to `main` (PR #1, rebased). Checked afterwards: Strawberry Peak's published copy equals its working copy, the two drafts have no `draft:` line, `save_hike`/`create_hike` are gone, every stored guide passes the save gate, the guide page is 200, `/api/health` says `"store":"postgres"`, and signed out the editor and its API are 404.

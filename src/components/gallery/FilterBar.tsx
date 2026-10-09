@@ -15,7 +15,8 @@ export function FilterBar({ value, onChange, shown, total }: Props) {
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 sm:gap-3 sm:px-7 sm:py-4">
-      <h1 className="mr-3 hidden font-display text-[26px] font-bold sm:block">Find a hike</h1>
+      {/* On a phone the heading is for screen readers only: the filters take the row. */}
+      <h1 className="mr-3 font-display text-[26px] font-bold max-sm:sr-only">Find a hike</h1>
       <Dropdown label="Difficulty" active={isActive.difficulty(value)}>
         <fieldset className="flex flex-col gap-1.5">
           <legend className="mb-2">Difficulty</legend>

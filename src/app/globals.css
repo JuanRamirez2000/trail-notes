@@ -168,9 +168,11 @@
    The document is styled like the public guide page (components/mdx/prose.tsx), so writing looks
    like the result. MDXEditor's own chrome (toolbar, dialogs) is themed through its variables.
    `.write-editor` is on the editor root; MDXEditor's popups render elsewhere, so the theme
-   variables are also set on its popup container. */
-.write-editor,
-.mdxeditor-popup-container {
+   variables are also set on its popup container. Each class is written twice so these win over
+   MDXEditor's own defaults (`.mdxeditor`, one class) whichever stylesheet loads last: when its
+   sheet came second, the toolbar showed its grey-and-blue theme, with a 1.9:1 placeholder. */
+.write-editor.write-editor,
+.mdxeditor-popup-container.mdxeditor-popup-container {
   --accentBase: var(--color-paper);
   --accentBgSubtle: var(--color-paper-deep);
   --accentBg: var(--color-highlight);

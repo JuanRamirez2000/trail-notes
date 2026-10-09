@@ -206,13 +206,13 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
               : "All changes saved";
 
   return (
-    <div className="flex h-dvh flex-col bg-paper">
+    <main className="flex h-dvh flex-col bg-paper">
       {/* Top bar */}
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b border-line bg-frame px-5 py-2.5">
         <Link href="/editor" className="text-[15px] text-bark">
           ← Hikes
         </Link>
-        <span className="min-w-0 truncate text-xl max-sm:basis-full">{title}</span>
+        <h1 className="min-w-0 truncate text-xl max-sm:basis-full">{title}</h1>
         <span
           className={cn("rounded-full border px-2.5 text-sm", unpublishedChanges ? "border-ochre bg-highlight text-graphite" : "border-line-strong text-bark")}
           title={unpublishedChanges ? "The site still shows the version you last published." : undefined}
@@ -246,7 +246,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
           </button>
         )}
         <button type="button" onClick={doSave} className="cursor-pointer rounded-lg border border-line bg-card px-3.5 py-1 text-graphite">
-          Save <span className="opacity-60">⌘S</span>
+          Save <span className="text-bark">⌘S</span>
         </button>
       </div>
 
@@ -396,6 +396,6 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
           </span>
         )}
       </div>
-    </div>
+    </main>
   );
 }

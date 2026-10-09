@@ -20,7 +20,7 @@ type Props = {
 const paperTheme = EditorView.theme({
   "&": { height: "100%", fontSize: "14px", backgroundColor: "var(--color-card)" },
   ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.7" },
-  ".cm-gutters": { backgroundColor: "var(--color-card)", border: "none", color: "var(--color-line-strong)" },
+  ".cm-gutters": { backgroundColor: "var(--color-card)", border: "none", color: "var(--color-bark)" },
   ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "color-mix(in srgb, var(--color-highlight) 60%, transparent)" },
   "&.cm-focused": { outline: "none" },
 });
@@ -31,6 +31,8 @@ export default function SourceEditor({ value, language, onChange, onReady, onCur
       language === "json" ? json() : markdown(),
       EditorView.lineWrapping,
       paperTheme,
+      // tabindex: the text is focusable anyway, but axe only counts the scroll area as keyboard-reachable with it.
+      EditorView.contentAttributes.of({ "aria-label": language === "json" ? "Pins (JSON)" : "Guide (Markdown)", tabindex: "0" }),
       EditorView.updateListener.of((u) => {
         if (!u.selectionSet && !u.docChanged) return;
         const head = u.state.selection.main.head;

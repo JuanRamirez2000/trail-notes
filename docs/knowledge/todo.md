@@ -14,6 +14,11 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
 - [ ] **CI doesn't check the stored guides:** the `DATABASE_URL` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
 - [ ] **PR preview builds fail:** Vercel's Preview environment has no `DATABASE_URL` (owner adds it). Until then only pushes to `main` build on Vercel.
 - [ ] **`SUPABASE_SERVICE_ROLE_KEY` is still set in Vercel** though the site no longer reads it (owner deletes it).
+- [ ] **Accessibility leftovers** (from the pass of 2026-10-08, none serious):
+  - Map pin buttons are named by the pin's label while their visible text starts with the glyph or number (Lighthouse: "visible text labels do not match accessible names"). Hiding the glyph from the name calculation would fix it.
+  - Every Mapbox canvas is a landmark called "Map"; a page with several maps has several identical landmarks.
+  - The source editors hide the focus outline (`&.cm-focused { outline: none }`); the cursor and active line are the only sign of focus.
+  - Phone performance (Lighthouse 76 on the gallery, 86 on a guide) is the cover photo's paint time; untuned.
 - [ ] **The release itself** is planned step by step in [v0.1-plan.md](v0.1-plan.md) (`v0.1.0`, MIT for the code, decided 2026-10-08).
 - [ ] **An orphaned `pnpm start` on port 3101** (started 2026-09-29) was still running on the owner's Mac on 2026-10-07.
 
