@@ -1,8 +1,12 @@
 # Trailnotes
 
-Photo-by-photo trail guides. Each hike is an MDX guide with embedded map components; the route, turning points and view directions come from the EXIF data in your photos (GPS, timestamp, compass heading).
+Photo-by-photo trail guides. Each guide follows one hike with a photo at every point where the trail changes, pinned on the map where it was taken. The route comes from a GPS recording, and the pins and view directions come from the photos' own data (GPS position and compass heading).
 
-**Stack:** Next.js 16 (App Router) · Tailwind CSS v4 · MDX · Mapbox GL JS (via react-map-gl) · Photo Sphere Viewer · Turf · Zod · Zustand · Supabase (database, Auth, Storage)
+Live: https://trail-notes-amber.vercel.app
+
+Guides are written in the site's own editor: create a hike, drop in its photos, write, publish. Everything the editor does can also be done with files and scripts on your machine.
+
+**Stack:** Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · MDX · Mapbox GL JS (react-map-gl) · Photo Sphere Viewer · Zod · Zustand · Drizzle over Postgres · Supabase (database, sign-in, photo storage) · lucide icons
 
 ```bash
 pnpm install
@@ -10,113 +14,114 @@ cp .env.example .env.local   # add your Mapbox token
 pnpm dev                     # http://localhost:3100
 ```
 
-Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set. Photos come from Supabase; to work offline, run `pnpm photos pull` once and set `NEXT_PUBLIC_PHOTO_STORAGE=local` (dev only).
+With nothing else set, the site reads the guides in `content/hikes`, and http://localhost:3100/editor opens without a sign-in (the dev server listens on this machine only). Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set. Photos come from Supabase; to keep them on disk instead, set `NEXT_PUBLIC_PHOTO_STORAGE=local` (dev only) and run `pnpm photos pull` once.
 
 ```bash
 pnpm test        # unit tests (Vitest)
 pnpm lint
 pnpm typecheck   # next typegen + tsc
 pnpm build
-pnpm icons       # rerender favicon.ico and apple-icon.png after editing src/app/icon.svg
+pnpm e2e         # end-to-end tests (Playwright), after pnpm build
 ```
 
-CI (`.github/workflows/ci.yml`) runs `pnpm content check`, lint, typecheck, tests, `pnpm photos check` and `pnpm build` on every push and PR.
+CI (`.github/workflows/ci.yml`) runs all of these, plus `pnpm content check` and `pnpm photos check`, on every push and pull request.
+
+---
+
+## Writing a guide in the editor
+
+Open `/editor`. Under `pnpm dev` you're a local owner. On the live site the editor is behind Google sign-in and only people on the editors list can open it; everyone else gets a 404.
+
+1. **＋ New hike.** Fill in the form and, if you recorded the hike (Garmin, Strava, Gaia…), choose its GPX file. The file is read in your browser and only latitude, longitude and elevation are sent, so times and heart rate never leave your device. This creates a draft.
+2. **Pins → Add photos** (or drop the files anywhere on the Pins view). Each photo is resized in your browser, uploaded, and becomes a pin where it was taken:
+   - Only the resized image is uploaded. Re-encoding removes the location, time and camera data from the file; the position and direction are kept as the pin.
+   - Photos are pinned in the order they were taken and, when the hike has a recorded track, snapped onto it and slotted in by trail mileage.
+   - A photo with no compass heading gets one guessed from where the next photo was taken, marked **check direction** until you aim it.
+   - A photo with no GPS position waits under **Unplaced**: drag it onto the map, or choose **Place** and click the map.
+   - HEIC photos only work in a browser that can read them (Safari should; Chrome and Firefox can't). Elsewhere, export as JPEG first. On an iPhone, the photo picker has an **Options** menu that can strip the location; leave it on.
+3. **Tidy the pins.** Drag a pin to move it, drag the yellow dot to aim the photo, and use the form to set each pin's type, label and section title. A photo taken off a pin goes back to Unplaced, where it can be deleted.
+4. **Write.** The guide is a document: type text, and insert blocks (maps, the elevation profile, photo cards…) from **＋ Insert block**. Click a block to change its settings, move it up or down, or remove it.
+5. **Details.** Title, stats, the "Before you go" card and the sidebar order.
+6. **Publish.** Until then the guide is a draft with no public page. After publishing, edits are saved to a working copy and the public page changes only when you press **Publish changes**.
+
+The editor's five views are the same guide seen five ways:
+
+| View | What it's for |
+| --- | --- |
+| **Write** | The guide as a document, with every block live. A guide that uses Markdown this view can't show (an image, a code block, a footnote) is sent to Advanced instead of being shown cut short |
+| **Details** | The guide's details as a form |
+| **Pins** | Pins on a map, a list in route order, a form per pin, and photos |
+| **Advanced** | The raw Markdown and pins JSON, with a live preview |
+| **History** | Every saved version, with who saved it; restoring one makes it the newest version |
+
+Saving is automatic, 1.5 s after you stop typing. Every save passes the same checks as the scripts, and nothing invalid is written. Each save names the version it was based on, so if the guide changed in the meantime (another tab, another editor) the editor says so and writes nothing.
+
+What a published guide gets without any extra work: a page at `/hikes/<slug>`, a GPX download of the route and pins (`/hikes/<slug>/route.gpx`, no times in it), photos that open full size, a social card image made from the cover, and a place in the gallery, the sitemap and the landing page.
 
 ---
 
 ## How it fits together
 
 ```
-~/photos/<hike>/*.jpg
-   │  pnpm ingest <folder> --slug <slug>
-   ▼
-exifr (GPS · time · heading) → sort by time → fill headings (EXIF → bearing to next photo → blank)
-   → sharp: webp 2400px + 480px thumb, all metadata stripped → Supabase (or /public/photos in dev)
-   → content/hikes/<slug>/waypoints.json (draft) + index.mdx stub
-   │  you review and edit (by hand or in /editor)
-   ▼
-Content store (src/lib/store): validates the guide + pins with the Zod schemas in src/lib/schemas.ts and compiles the MDX
-   (files in content/hikes under `pnpm dev`; the Supabase database in production)
-   ▼
-/hikes/[slug] (static) → MDX rendered with the component registry
-   → <HikeProvider> store shared by RouteMap · Minimap · StepByStep · PhotoCard · PanoViewer · SafetyPins
+In the editor                                   On the command line
+─────────────                                   ───────────────────
+photos dropped in Pins                          pnpm ingest <folder> --slug <slug>
+  │ browser: read EXIF, resize, re-encode         │ Node: read EXIF, resize with sharp
+  │ upload straight to storage                    │ upload (or write to public/photos)
+  ▼                                               ▼
+        the same rules (src/lib/ingest.ts): capture order, heading
+        from EXIF or the next photo, snap to the track, one pin per photo
+                              │
+                              ▼
+Content store (src/lib/store): checks every save against the schemas in
+src/lib/schemas.ts, compiles the MDX, refuses code and stale versions
+   files in content/hikes (default)  ·  Postgres through Drizzle (the live site)
+                              │  Publish copies the working copy to the published copy
+                              ▼
+/hikes/[slug] (cached) → MDX rendered with the component registry
+   → one <HikeProvider> store shared by the maps, step lists, photos and elevation profile
 ```
 
 ```
-content/hikes/<slug>/
-  index.mdx            frontmatter + prose + components
-  waypoints.json       one entry per photo / pin
-scripts/
-  ingest-photos.ts     EXIF → waypoints draft + web images
-  import-gpx.ts        GPX → track.json
-  photos.ts            check / push / pull photos between Supabase and public/photos
-  content.ts           check guides against the save gate; copy guides files ↔ database
-  editors.ts           the editors allow-list
-  lib/                 pure helpers shared by the scripts (unit-tested)
-  make-sample-photos.ts  placeholder JPEGs with real EXIF, for trying the pipeline
+content/hikes/<slug>/      guides as files: index.mdx, waypoints.json (the pins), track.json, published/
+scripts/                   ingest-photos, import-gpx, photos, content, editors, make-icons, make-sample-photos
 src/
-  app/(site)/          landing page (/), gallery (/hikes) and hike guide (/hikes/[slug])
-  app/editor/          the editor (a local owner under `pnpm dev`; Google sign-in on the live site)
-  app/api/editor/      create and save endpoints (404 for anyone who isn't an editor)
-  app/robots.ts, sitemap.ts, error.tsx, not-found.tsx   crawler files and error pages
-  proxy.ts             refreshes the sign-in session on editor routes
-  components/mdx/      guide components + registry.tsx
-  components/map/      TrailMap (Mapbox, lazy) + SketchMap fallback
-  components/gallery/  filters, all-hikes map, cards
-  components/sidebar/  the guide's sidebar cards
-  components/editor/   Write, Details, Pins and Advanced views
-  lib/store/           the content store: one interface over files and Supabase, with the save gate
-  lib/auth/            who may edit (getEditor, can) and request guards
-  lib/mdx/             component manifest, remark passes (no code, step sections, props), compile
-  lib/schemas.ts       single source of truth for content shape
-  lib/hike-store.tsx   per-page Zustand store (active step, 360° look direction)
-  lib/storage.ts       photo key → URL (Supabase, or local in dev)
-  app/globals.css      design tokens (Tailwind @theme) from the Claude Design handoff
-  db/                  the database tables in TypeScript (Drizzle, schema.ts) and the connection
-drizzle/               migrations generated from src/db/schema.ts (`pnpm db:generate`)
-supabase/migrations/   the SQL migrations up to 2026-10-08 (drizzle/0000_baseline.sql describes their result)
+  app/(site)/              landing page (/), gallery (/hikes), guide (/hikes/[slug], with route.gpx and og.jpg)
+  app/editor/              the editor
+  app/api/editor/          create, save, publish, history and photo routes (404 for anyone who isn't an editor)
+  proxy.ts                 refreshes the sign-in session on editor routes
+  components/mdx/          guide components, registry.tsx, icons.ts
+  components/map/          TrailMap (Mapbox, loaded when near the viewport) with SketchMap underneath
+  components/editor/       Write, Details, Pins, Advanced and History views
+  components/sidebar/      the guide's sidebar cards
+  lib/store/               the content store: one interface over files and Postgres
+  lib/auth/                who may edit (getEditor, can) and request guards
+  lib/mdx/                 component manifest, remark passes (no code, step sections, props), compile
+  lib/ingest.ts            photos into pins, shared by the editor and pnpm ingest
+  lib/photo-store.ts       the server's side of photo storage (upload URLs, listing, deleting)
+  lib/schemas.ts           single source of truth for content shape
+  lib/hike-store.tsx       per-page store (active step, open photo, 360° look direction)
+  db/                      the database tables in TypeScript (Drizzle)
+drizzle/                   migrations (`pnpm db:generate`, `pnpm db:migrate`)
+docs/knowledge/            the project's current state, changelog, TODOs and plans
 ```
+
+`docs/knowledge/current.md` is the detailed description of how everything works today, including the decisions and gotchas the code doesn't explain.
 
 ---
 
-## Adding a hike
+## Pins and guide sections
 
-**In the app:** open the editor, click **＋ New hike**, fill in the form and (optionally) choose a GPX recording. It creates a draft and opens it: place pins under **Pins**, write under **Write**, fill in the rest under **Details**, then **Publish**. Photos are still added from the command line (below), with `--guides supabase` if the site reads guides from the database.
-
-**From photos, on the command line:**
-
-1. **Export your photos as JPEG** (keep location metadata on). HEIC originals work for EXIF, but sharp's prebuilt binaries can't decode HEVC, so convert first.
-2. **Run the ingest script:**
-
-   ```bash
-   pnpm ingest ~/Pictures/granite-lakes --slug granite-lakes
-   ```
-
-   This creates `content/hikes/granite-lakes/` with a `waypoints.json` draft and an `index.mdx` stub (a draft), and uploads web-sized photos to Supabase. Useful flags: `--storage local` (write to `public/photos` instead; run `pnpm photos push` before deploying), `--dry-run` (read EXIF, write nothing) and `--force` (replace an existing `waypoints.json` instead of merging into it).
-
-   **Adding photos to a hike that already has waypoints** (or a recorded track) merges them in: existing pins keep their ids and text, photos that were ingested before are skipped, and new ones get the next free `wp-NN` id. If the hike has a `track.json`, each photo is snapped onto the track (when it's within ~80 m) and slotted in by trail mileage, so an out-and-back resolves by capture time. Photos far from the track keep their GPS position and are listed, with a hint when one looks out of order rather than off-trail. It's fine to import the GPX first and add photos later.
-3. **Review `waypoints.json`.** For each waypoint:
-   - `id`: rename `wp-03` to something readable like `ridge-junction` (this is what MDX refers to)
-   - `type`: `start | turn | note | viewpoint | landmark | water | ranger | bailout` (see *Guide sections* below)
-   - `label` (short map label), `title` (step instruction), `caption`, `note` (for safety pins)
-   - `heading`: check any with `"headingSource": "inferred"`, and fill the ones left `null` (then set `"headingSource": "manual"`)
-   - `mile`: optional real trail mileage. Without it, mileage is estimated from straight lines between photos, which reads low.
-   - `order` values have gaps of 10, so you can slot in extra waypoints.
-4. **Write the guide** in `index.mdx` and fill in the frontmatter, then press **Publish** in the editor (with files, that copies them to `published/`). `pnpm dev` shows every guide's working copy; production shows only published copies.
-5. `pnpm dev` and check the page, or use the editor (below).
-
-Invalid content (unknown waypoint type, a slug that doesn't match its folder, a bad photo key, a mistyped component prop…) is refused when it's saved and reported by `pnpm content check`, with a readable error. Guides can't contain code: no `import`/`export`, no `{…}` expressions, and no raw HTML beyond a few harmless tags.
-
-### Guide sections
-
-Every pin type declares how it relates to the written guide (`src/lib/pins.ts`):
+Every pin has a type, and the type decides how it relates to the written guide (`src/lib/pins.ts`):
 
 | Pin | Section | Sidebar step list |
 | --- | --- | --- |
-| Trailhead `S`, Turn `↰`, Note `✎`, Bail-out `!` | **Required.** Write `<Step waypoint="id">…</Step>` for it; if you don't, a stub section (title, photo, caption) is generated in route order | Numbered |
-| Viewpoint `◎`, Landmark `◆`, Water `W`, Ranger station `R` | **Optional.** Only appears if you write a `<Step>` for it | Not listed. Clicking the pin jumps to the nearest section before it |
+| Trailhead `S`, Turn `↰`, Note `✎`, Bail-out `!` | **Required.** If you don't write one, a section with the pin's title, photo and caption is generated in route order | Numbered |
+| Viewpoint `◎`, Landmark `◆`, Water `W`, Ranger station `R` | **Optional.** Only appears if you write one | Not listed. Clicking the pin jumps to the nearest section before it |
 
-`note` is the flex type: a required section for anything that isn't a turn (a slick slab, a confusing fork, no cell signal). To give it its own look later, change its entry in `PIN_STYLES`.
+`note` is the flexible type: a required section for anything that isn't a turn (a slick slab, a confusing fork, no cell signal). Water, ranger stations and bail-outs are the **safety** pins (larger, double halo); they make up the Safety points list and the `<SafetyPins />` map.
+
+In the Write view, pins without a written section are listed above the document with a **Write this section** button. In Markdown a section is:
 
 ```mdx
 <Step waypoint="creek-junction">
@@ -124,146 +129,96 @@ Your notes for this part of the trail. The step number, pin, mileage, photo and 
 </Step>
 ```
 
-A `<Step>` pointing at an unknown waypoint id, two `<Step>` blocks for the same waypoint, or a `<Step>` in the middle of a line is refused when the guide is saved (and by `pnpm content check`). The stub generator lives in `src/lib/mdx/remark-step-sections.ts`. Under `pnpm dev`, guides are read from the files on every request, so an edited `waypoints.json` or `track.json` shows on reload.
+A `<Step>` pointing at a pin that doesn't exist, two for the same pin, or one in the middle of a line is refused when the guide is saved.
 
-Water, ranger stations and bail-outs are the **safety** pins (larger, double halo). They make up the Safety points list and the `<SafetyPins />` map.
+**Sidebar:** on a wide screen the guide has a sticky rail: **Minimap → Safety points → Steps**. Clicking a step scrolls to its section, and the active step follows what you're reading. On a phone the same cards live in a bar pinned to the top. The order is set under Details (in the frontmatter, `sidebar: [steps, minimap]`), and a card left out isn't shown.
 
-**Sidebar:** on desktop, the guide has a sticky rail: **Minimap → Safety points → Steps**. Clicking a step scrolls to its section, and as you scroll, the active step follows what you're reading. On mobile, the same list lives in the pinned minimap bar. To add more cards to the rail, append to `src/components/sidebar/registry.tsx`.
+### Blocks
 
-### Before you go
-
-Optional `essentials` in the frontmatter render as a "Before you go" card. It comes first unless the guide places `<BeforeYouGo />` somewhere else:
-
-```yaml
-essentials:
-  permit: Free self-issue permit at the guard station.
-  parking: Gravel lot, ~25 cars. Full by 8 am on weekends.
-  facilities: Vault toilet at the trailhead.
-  water: Granite Creek (1.6 mi), Tarn Lake (5.0 mi).
-  dogs: On leash.
-  cellSignal: None until First Pass.
-  hazards:
-    - Loose rock on the scree traverse (mile 5.4).
-```
-
-### Components you can use in MDX
-
-| Component | Props | What it does |
+| Block | Settings | What it does |
 | --- | --- | --- |
-| `<Step waypoint="id">…</Step>` | `hidePhoto` | A guide section for a pin (see above) |
-| `<BeforeYouGo />` | | The "Before you go" card from the frontmatter `essentials`. If a guide doesn't place it, it goes first |
-| `<RouteMap />` | `height`, `labels`, `terrain` | All pins + route line, 3D terrain, legend |
-| `<SafetyPins />` | `height` | Water + bail-out layer, other pins faded |
-| `<Minimap />` | `height` | Current step map (the page already puts one in the sticky rail) |
+| `<Step waypoint="id">…</Step>` | `hidePhoto` | A guide section for a pin |
+| `<BeforeYouGo />` | | Permit, parking, water and hazards from the guide's details. Comes first unless you place it |
+| `<RouteMap />` | `height`, `labels`, `terrain` | All pins and the route line, 3D terrain, legend |
+| `<SafetyPins />` | `height` | Water and bail-out pins, the others faded |
+| `<Minimap />` | `height` | A small map that follows the current step (the page already has one in the rail) |
+| `<ElevationProfile />` | `height` | The climb along the recorded track, with the pins on it |
+| `<GpxDownload />` | | A button to download the route and pins |
 | `<SafetyPoints />` | | The sidebar's safety list, placed in the guide |
 | `<Steps />` | | The sidebar's numbered step list, placed in the guide |
-| `<StepByStep />` | `showMeta` | Inline step list with photos |
-| `<PhotoCard waypoint="id" />` | `caption` | Photo linked to its pin (360° photos switch to the viewer) |
-| `<PanoViewer waypoint="id" />` | `markerRadiusMi` | 360° viewer; the inset map cone follows where you look. Shows a "coming soon" placeholder until the waypoint has a 360° photo |
+| `<StepByStep />` | `showMeta` | An inline step list with photos |
+| `<PhotoCard waypoint="id" />` | `caption` | A photo linked to its pin (360° photos switch to the viewer) |
+| `<PanoViewer waypoint="id" />` | `markerRadiusMi` | 360° viewer; the inset map's cone follows where you look |
 
-Props are checked at build time against `src/lib/mdx/manifest.ts`: an unknown component, an unknown or mistyped prop, an out-of-range number, content inside a component that takes none, or a pin id that isn't in `waypoints.json` fails the build with the line number. The editor refuses to save the same mistakes.
+Settings are checked against `src/lib/mdx/manifest.ts` on every save: an unknown block, an unknown or mistyped setting, an out-of-range number, text inside a block that takes none, or a pin id that doesn't exist is refused with the line number. Guides can't contain code: no `import`/`export`, no `{…}` expressions, and no raw HTML beyond a few harmless tags.
 
-**Sidebar per guide:** the rail (and the mobile bar) shows `minimap`, `safety` and `steps` in that order by default. To reorder them or leave one out, list them in the frontmatter:
-
-```yaml
-sidebar: [steps, minimap]
-```
-
-### Adding a new component
+### Adding a new block
 
 1. Build the component inside `<Frame>` and read or write shared state with `useHike(...)`.
-2. Describe its props in `src/lib/mdx/manifest.ts` (a zod object: `.describe()` is the field label, `waypointRef()` makes it a pin picker) and give it a title, category and snippet.
-3. Add it to `src/components/mdx/registry.tsx`. Its props type comes from the manifest (`ManifestProps<"Name">`).
+2. Describe its settings in `src/lib/mdx/manifest.ts` (a zod object: `.describe()` is the field label, `waypointRef()` makes it a pin picker) and give it a title, category and snippet.
+3. Add it to `src/components/mdx/registry.tsx` and give it an icon in `src/components/mdx/icons.ts`. Its props type comes from the manifest (`ManifestProps<"Name">`).
 
-It then works in MDX, gets checked at build time, appears in the editor's insert menu under its category, and gets a settings form in the editor with no editor work.
+It then works in guides, is checked on save, appears in the editor's insert menu with its icon, and gets a settings form, with no editor work.
 
 ---
 
-## Recorded routes (GPX)
+## Working with files and scripts
 
-If you recorded the hike (Garmin, Strava, Gaia…), import the GPX so the maps draw the real route instead of straight lines between photos:
+Everything above also works without the editor, on the guides in `content/hikes`. Add `--guides postgres` to write to the database instead (it needs `DATABASE_URL`).
 
 ```bash
-pnpm gpx ~/Downloads/activity.gpx --slug strawberry-peak
+pnpm gpx ~/Downloads/activity.gpx --slug granite-lakes     # the recorded route; creates a draft on a new slug
+pnpm ingest ~/Pictures/granite-lakes --slug granite-lakes  # photos → pins
 ```
 
-This writes `content/hikes/<slug>/track.json` and prints the distance, gain and trailhead to use in the frontmatter. Waypoint mileages are then measured along the recorded track, projected onto the nearest segment (an out-and-back resolves by waypoint `order`). Only latitude, longitude and elevation are kept: timestamps, heart rate, cadence and device data are dropped, so the track is safe to publish. A hike can have a track and no photos; `cover` is optional and falls back to a contour placeholder.
-
-## The editor (`/editor`)
-
-`pnpm dev`, then open http://localhost:3100/editor (a local owner, no sign-in; the dev server only listens on this machine, use `pnpm dev:lan` to reach it from a phone). On the live site the editor is behind Google sign-in, and only people on the editors list (`pnpm editors add <email>`) can open it; everyone else gets a 404.
-
-One guide, four views:
-
-- **Write** (default): the guide as a document. Text is edited in place and every component is a live block; click one to change its settings beside it. A guide that uses Markdown this view can't show (an image, a code block, a reference-style link, a footnote) is sent to Advanced instead of being shown cut short.
-- **Details**: title, stats, "Before you go" and the sidebar order, as a form.
-- **Pins**: the pins on a map (drag to move, drag the yellow dot to aim the photo, click to add), a list in route order and a form per pin.
-- **Advanced**: the raw Markdown and pins JSON with a live preview.
-
-Autosave runs 1.5 s after you stop typing (or press ⌘S), one save at a time. Every save passes the same gate as the scripts (schemas, MDX compile, no code) and nothing invalid is written. Each save names the version it was based on, so if the guide changed in the meantime (another tab, a script, another editor) the editor says so and writes nothing. Leaving the page with unsaved text asks first. Publish and Unpublish flip the guide's `draft` flag.
-
----
-
-## Try the pipeline with sample photos
-
-The sample hike (`ridgeline-loop`) was generated this way:
+- **`pnpm gpx`** keeps only latitude, longitude and elevation and prints the distance, gain and trailhead to use in the details. Pin mileages are then measured along the track (an out-and-back resolves by route order).
+- **`pnpm ingest`** follows the same rules as the editor's upload. Photos without GPS are skipped. Run again on the same folder, it merges: existing pins keep their ids and text, and photos already added are skipped. `--storage local` writes photos to `public/photos` instead of Supabase, `--dry-run` writes nothing, and `--force` replaces the hike's pins instead of merging. sharp can't decode HEIC, so convert those to JPEG first (`sips -s format jpeg`).
+- **Review `waypoints.json`:** rename ids like `wp-03` to something readable (`ridge-junction`), set each pin's `type`, `label`, `title` and `caption`, and check any `"headingSource": "inferred"`. `order` has gaps of 10 so pins can be slotted in.
+- **Write** `index.mdx`, then publish from the editor (with files, that copies the guide to `published/`). `pnpm dev` shows every guide's working copy; a production build shows only published copies.
 
 ```bash
-pnpm sample:photos [slug]   # placeholder JPEGs with GPS/time/heading EXIF → fixtures/sample-photos/<slug>/
-pnpm ingest fixtures/sample-photos/ridgeline-loop --slug ridgeline-loop --force
+pnpm content check [--store postgres]        # every guide passes the save checks
+pnpm content seed [slug] [--force]           # copy guides: files → database
+pnpm content pull [slug]                     # copy guides: database → files
+pnpm photos check | push [slug] | pull [slug]   # photos referenced exist / upload local photos / download for offline dev
+pnpm editors list | add <email> | remove <email>   # who may use the editor on the live site
+pnpm sample:photos [slug]                    # placeholder JPEGs with real EXIF, for trying the pipeline
+pnpm icons                                   # rerender favicon.ico and apple-icon.png from src/app/icon.svg
 ```
 
-`granite-saddle` is the detailed example: 18 pins covering every type, a full "Before you go" card, and a written section for each.
-
-Re-running with `--force` overwrites the hand-edited `waypoints.json`; without it, already-ingested photos are skipped. Both samples are drafts (never published): they show in `pnpm dev` (and serve as reference content) but not in production. `strawberry-peak` is a real recorded route (GPX).
+The repo's guides: `strawberry-peak` is the real one (a recorded route, six photos) and the reference for tests. `ridgeline-loop` and `granite-saddle` are drafts with placeholder photos, kept as fixtures; `granite-saddle` uses every pin type.
 
 ---
 
-## Photo storage: Supabase
+## Photos and storage
 
-Supabase Storage is the source of truth for photos. `public/photos` is gitignored and only used by the dev-only `local` backend; production builds refuse to run without `NEXT_PUBLIC_PHOTO_STORAGE=supabase`.
+Supabase Storage holds the photos, in a public bucket (`hikes`) that accepts webp only: two files per photo, `<slug>/<NN>-<name>.full.webp` (2400 px) and `.thumb.webp` (480 px), with no metadata. Your originals never leave your machine.
 
-1. Create a Supabase project. Nothing else is needed; the ingest script creates a public `hikes` bucket on first run.
-2. In `.env.local`:
-
-   ```bash
-   NEXT_PUBLIC_PHOTO_STORAGE=supabase
-   NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
-   SUPABASE_SERVICE_ROLE_KEY=<service role key>   # secret; only the photo scripts use it (Storage uploads)
-   DATABASE_URL=<transaction pooler connection string>   # secret; the guides database (see .env.example)
-   ```
-
-3. `pnpm ingest <folder> --slug <slug>` now uploads to `hikes/<slug>/...`.
-
-```bash
-pnpm photos check         # every photo the content references is in the bucket (no key needed; CI runs it)
-pnpm photos push [slug]   # upload public/photos → bucket (skips existing files)
-pnpm photos pull [slug]   # download bucket → public/photos, for offline dev
-```
-
-Only the two web-sized, metadata-free webp copies are uploaded. Your originals (with exact GPS) never leave your machine. The site builds public URLs from the photo key, so moving storage later is a one-file change in `src/lib/storage.ts`.
+- **From the editor**, the server works as the signed-in editor: the bucket's policies let people on the editors list add, list and delete photos, and nobody else. The browser uploads straight to Supabase through short-lived signed URLs. The site holds no admin key.
+- **From the scripts** (`pnpm ingest --storage supabase`, `pnpm photos push|pull`), uploads use `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`. It bypasses every rule, so it stays on your machine.
+- **Deleting** a photo is only possible from Unplaced in the editor, and the server refuses while the saved guide or the published page still uses it. Deleting a draft removes its photos.
+- **`public/photos`** is a gitignored, dev-only stand-in (`NEXT_PUBLIC_PHOTO_STORAGE=local`). Production builds refuse it.
 
 ---
 
-## Deploying to Vercel
+## Running your own
 
-1. Push the repo to GitHub, then **Add New → Project** on Vercel and import it. The framework preset is detected, and `pnpm build` (`next build`) is the build command.
-2. Add environment variables (Production + Preview):
-   - `NEXT_PUBLIC_MAPBOX_TOKEN`
-   - `NEXT_PUBLIC_PHOTO_STORAGE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_BUCKET` (required: the build fails without them)
-   - To serve guides from the database and open the editor on the live site, also add `CONTENT_STORE=postgres`, `DATABASE_URL` (the transaction pooler's connection string; **Sensitive**, never `NEXT_PUBLIC_`), `EDITOR_AUTH=supabase` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Create the tables with `pnpm db:migrate`. The full steps, including Google sign-in, are in [docs/knowledge/current.md](docs/knowledge/current.md#live-setup-sign-in-and-the-database). Without them the site reads the guides committed in `content/hikes` and the editor is closed.
-   - Optional: `NEXT_PUBLIC_SITE_URL` once the site has its own domain (the sitemap and social cards use it; it defaults to the project's production domain).
-3. In your Mapbox account, add the Vercel domain(s) to the token's URL restrictions.
-4. Deploy. Hike pages are rendered once and cached. With guides in files, adding a hike means committing its folder and pushing; with guides in the database, a saved guide is live within seconds and needs no deploy.
+1. **Supabase.** Create a project. `pnpm db:migrate` (with `DATABASE_URL` in `.env.local`) creates the tables, the "server only" rules on them, and the bucket's policies. The `hikes` bucket itself is created by the first `pnpm ingest --storage supabase`.
+2. **Vercel.** Import the repo; the framework preset is detected. Environment variables:
+   - `NEXT_PUBLIC_MAPBOX_TOKEN` (a public `pk.` token, restricted to your domains)
+   - `NEXT_PUBLIC_PHOTO_STORAGE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_BUCKET` (the build fails without them)
+   - For guides in the database and the editor on the live site: `CONTENT_STORE=postgres`, `DATABASE_URL` (the transaction pooler's connection string; **Sensitive**, never `NEXT_PUBLIC_`), `EDITOR_AUTH=supabase` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - Optional: `NEXT_PUBLIC_SITE_URL` once the site has its own domain
+3. **Sign-in.** Google sign-in through Supabase Auth, and `pnpm editors add <email>` for each editor. The steps are in [docs/knowledge/current.md](docs/knowledge/current.md#live-setup-sign-in-and-the-database).
 
-With the CLI: `npm i -g vercel`, `vercel link`, `vercel env add NEXT_PUBLIC_MAPBOX_TOKEN`, then `vercel --prod`.
+Without the database variables the site serves the guides committed in `content/hikes` and the editor is closed. With them, a published guide is live within seconds and needs no deploy. `.env.example` describes every variable.
 
 ---
 
 ## Notes
 
-- **Backlog:** unscheduled feature ideas live in [docs/knowledge/backlog.md](docs/knowledge/backlog.md).
-
-- **Mapbox costs:** each map counts as a map load. Maps only mount when scrolled near the viewport, and the small inset maps skip 3D terrain. The free tier is 50k loads/month.
-- **Timestamps:** a photo's capture time is only used to put the photos in order during `pnpm ingest`. It is never stored or published.
-- **Panos:** a 2:1 image (or GPano `ProjectionType=equirectangular`) is treated as 360°. `heading` for a pano is the compass direction of the image centre (`PoseHeadingDegrees` or `GPSImgDirection`).
+- **Privacy:** a photo's capture time only orders a batch and is never stored; tracks keep no times either. Position plus time would give away pace.
+- **Mapbox costs:** each map counts as a map load. Maps only mount when scrolled near the viewport, with the sketch map underneath until they've painted. The free tier is 50k loads a month.
+- **360° photos:** a 2:1 image (or one marked `ProjectionType=equirectangular`) is treated as 360°. Its `heading` is the compass direction of the image centre.
+- **Licence:** MIT for the code (`LICENSE`). The guides and photos are all rights reserved.
+- **Where things are going:** [docs/knowledge/](docs/knowledge/) has the changelog, the TODO list and the backlog.
