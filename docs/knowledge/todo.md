@@ -9,7 +9,7 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
 - [ ] **Capture times in old copies (owner's call).** The stored pins of the three guides were cleaned on 2026-10-07 (through the store, keeping the stored text), and nothing public carries `takenAt` any more. It is still in:
   - rows of `hike_revisions` saved before then (server-only, never public; 12 of 15 rows on 2026-10-08);
   - the public repo's git history (`content/hikes/*/waypoints.json` before 2026-10-07). Removing it means rewriting history and force-pushing.
-- [ ] **Backups (more urgent since 2026-10-09: the repo no longer holds any guide).** The free Supabase plan has none, and the database is the only copy of every guide. A scheduled `pnpm content pull` (committed, or to a private place) would cover the text; the photo originals exist only on the owner's Mac.
+- [ ] **Backups cover the guides, not the photos, and live on one Mac.** `pnpm backup` runs daily there since 2026-10-09 ([current.md](current.md)). Not covered: the photo files (the bucket is the only copy), and the Mac itself (the folder isn't off-site unless it's synced somewhere). It also only runs when the Mac is awake; `backup.log` in the folder shows the last run.
 - [ ] **Nothing watches `/api/health`.** It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
 - [ ] **CI doesn't check the stored guides:** the `DATABASE_URL` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
 - [ ] **PR preview builds fail:** Vercel's Preview environment has no `DATABASE_URL` (owner adds it). Until then only pushes to `main` build on Vercel.

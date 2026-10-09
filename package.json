@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "e2e": "tsx scripts/e2e.ts",
     "photos": "tsx scripts/photos.ts",
+    "backup": "tsx scripts/backup.ts",
     "editors": "tsx scripts/editors.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
