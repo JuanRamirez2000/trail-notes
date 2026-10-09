@@ -1,4 +1,5 @@
-import { readdir, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -11,6 +12,12 @@ test.describe.configure({ mode: "serial" });
 const slug = `zz-e2e-${Date.now().toString(36)}`;
 const title = `E2E ${slug}`;
 const HIKES = path.join(process.cwd(), "content/hikes");
+const PHOTOS = path.join(process.cwd(), "public/photos");
+const SAMPLES = path.join(process.cwd(), "fixtures/sample-photos/ridgeline-loop");
+/** A 1 × 1 PNG: a picture with no EXIF, so no position. */
+const NO_GPS = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+const sample = async (name: string) => ({ name, mimeType: "image/jpeg", buffer: await readFile(path.join(SAMPLES, name)) });
+const stored = async () => (existsSync(path.join(PHOTOS, slug)) ? (await readdir(path.join(PHOTOS, slug))).sort() : []);
 
 const status = (page: Page) => page.getByTestId("save-status");
 const badge = (page: Page) => page.getByTestId("publish-badge");
@@ -30,6 +37,7 @@ test.beforeAll(async ({ request }) => {
 test.afterAll(async () => {
   // Whatever a failed run left behind.
   for (const dir of await readdir(HIKES)) if (dir.startsWith("zz-e2e-")) await rm(path.join(HIKES, dir), { recursive: true, force: true });
+  if (existsSync(PHOTOS)) for (const dir of await readdir(PHOTOS)) if (dir.startsWith("zz-e2e-")) await rm(path.join(PHOTOS, dir), { recursive: true, force: true });
 });
 
 test("create a draft from the New hike form", async ({ page }) => {
@@ -95,6 +103,50 @@ test("publish, edit, publish the changes, unpublish", async ({ page }) => {
   await expect(badge(page)).toHaveText("Draft");
 });
 
+test("photos dropped into Pins are resized, uploaded and pinned; an unplaced one can be deleted", async ({ page }) => {
+  // These uploads must land on this machine's disk.
+  expect((await (await page.request.get("/api/health")).json()).store).toBe("local");
+  await page.goto(`/editor/${slug}`);
+  await page.getByRole("tab", { name: "Pins" }).click();
+  const pinList = page.getByRole("list", { name: "Pins in route order" });
+  const before = await pinList.getByRole("listitem").count();
+
+  await page.getByLabel("Add photos").setInputFiles([
+    await sample("IMG_2041.jpg"),
+    await sample("IMG_2047.jpg"),
+    { name: "No GPS.png", mimeType: "image/png", buffer: NO_GPS },
+  ]);
+  const uploads = page.getByRole("list", { name: "Uploads" });
+  await expect(uploads.locator('[data-upload="pinned"]')).toHaveCount(2);
+  await expect(uploads.locator('[data-upload="unplaced"]')).toHaveCount(1);
+
+  // Two pins, numbered by the server, each with its two webp files; the third photo is stored but on no pin.
+  await expect(pinList.getByRole("listitem")).toHaveCount(before + 2);
+  await expect(pinList.getByText("Photo 02")).toBeVisible();
+  expect(await stored()).toEqual(["01-img-2041", "02-img-2047", "03-no-gps"].flatMap((n) => [`${n}.full.webp`, `${n}.thumb.webp`]));
+  expect((await page.request.get(`/photos/${slug}/01-img-2041.thumb.webp`)).headers()["content-type"]).toBe("image/webp");
+  await expect(status(page)).toHaveText(/^Saved /);
+
+  // The same file again is recognised, not uploaded twice.
+  await page.getByLabel("Add photos").setInputFiles([await sample("IMG_2041.jpg")]);
+  await expect(uploads.locator('[data-upload="skipped"]')).toHaveCount(1);
+
+  // A photo on a pin can't be deleted; the unplaced one can.
+  const del = (key: string) => page.request.delete(`/api/editor/${slug}/photos`, { data: { key }, headers: { origin: new URL(page.url()).origin } });
+  expect((await del(`${slug}/01-img-2041`)).status()).toBe(409);
+  const tray = page.getByRole("list", { name: "Unplaced photos" });
+  await expect(tray.getByRole("listitem")).toHaveCount(1);
+  page.once("dialog", (d) => d.accept());
+  await tray.getByRole("button", { name: "Delete 03-no-gps" }).click();
+  await expect(tray).toHaveCount(0);
+  expect(await stored()).toHaveLength(4);
+
+  // The pins survive a reload, with their photos.
+  await page.reload();
+  await page.getByRole("tab", { name: "Pins" }).click();
+  await expect(page.getByRole("list", { name: "Pins in route order" }).getByText("Photo 01")).toBeVisible();
+});
+
 test("delete the draft", async ({ page }) => {
   await openDetails(page);
   await page.getByRole("button", { name: "Delete draft…" }).click();
@@ -102,4 +154,6 @@ test("delete the draft", async ({ page }) => {
   await expect(page).toHaveURL(/\/editor$/);
   await expect(page.getByText(title)).toHaveCount(0);
   expect((await page.request.get(`/editor/${slug}`)).status()).toBe(404);
+  // Its photos went with it.
+  expect(await stored()).toEqual([]);
 });

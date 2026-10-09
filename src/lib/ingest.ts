@@ -96,7 +96,7 @@ export type PinPhoto = Pick<ScannedPhoto, "isPano" | "width" | "height"> & {
 /**
  * One pin per photo, in the order given. `width` and `height` are the stored full-size image's.
  * The first photo of a hike with no pins is its trailhead; the rest are turns for the author to
- * retype or retitle. `order` is left for mergeWaypoints. An id already in `usedIds` gets a suffix.
+ * retype and retitle. `order` is left for mergeWaypoints. An id already in `usedIds` gets a suffix.
  */
 export function pinsFromPhotos(photos: PinPhoto[], { isNewHike, usedIds = [] }: { isNewHike: boolean; usedIds?: Iterable<string> }): Waypoint[] {
   const used = new Set(usedIds);
@@ -105,13 +105,14 @@ export function pinsFromPhotos(photos: PinPhoto[], { isNewHike, usedIds = [] }: 
     let id = `wp-${n}`;
     for (let k = 2; used.has(id); k++) id = `wp-${n}-${k}`;
     used.add(id);
-    const first = isNewHike && i === 0;
+    const label = isNewHike && i === 0 ? "Trailhead" : `Photo ${n}`;
     return {
       id,
       order: 0,
-      type: first ? "start" : "turn",
-      label: first ? "Trailhead" : `Photo ${n}`,
-      title: "TODO describe this step",
+      type: label === "Trailhead" ? "start" : "turn",
+      label,
+      // A placeholder that reads as one: it's the heading of the pin's section until it's written.
+      title: label,
       lat: round(p.lat),
       lng: round(p.lng),
       heading: p.heading,

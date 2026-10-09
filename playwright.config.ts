@@ -10,11 +10,14 @@ import { defineConfig, devices } from "@playwright/test";
  *    way to reach the editor without a real Google account (e2e/editor.spec.ts). Next allows one
  *    `next dev` per folder, so stop `pnpm dev` first.
  *
- * The editor tests work on a hike they create (`zz-e2e-…`) and delete.
+ * The editor tests work on a hike they create (`zz-e2e-…`) and delete, and keep its photos in
+ * `public/photos` (the dev server runs with `NEXT_PUBLIC_PHOTO_STORAGE=local`).
  */
 const SITE = "http://127.0.0.1:3211";
 const EDITOR = "http://127.0.0.1:3210";
 const env = { CONTENT_STORE: "local", EDITOR_AUTH: "", NEXT_TELEMETRY_DISABLED: "1" };
+// The editor tests upload photos: onto this machine's disk (public/photos), never to the bucket.
+const editorEnv = { ...env, NEXT_PUBLIC_PHOTO_STORAGE: "local" };
 
 export default defineConfig({
   testDir: "e2e",
@@ -32,6 +35,6 @@ export default defineConfig({
   ],
   webServer: [
     { command: "pnpm exec next start --port 3211 --hostname 127.0.0.1", url: `${SITE}/api/health`, env, reuseExistingServer: false, timeout: 60_000 },
-    { command: "pnpm exec next dev --port 3210 --hostname 127.0.0.1", url: `${EDITOR}/api/health`, env, reuseExistingServer: false, timeout: 120_000 },
+    { command: "pnpm exec next dev --port 3210 --hostname 127.0.0.1", url: `${EDITOR}/api/health`, env: editorEnv, reuseExistingServer: false, timeout: 120_000 },
   ],
 });

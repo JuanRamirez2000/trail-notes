@@ -4,7 +4,7 @@ import { getEditor } from "@/lib/auth/server";
 import { existingNumbering, kebab, photoKey } from "@/lib/ingest";
 import { getPhotoStore, MAX_PHOTO_BYTES, PhotoStoreUnavailable, photosBelongToStore } from "@/lib/photo-store";
 import { SLUG, waypointsFileSchema } from "@/lib/schemas";
-import { photoObjectPath, type PhotoVariant } from "@/lib/storage";
+import { mentionsPhoto, photoObjectPath, type PhotoVariant } from "@/lib/storage";
 import { getStore } from "@/lib/store/server";
 
 /** Photos per request. The editor sends a drop in batches of this size. */
@@ -91,12 +91,6 @@ export async function POST(req: Request, ctx: RouteContext<"/api/editor/[slug]/p
   }
 }
 
-/** True if `text` mentions the photo key, and not just a longer key that starts with it. */
-const mentions = (text: string, key: string) => {
-  for (let at = text.indexOf(key); at !== -1; at = text.indexOf(key, at + 1)) if (!/[a-z0-9._-]/.test(text[at + key.length] ?? "")) return true;
-  return false;
-};
-
 /**
  * Deletes a photo's files. Refused while anything still shows it: a pin or the cover, in the
  * working copy or the published one. Older versions in History aren't checked: restoring one can
@@ -113,8 +107,8 @@ export async function DELETE(req: Request, ctx: RouteContext<"/api/editor/[slug]
   const store = await getStore();
   const record = await store.read(slug);
   if (!record) return notFound();
-  const used = [record.mdx, record.waypoints, record.published?.mdx ?? "", record.published?.waypoints ?? ""].some((text) => mentions(text, key));
-  if (used) return json({ ok: false, problems: [record.published ? "That photo is still used by a pin or as the cover, here or on the published page." : "That photo is still used by a pin or as the cover."] }, 409);
+  const used = [record.mdx, record.waypoints, record.published?.mdx ?? "", record.published?.waypoints ?? ""].some((text) => mentionsPhoto(text, key));
+  if (used) return json({ ok: false, problems: [`That photo is still used by a pin or as the cover in the saved guide${record.published ? " or on the published page" : ""}. If you just took it off, try again once that's saved.`] }, 409);
 
   try {
     const photos = await getPhotoStore();

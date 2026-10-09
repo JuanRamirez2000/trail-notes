@@ -1,7 +1,7 @@
 "use client";
 
 import "mapbox-gl/dist/mapbox-gl.css";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type DragEvent } from "react";
 import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 import { Cone } from "@/components/map/Cone";
 import { MAPBOX_STYLE, MAPBOX_TOKEN, useCssColor } from "@/components/map/config";
@@ -25,6 +25,10 @@ type Props = {
   /** When set, the next click on the map adds a pin there. */
   adding: boolean;
   onAdd: (at: LngLat) => void;
+  /** Something dragged from outside the map (an unplaced photo) was dropped at a spot. */
+  onDropAt?: (data: DataTransfer, at: LngLat) => void;
+  /** The drag types `onDropAt` wants; anything else passes through (files dropped on the view). */
+  dropTypes?: string[];
   onError: () => void;
 };
 
@@ -36,7 +40,7 @@ const HANDLE_PX = 84;
  * a cone with a handle to drag, and in "add" mode a click drops a new pin. It reports what the
  * author did; snapping to the track and updating the pins is the caller's job (pin-ops.ts).
  */
-export default function PinMap({ pins, route, selectedId, onSelect, onMove, onAim, adding, onAdd, onError }: Props) {
+export default function PinMap({ pins, route, selectedId, onSelect, onMove, onAim, adding, onAdd, onDropAt, dropTypes = [], onError }: Props) {
   // Held in state (not a ref) because the handle's position is computed from the map while rendering.
   const [map, setMap] = useState<MapRef | null>(null);
   const forest = useCssColor("--color-forest");
@@ -63,7 +67,20 @@ export default function PinMap({ pins, route, selectedId, onSelect, onMove, onAi
     return { lng: at.lng, lat: at.lat };
   })();
 
+  const wanted = (e: DragEvent<HTMLDivElement>) => dropTypes.some((t) => e.dataTransfer.types.includes(t));
+
   return (
+    <div
+      className="absolute inset-0"
+      onDragOver={(e) => wanted(e) && e.preventDefault()}
+      onDrop={(e) => {
+        if (!map || !wanted(e)) return;
+        e.preventDefault();
+        const box = e.currentTarget.getBoundingClientRect();
+        const at = map.unproject([e.clientX - box.left, e.clientY - box.top]);
+        onDropAt?.(e.dataTransfer, { lat: at.lat, lng: at.lng });
+      }}
+    >
     <Map
       ref={setMap}
       mapboxAccessToken={MAPBOX_TOKEN}
@@ -129,5 +146,6 @@ export default function PinMap({ pins, route, selectedId, onSelect, onMove, onAi
 
       <NavigationControl position="top-right" showCompass={false} />
     </Map>
+    </div>
   );
 }

@@ -44,6 +44,10 @@ test("the editor's API is a 404 for every method", async ({ request, baseURL }) 
     ["DELETE", "/api/editor/strawberry-peak/publish"],
     ["GET", "/api/editor/strawberry-peak/history"],
     ["GET", "/api/editor/strawberry-peak/history/1"],
+    ["GET", "/api/editor/strawberry-peak/photos"],
+    ["POST", "/api/editor/strawberry-peak/photos"],
+    ["DELETE", "/api/editor/strawberry-peak/photos"],
+    ["PUT", "/api/editor/strawberry-peak/photos/local/01-x.full.webp"],
   ];
   for (const [method, path] of calls) {
     const res = await request.fetch(path, { method, headers, data: method === "GET" ? undefined : body });

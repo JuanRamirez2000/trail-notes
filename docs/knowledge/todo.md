@@ -13,7 +13,10 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
 - [ ] **Nothing watches `/api/health`.** It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
 - [ ] **CI doesn't check the stored guides:** the `DATABASE_URL` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
 - [ ] **PR preview builds fail:** Vercel's Preview environment has no `DATABASE_URL` (owner adds it). Until then only pushes to `main` build on Vercel.
-- [ ] **`SUPABASE_SERVICE_ROLE_KEY` is still set in Vercel** though the site no longer reads it (owner deletes it).
+- [ ] **Photo upload: the checks only the owner can do** (shipped 2026-10-08; everything below needs the owner's sign-in or phone):
+  - `SUPABASE_SERVICE_ROLE_KEY` must be set in Vercel (Production, Sensitive). It was still there on 2026-10-08 from before; **keep it**. Without it the Pins view says "Photo uploads aren't set up on this server".
+  - On the live site, on a throwaway draft: add two or three photos in Pins, see them pinned and their thumbnails load, take one off its pin, delete it from Unplaced, then delete the draft and check its folder is gone from the `hikes` bucket. No signed upload has been made against the real bucket yet: if the PUT is refused, the status code is in the per-file message.
+  - From an iPhone: Safari can't encode webp, so this is the WASM path on a real device (only forced in Chromium so far). Also note what the iOS photo picker hands over: it may convert HEIC to JPEG and may strip the location ("Options" in the picker), in which case the photos arrive unplaced.
 - [ ] **Live checks only the owner can do** (they need the owner's Google sign-in; setup and what's already verified are in [current.md](current.md)):
   - Draft and published copies in the live editor: the badge on Strawberry Peak, an edit shows "Published · changes not live" while the public page stays as it was, Publish changes, Unpublish (the page is a 404 on the very next load), Publish again. Checked locally and by `pnpm e2e` on 2026-10-08, not on the live site.
   - A hike created and published on the live site gets its page without a deploy.
@@ -83,7 +86,7 @@ None changes behaviour; each needs the tests named first.
 - [ ] Gallery: region filter, search, sort (including nearest), mobile pull-up sheet, "Load more". Only worth it with more hikes.
 - [ ] About page, "⋯" frame menu, drive time next to directions.
 - [ ] GPX export button (the route only, never timestamps).
-- [ ] Photo uploads from the live site / phone (deferred from V2; live-site editing is now E3): browser → Supabase through short-lived signed upload URLs from a server route (server-only key on Vercel). Spike first: iOS Safari may convert HEIC and may strip location from photos picked in the browser, and sharp can't decode HEIC.
+- [ ] Photo upload leftovers (the upload itself shipped 2026-10-08): the Pins view has no phone layout; `pnpm photos check` and CI still read only the repo's guides; photo files nothing uses are only removed by hand (Unplaced → Delete); several photos per pin.
 
 ## v3/v4
 

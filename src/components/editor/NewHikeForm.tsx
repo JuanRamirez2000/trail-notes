@@ -185,7 +185,7 @@ export function NewHikeForm({ taken }: { taken: string[] }) {
         </button>
         {missing.length > 0 && <span className="text-[13px] text-bark">Still needed: {missing.join(", ")}.</span>}
       </div>
-      <p className="text-[13px] text-bark">Next you&rsquo;ll land in the editor: add pins on the map under Pins, write under Write. Photos are added afterwards with pnpm ingest.</p>
+      <p className="text-[13px] text-bark">Next you&rsquo;ll land in the editor: add photos and pins under Pins, write under Write.</p>
     </form>
   );
 }

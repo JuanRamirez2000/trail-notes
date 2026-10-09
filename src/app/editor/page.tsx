@@ -35,7 +35,7 @@ export default async function EditorIndex() {
         {store.kind !== "local"
           ? "Saves go to the database. The site shows what you last published; publish again to put changes live."
           : "Saves write to content/hikes on this machine; published copies are in each hike's published/ folder."}{" "}
-        Photos are added with <code>pnpm ingest</code>.
+        Photos are added in each hike&rsquo;s Pins view.
       </p>
       <ul className="mt-6 divide-y divide-line rounded-[10px] border border-line bg-card">
         {hikes.map((h) => (

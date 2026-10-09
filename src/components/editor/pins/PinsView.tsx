@@ -1,20 +1,26 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { hasMapbox } from "@/components/map/config";
 import { SketchMap } from "@/components/map/SketchMap";
 import { Pin } from "@/components/ui/Pin";
 import { cn } from "@/lib/cn";
 import { compassLabel } from "@/lib/geo";
+import { existingNumbering } from "@/lib/ingest";
+import { mentionsPhoto } from "@/lib/storage";
 import type { HikeWaypoint, RouteCoords } from "@/lib/hike";
 import { LEGEND_ORDER, PIN_STYLES, requiresSection } from "@/lib/pins";
 import type { Photo, Track, WaypointType } from "@/lib/schemas";
+import { PhotoPanel, TRAY_PHOTO, type PhotoPanelHandle } from "./PhotoPanel";
+import { addPhotoPins, placePhoto, type UploadedPhoto } from "./photo-pins";
+import { deletePhoto, listPhotos, measurePhoto } from "./photo-upload";
 import { addPin, aimPin, movePin, referencesTo, removePin, renamePin, reorderPin, snapToTrack, updatePin } from "./pin-ops";
 
 const PinMap = dynamic(() => import("./PinMap"), { ssr: false, loading: () => <p className="p-6 text-bark">Loading the map…</p> });
 
 type Props = {
+  slug: string;
   /** The pins as JSON text (what's saved) and as parsed, derived pins (what's drawn). */
   waypoints: string;
   pins: HikeWaypoint[];
@@ -33,10 +39,64 @@ const smallBtn = "cursor-pointer rounded border border-line-strong px-2 text-bar
  * The Pins view: the hike's pins on a map and in a list, with a form for the selected one.
  * Every change goes through pin-ops.ts and comes back as new pins JSON, saved like any other edit.
  */
-export function PinsView({ waypoints, pins, mdx, track, route, onWaypoints, onBoth }: Props) {
+export function PinsView({ slug, waypoints, pins, mdx, track, route, onWaypoints, onBoth }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(pins[0]?.id ?? null);
   const [adding, setAdding] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
+  const [dropping, setDropping] = useState(false);
+  const panel = useRef<PhotoPanelHandle>(null);
+
+  // Uploads finish long after the render that started them, so they need the pins as they are
+  // then, not as they were: the author may have moved a pin while the photos were going up.
+  const latest = useRef(waypoints);
+  useEffect(() => {
+    latest.current = waypoints;
+  }, [waypoints]);
+  const commit = (json: string) => {
+    latest.current = json;
+    onWaypoints(json);
+  };
+
+  // Every photo stored for the hike. The ones no pin (and no cover) uses are the "unplaced" tray.
+  const [stored, setStored] = useState<string[]>([]);
+  const [photoProblem, setPhotoProblem] = useState<string | null>(null);
+  const [placing, setPlacing] = useState<string | null>(null);
+  // Sizes of photos uploaded in this visit; older ones are measured when they're placed.
+  const sizes = useRef(new Map<string, Photo>());
+  useEffect(() => {
+    let on = true;
+    listPhotos(slug).then(
+      (keys) => on && setStored((now) => [...new Set([...keys, ...now])].sort()),
+      (err: Error) => on && setPhotoProblem(err.message),
+    );
+    return () => {
+      on = false;
+    };
+  }, [slug]);
+  const tray = useMemo(() => stored.filter((key) => !mentionsPhoto(waypoints, key) && !mentionsPhoto(mdx, key)), [stored, waypoints, mdx]);
+  const known = useMemo(() => new Set([...existingNumbering(pins).names, ...stored.map((key) => key.replace(/^.*\/(\d+-)?/, ""))]), [pins, stored]);
+  const entry = async (key: string) => sizes.current.get(key) ?? (await measurePhoto(key));
+
+  const onUploaded = (photos: UploadedPhoto[]) => {
+    for (const p of photos) sizes.current.set(p.key, { key: p.key, kind: p.meta.isPano ? "pano" : "flat", width: p.width, height: p.height });
+    setStored((now) => [...new Set([...now, ...photos.map((p) => p.key)])].sort());
+    const result = addPhotoPins(latest.current, photos, track);
+    if (result.pinned.size) {
+      commit(result.json);
+      setSelectedId([...result.pinned.values()][0]);
+    }
+    return result;
+  };
+  const place = async (key: string, at: { lat: number; lng: number }) => {
+    setPlacing(null);
+    try {
+      const { json, id } = placePhoto(latest.current, await entry(key), at, track);
+      commit(json);
+      setSelectedId(id);
+    } catch (err) {
+      setPhotoProblem((err as Error).message);
+    }
+  };
   const selected = pins.find((p) => p.id === selectedId) ?? null;
   const showMap = hasMapbox && !mapFailed;
   // `pins` carry the measured mileage; whether a pin has its own override is only in the JSON as written.
@@ -57,9 +117,28 @@ export function PinsView({ waypoints, pins, mdx, track, route, onWaypoints, onBo
     setAdding(false);
   };
 
+  const hasFiles = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
+
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[45dvh_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-1">
+    <div
+      className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[45dvh_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-1"
+      onDragOver={(e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        setDropping(true);
+      }}
+      onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setDropping(false)}
+      onDrop={(e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        setDropping(false);
+        panel.current?.add([...e.dataTransfer.files]);
+      }}
+    >
       <div className="relative min-h-0 border-b border-line lg:border-r lg:border-b-0">
+        {dropping && (
+          <div className="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-[10px] border-2 border-dashed border-forest bg-highlight/90 text-lg">Drop photos to pin them where they were taken</div>
+        )}
         {showMap ? (
           <PinMap
             pins={pins}
@@ -68,8 +147,10 @@ export function PinsView({ waypoints, pins, mdx, track, route, onWaypoints, onBo
             onSelect={setSelectedId}
             onMove={(id, to) => onWaypoints(movePin(waypoints, id, to, track))}
             onAim={(id, at) => onWaypoints(aimPin(waypoints, id, at))}
-            adding={adding}
-            onAdd={add}
+            adding={adding || placing !== null}
+            onAdd={(at) => (placing ? place(placing, at) : add(at))}
+            dropTypes={[TRAY_PHOTO]}
+            onDropAt={(data, at) => place(data.getData(TRAY_PHOTO), at)}
             onError={() => setMapFailed(true)}
           />
         ) : (
@@ -85,10 +166,13 @@ export function PinsView({ waypoints, pins, mdx, track, route, onWaypoints, onBo
             <button
               type="button"
               aria-pressed={adding}
-              onClick={() => setAdding((v) => !v)}
-              className={cn("absolute top-3 left-3 cursor-pointer rounded-lg border-2 px-3.5 py-1 shadow-sketch", adding ? "border-forest bg-forest text-paper" : "border-forest bg-highlight text-graphite")}
+              onClick={() => {
+                if (placing) setPlacing(null);
+                else setAdding((v) => !v);
+              }}
+              className={cn("absolute top-3 left-3 cursor-pointer rounded-lg border-2 px-3.5 py-1 shadow-sketch", adding || placing ? "border-forest bg-forest text-paper" : "border-forest bg-highlight text-graphite")}
             >
-              {adding ? "Click the map to place the pin · Cancel" : "＋ Add a pin"}
+              {placing ? "Click the map to place the photo · Cancel" : adding ? "Click the map to place the pin · Cancel" : "＋ Add a pin"}
             </button>
             {/* At the bottom, clear of the pins (routes usually run up the map) and above Mapbox's logo. */}
             <span className="pointer-events-none absolute bottom-9 left-3 max-w-[calc(100%-1.5rem)] rounded-md border border-line bg-card/90 px-2 py-0.5 text-[13px] text-bark">
@@ -99,6 +183,29 @@ export function PinsView({ waypoints, pins, mdx, track, route, onWaypoints, onBo
       </div>
 
       <div className="flex min-h-0 flex-col bg-paper-deep">
+        <PhotoPanel
+          ref={panel}
+          slug={slug}
+          known={known}
+          onUploaded={onUploaded}
+          tray={tray}
+          placing={placing}
+          onPlacing={(key) => {
+            setAdding(false);
+            setPlacing(key);
+          }}
+          onDelete={(key) =>
+            deletePhoto(slug, key).then(
+              () => {
+                setStored((now) => now.filter((k) => k !== key));
+                return null;
+              },
+              (err: Error) => err.message,
+            )
+          }
+          problem={photoProblem}
+          canPlace={showMap}
+        />
         <div className="border-b border-line bg-frame px-4 py-1.5 font-mono text-[11px] font-semibold text-bark">PINS · {pins.length}, IN ROUTE ORDER</div>
         <ol className="max-h-[38%] min-h-[96px] flex-none overflow-y-auto border-b border-line" aria-label="Pins in route order">
           {pins.map((w, i) => (
@@ -106,6 +213,11 @@ export function PinsView({ waypoints, pins, mdx, track, route, onWaypoints, onBo
               <button type="button" onClick={() => setSelectedId(w.id)} aria-current={w.id === selectedId} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left">
                 <Pin type={w.type} size={20} />
                 <span className="min-w-0 flex-1 truncate">{w.label}</span>
+                {w.headingSource === "inferred" && (
+                  <span className="flex-none rounded border border-ochre px-1 text-[11px] text-graphite" title="The photo's direction was guessed from the next photo. Check it on the map.">
+                    check direction
+                  </span>
+                )}
                 <span className="flex-none text-sm text-bark">{w.mile.toFixed(1)} mi</span>
               </button>
               <button type="button" className={smallBtn} disabled={i === 0} onClick={() => onWaypoints(reorderPin(waypoints, w.id, -1))} aria-label={`Move ${w.label} earlier`}>
@@ -127,6 +239,8 @@ export function PinsView({ waypoints, pins, mdx, track, route, onWaypoints, onBo
               pins={pins}
               track={track}
               references={referencesTo(mdx, selected.id)}
+              tray={tray}
+              onTrayPhoto={(key) => entry(key).then((photo) => commit(updatePin(latest.current, selected.id, { photo })), (err: Error) => setPhotoProblem(err.message))}
               mileOverride={overrides.get(selected.id)}
               onChange={(patch) => onWaypoints(updatePin(waypoints, selected.id, patch))}
               onRename={(nextId) => {
@@ -155,6 +269,9 @@ type FormProps = {
   pin: HikeWaypoint;
   pins: HikeWaypoint[];
   track: Track | null;
+  /** Stored photos on no pin, offered in the Photo field. */
+  tray: string[];
+  onTrayPhoto: (key: string) => void;
   /** How many blocks in the guide point at this pin. */
   references: number;
   /** The pin's own mileage, if the author set one instead of having it measured. */
@@ -165,7 +282,7 @@ type FormProps = {
   onRemove: () => void;
 };
 
-function PinForm({ pin, pins, track, references, mileOverride, onChange, onRename, onRemove }: FormProps) {
+function PinForm({ pin, pins, track, tray, onTrayPhoto, references, mileOverride, onChange, onRename, onRemove }: FormProps) {
   const [id, setId] = useState(pin.id);
   const [idProblem, setIdProblem] = useState<string | null>(null);
   // Photos already uploaded for this hike, as far as the pins know them.
@@ -203,17 +320,25 @@ function PinForm({ pin, pins, track, references, mileOverride, onChange, onRenam
         </Field>
       )}
 
-      <Field id="pin-photo" label="Photo" hint="Photos are added with pnpm ingest for now; here you can move one between pins or take it off.">
+      <Field id="pin-photo" label="Photo" hint="Add photos under Photos, above. A photo taken off a pin stays stored, under Unplaced.">
         <select
           id="pin-photo"
           className={input}
           value={pin.photo?.key ?? ""}
-          onChange={(e) => onChange({ photo: photos.find((p) => p.photo.key === e.target.value)?.photo })}
+          onChange={(e) => {
+            if (tray.includes(e.target.value)) onTrayPhoto(e.target.value);
+            else onChange({ photo: photos.find((p) => p.photo.key === e.target.value)?.photo });
+          }}
         >
           <option value="">No photo</option>
           {photos.map((p) => (
             <option key={p.photo.key} value={p.photo.key}>
               {p.photo.key.split("/")[1]} (on {p.label})
+            </option>
+          ))}
+          {tray.map((key) => (
+            <option key={key} value={key}>
+              {key.split("/")[1]} (unplaced)
             </option>
           ))}
         </select>
@@ -222,7 +347,7 @@ function PinForm({ pin, pins, track, references, mileOverride, onChange, onRenam
       <Field
         id="pin-heading"
         label="Photo direction"
-        hint={pin.heading == null ? "Not set. Enter degrees (0 = north), or set it and drag the yellow dot on the map." : `Facing ${compassLabel(pin.heading)}. Drag the yellow dot on the map to aim it.`}
+        hint={pin.heading == null ? "Not set. Enter degrees (0 = north), or set it and drag the yellow dot on the map." : `Facing ${compassLabel(pin.heading)}${pin.headingSource === "inferred" ? ", guessed from where the next photo was taken: check it" : ""}. Drag the yellow dot on the map to aim it.`}
       >
         <div className="flex gap-2">
           <input

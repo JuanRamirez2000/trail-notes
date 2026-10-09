@@ -34,3 +34,13 @@ export function photoUrl(key: string, variant: PhotoVariant = "full"): string {
   }
   return `/photos/${path}`;
 }
+
+/**
+ * True if `text` (pins JSON, or a guide's MDX with its `cover:`) refers to the photo `key`, and
+ * not just to a longer key that starts with it. This is how "is this photo used" is decided, in
+ * the editor and before the server deletes one.
+ */
+export function mentionsPhoto(text: string, key: string): boolean {
+  for (let at = text.indexOf(key); at !== -1; at = text.indexOf(key, at + 1)) if (!/[a-z0-9._-]/.test(text[at + key.length] ?? "")) return true;
+  return false;
+}

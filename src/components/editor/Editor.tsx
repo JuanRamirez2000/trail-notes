@@ -353,6 +353,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
       {view === "pins" &&
         (parsed.ok ? (
           <PinsView
+            slug={slug}
             waypoints={waypoints}
             pins={pins}
             mdx={mdx}
