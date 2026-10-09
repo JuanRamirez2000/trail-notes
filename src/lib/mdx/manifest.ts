@@ -87,6 +87,14 @@ export const manifest = {
     children: "none",
     snippet: "<Minimap />",
   },
+  ElevationProfile: {
+    title: "Elevation profile",
+    description: "The climb along the recorded track, with the pins on it",
+    category: "Maps",
+    props: z.object({ height: z.number().int().min(120).max(400).default(180).describe("Height (px)") }).strict(),
+    children: "none",
+    snippet: "<ElevationProfile />",
+  },
   SafetyPoints: {
     title: "Safety points",
     description: "List of water, bail-outs and ranger stations (also in the sidebar)",
@@ -147,7 +155,7 @@ export const isComponentName = (name: string): name is ComponentName => Object.h
 export type ManifestProps<K extends ComponentName> = z.input<(typeof manifest)[K]["props"]>;
 
 /** Shown greyed-out in the editor's insert menu. */
-export const COMING_LATER = ["Video overlay", "Elevation scrubber", "Sun / shade simulator", "Viewshed map", "GPX export"];
+export const COMING_LATER = ["Video overlay", "Sun / shade simulator", "Viewshed map", "GPX export"];
 
 // ── Editor-facing description of a component's props ───────────────────────
 

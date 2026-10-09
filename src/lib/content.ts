@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { elevationProfile, type ProfilePoint } from "./elevation";
 import { deriveWaypoints, routeCoords, type HikeWaypoint, type RouteCoords } from "./hike";
 import { compileGuide } from "./mdx/compile";
 import { SLUG, waypointsFileSchema, type Frontmatter, type Track } from "./schemas";
@@ -34,6 +35,7 @@ export type HikePage = {
   waypoints: HikeWaypoint[];
   /** Line drawn on the maps: the recorded track when present, else straight segments. */
   route: RouteCoords;
+  profile: ProfilePoint[] | null;
   track: Track | null;
 };
 
@@ -52,6 +54,7 @@ export const getHikePage = cache(async (slug: string): Promise<HikePage | null> 
     body: await compileGuide(copy.mdx, pins),
     waypoints,
     route: routeCoords(waypoints, record.track),
+    profile: elevationProfile(record.track),
     track: record.track,
   };
 });

@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { proseComponents } from "@/components/mdx/prose";
 import { mdxComponents } from "@/components/mdx/registry";
+import { elevationProfile } from "@/lib/elevation";
 import { routeCoords } from "@/lib/hike";
 import { HikeProvider } from "@/lib/hike-store";
 import { essentialsSchema, type Track } from "@/lib/schemas";
@@ -71,6 +72,7 @@ export function Preview({ slug, mdx, waypoints, track, selectedStart, onSelectCo
             slug={slug}
             waypoints={wp.ok ? wp.waypoints : []}
             route={routeCoords(wp.ok ? wp.waypoints : [], track)}
+            profile={elevationProfile(track)}
             essentials={essentialsSchema.safeParse(compiled.frontmatter.essentials).data}
           >
             <compiled.Content components={{ ...proseComponents, ...mdxComponents }} />

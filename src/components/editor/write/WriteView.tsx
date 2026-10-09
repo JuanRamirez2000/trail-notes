@@ -26,6 +26,7 @@ import { createPortal } from "react-dom";
 import { mdxComponents } from "@/components/mdx/registry";
 import { cn } from "@/lib/cn";
 import type { HikeWaypoint, RouteCoords } from "@/lib/hike";
+import type { ProfilePoint } from "@/lib/elevation";
 import { HikeProvider } from "@/lib/hike-store";
 import { isComponentName, manifest, type ComponentName } from "@/lib/mdx/manifest";
 import { attributeValue } from "@/lib/mdx/remark-component-props";
@@ -48,6 +49,7 @@ type Props = {
   onChange: (body: string) => void;
   waypoints: HikeWaypoint[];
   route: RouteCoords;
+  profile: ProfilePoint[] | null;
   essentials?: Essentials;
   /** Where a selected block renders its settings form. */
   panel: HTMLElement | null;
@@ -74,7 +76,7 @@ const useWrite = () => {
   return ctx;
 };
 
-export default function WriteView({ body, onChange, waypoints, route, essentials, panel, onSelectionChange, deselect, onOpenAdvanced }: Props) {
+export default function WriteView({ body, onChange, waypoints, route, profile, essentials, panel, onSelectionChange, deselect, onOpenAdvanced }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [seenDeselect, setSeenDeselect] = useState(deselect);
   if (deselect !== seenDeselect) {
@@ -127,7 +129,7 @@ export default function WriteView({ body, onChange, waypoints, route, essentials
 
   return (
     // The blocks are the real guide components, so they need the same shared state as a guide page.
-    <HikeProvider slug="editor" waypoints={waypoints} route={route} essentials={essentials}>
+    <HikeProvider slug="editor" waypoints={waypoints} route={route} profile={profile} essentials={essentials}>
       <Ctx.Provider value={ctx}>
         <div
           // Clicking the text (anything that isn't a block) clears the selection. The settings

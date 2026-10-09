@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { joinGuide, readDetails, splitGuide } from "@/lib/frontmatter";
+import { elevationProfile } from "@/lib/elevation";
 import { routeCoords } from "@/lib/hike";
 import { COMPONENT_NAMES } from "@/lib/mdx/manifest";
 import { essentialsSchema, type Track } from "@/lib/schemas";
@@ -75,6 +76,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
   const parsed = useMemo(() => parseWaypoints(waypoints, track), [waypoints, track]);
   const pins = useMemo(() => (parsed.ok ? parsed.waypoints : []), [parsed]);
   const route = useMemo(() => routeCoords(pins, track), [pins, track]);
+  const profile = useMemo(() => elevationProfile(track), [track]);
   const essentials = useMemo(() => essentialsSchema.safeParse(details.essentials).data, [details.essentials]);
 
   // What a save sends is read from here, so the save function itself never changes and a save
@@ -308,6 +310,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
                   onChange={setBody}
                   waypoints={pins}
                   route={route}
+                  profile={profile}
                   essentials={essentials}
                   panel={panel}
                   onSelectionChange={setHasSelection}

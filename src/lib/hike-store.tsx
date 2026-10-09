@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { createStore, useStore, type StoreApi } from "zustand";
+import type { ProfilePoint } from "./elevation";
 import { routeCoords, type HikeWaypoint, type RouteCoords } from "./hike";
 import type { Essentials } from "./schemas";
 
@@ -15,6 +16,8 @@ export type HikeState = {
   waypoints: HikeWaypoint[];
   /** Line drawn on every map: the GPX track if the hike has one. */
   route: RouteCoords;
+  /** Elevation along the track for <ElevationProfile />, or null if the hike has no recording. */
+  profile: ProfilePoint[] | null;
   steps: HikeWaypoint[];
   /** Frontmatter `essentials`, for <BeforeYouGo /> wherever the guide places it. */
   essentials?: Essentials;
@@ -30,12 +33,13 @@ export type HikeState = {
   setView: (view: HikeState["view"]) => void;
 };
 
-function createHikeStore(slug: string, waypoints: HikeWaypoint[], route?: RouteCoords, essentials?: Essentials) {
+function createHikeStore(slug: string, waypoints: HikeWaypoint[], route?: RouteCoords, essentials?: Essentials, profile?: ProfilePoint[] | null) {
   const steps = waypoints.filter((w) => w.stepIndex !== null);
   return createStore<HikeState>()((set, get) => ({
     slug,
     waypoints,
     route: route ?? routeCoords(waypoints),
+    profile: profile ?? null,
     steps,
     essentials,
     activeId: steps[0]?.id ?? null,
@@ -67,16 +71,18 @@ export function HikeProvider({
   waypoints,
   route,
   essentials,
+  profile,
   children,
 }: {
   slug: string;
   waypoints: HikeWaypoint[];
   route?: RouteCoords;
   essentials?: Essentials;
+  profile?: ProfilePoint[] | null;
   children: ReactNode;
 }) {
   // Lazy init keeps one store per mount even across re-renders.
-  const [store] = useState(() => createHikeStore(slug, waypoints, route, essentials));
+  const [store] = useState(() => createHikeStore(slug, waypoints, route, essentials, profile));
   return <HikeStoreContext.Provider value={store}>{children}</HikeStoreContext.Provider>;
 }
 

@@ -46,7 +46,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   const { slug } = await params;
   const page = await getHikePage(slug);
   if (!page) notFound();
-  const { hike, waypoints, route, body } = page;
+  const { hike, waypoints, route, profile, body } = page;
 
   const stats = [
     { k: "Distance", v: formatMiles(hike.distanceMi) },
@@ -57,7 +57,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   ].filter((s): s is { k: string; v: string } => Boolean(s));
 
   return (
-    <HikeProvider slug={slug} waypoints={waypoints} route={route} essentials={hike.essentials}>
+    <HikeProvider slug={slug} waypoints={waypoints} route={route} profile={profile} essentials={hike.essentials}>
       <GuideScrollSync />
       <article>
         {/* Hero: the cover photo, with the title as a card over it on wide screens and under it on a phone. */}
