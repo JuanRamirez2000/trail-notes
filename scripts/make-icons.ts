@@ -8,7 +8,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 
 const APP = "src/app";
-const PAPER = "#F4EDE0"; // --color-paper: iOS fills a transparent home-screen icon with black
+const PAPER = "#F8F9F6"; // --color-paper: iOS fills a transparent home-screen icon with black
 
 async function main() {
   const svg = await readFile(`${APP}/icon.svg`);

@@ -1,32 +1,35 @@
 @import "tailwindcss";
 
 /*
- * Trailnotes design tokens (from Claude Design: "Trailnotes Brand" + "Trail Guide Branded").
+ * Trailnotes design tokens: the "Fresh Green" theme (Claude Design: "Trailnotes Design System",
+ * screens in "Trail Guide Branded"). The names in the comments are the design's own.
  * Components use these via Tailwind utilities (bg-paper, text-bark, font-display…)
  * or var(--color-*) in inline styles. Never hardcode hex values in components.
+ * The token names date from the earlier paper theme; a theme change only changes the values here.
  */
 @theme {
   /* Brand palette */
-  --color-forest: #2f4a36; /* Primary · Forest Ink */
-  --color-bark: #6b4a32; /* Secondary · Bark */
-  --color-ochre: #d9a441; /* Accent · Ochre */
-  --color-paper: #f4ede0; /* Background · Paper */
-  --color-graphite: #2a2118; /* Text · Graphite */
+  --color-forest: #3a7a1e; /* Primary · Pine: buttons, links, active */
+  --color-bark: #5e655a; /* Secondary · Slate: secondary text, metadata */
+  --color-ochre: #f2b134; /* Accent · Sunny: highlights, badges */
+  --color-paper: #f8f9f6; /* Background · Page */
+  --color-graphite: #1f2421; /* Text · Ink */
 
   /* Surfaces & lines */
-  --color-card: #fbf7ee;
-  --color-paper-deep: #f8f1e1;
-  --color-frame: #efe6d3; /* component frame header */
-  --color-chrome: #e4d8be;
-  --color-stripe: #ede3cb; /* placeholder stripes */
-  --color-highlight: #f1e5c6; /* selected row / active filter */
-  --color-line: #d8cdb7;
-  --color-line-strong: #c9bb9b;
+  --color-card: #ffffff; /* Surface: cards, popovers */
+  --color-paper-deep: #f9faf7;
+  --color-frame: #f4f6f1; /* Tint: component frame header, subtle fills */
+  --color-chrome: #f0f3ec; /* Chrome: toolbars, placeholders */
+  --color-stripe: #eef1e9; /* placeholder stripes */
+  --color-highlight: #e6f2db; /* selected row / active filter */
+  --color-line: #e1e5da; /* Border */
+  --color-line-strong: #c3c9b9; /* Border strong: dividers, inputs */
 
-  /* Map pins — navigation pins are flat, safety pins get a double halo */
-  --color-pin-start: #2f4a36;
+  /* Map pins: fixed across themes, except the trailhead, which is the primary colour.
+     Navigation pins are flat, safety pins get a double halo */
+  --color-pin-start: var(--color-forest);
   --color-pin-turn: #d9731f;
-  --color-pin-note: var(--color-bark);
+  --color-pin-note: #6b4a32;
   --color-pin-viewpoint: #7b4fa8;
   --color-pin-water: #1f78b4;
   --color-pin-bailout: #c23b2e;
@@ -85,7 +88,7 @@
   }
 }
 
-/* Mapbox controls tuned to the paper theme */
+/* Mapbox controls tuned to the theme */
 .mapboxgl-ctrl-group {
   background: var(--color-card) !important;
   border: 1px solid var(--color-line);

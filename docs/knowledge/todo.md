@@ -21,6 +21,8 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
 
 None changes behaviour; each needs the tests named first.
 
+- [ ] Colour token names no longer describe their colours (`bark` is slate grey, `paper` is off-white, `ochre` is yellow) since the Fresh Green theme of 2026-10-08. A rename to the design's names (pine, slate, page, sunny, ink) is mechanical but touches every component. `scripts/make-sample-photos.ts` still draws its placeholders in the paper palette.
+
 - [ ] One builder for a new hike: `scripts/import-gpx.ts` and `scripts/ingest-photos.ts` hand-write the YAML that `src/lib/new-hike.ts` builds (check `pnpm ingest --dry-run` output).
 - [ ] One guard helper for the two editor API routes (the chain editor → origin → size → rate limit → JSON is written twice). `routes.test.ts` now covers both, so it's safe to extract.
 - [ ] Editor form primitives are copied four times (the input class, `Field`, the number helper): `DetailsForm`, `ComponentSettings`, `PinsView`, `NewHikeForm`. `PinsView` now has `RequiredText` and `NumberDraft`, which the others could use.
