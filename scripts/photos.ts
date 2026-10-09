@@ -1,7 +1,9 @@
 /**
  * Keeps Supabase Storage (the source of truth for photos) and the dev-only local copy in sync.
  *
- *   pnpm photos check          every photo the content references exists in the bucket (CI runs this)
+ *   pnpm photos check          every photo a published guide in content/ shows exists in the bucket
+ *                              (CI runs this). Drafts are listed, not checked: a production build
+ *                              never shows one, and deleting a draft on the live site removes its photos
  *   pnpm photos push [slug]    upload public/photos/** to the bucket (skips files already there)
  *   pnpm photos pull [slug]    download the bucket into public/photos, for offline `pnpm dev`
  *
@@ -44,26 +46,35 @@ const slugs = async () =>
     .filter((d) => d.isDirectory() && (!only || d.name === only))
     .map((d) => d.name);
 
-/** Every object path the content refers to: waypoint photos and covers, both variants. */
+/**
+ * Every object path the published guides refer to (pin photos and covers, both variants), and the
+ * hikes left out because they have no published copy.
+ */
 async function referencedObjects() {
   const keys = new Set<string>();
+  const drafts: string[] = [];
   for (const slug of await slugs()) {
-    const wpFile = path.join(HIKES, slug, "waypoints.json");
+    const dir = path.join(HIKES, slug, "published");
+    if (!existsSync(path.join(dir, "index.mdx"))) {
+      drafts.push(slug);
+      continue;
+    }
+    const wpFile = path.join(dir, "waypoints.json");
     if (existsSync(wpFile)) {
       const { waypoints } = waypointsFileSchema.parse(JSON.parse(await readFile(wpFile, "utf8")));
       for (const w of waypoints) if (w.photo) keys.add(w.photo.key);
     }
-    const mdx = await readFile(path.join(HIKES, slug, "index.mdx"), "utf8");
+    const mdx = await readFile(path.join(dir, "index.mdx"), "utf8");
     const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(mdx);
     const cover = fm ? frontmatterSchema.shape.cover.parse(parseYaml(fm[1])?.cover) : undefined;
     if (cover) keys.add(cover);
   }
-  return [...keys].flatMap((k) => VARIANTS.map((v) => photoObjectPath(k, v)));
+  return { objects: [...keys].flatMap((k) => VARIANTS.map((v) => photoObjectPath(k, v))), drafts };
 }
 
 async function check() {
   const base = `${env("NEXT_PUBLIC_SUPABASE_URL")}/storage/v1/object/public/${PHOTO_BUCKET}`;
-  const objects = await referencedObjects();
+  const { objects, drafts } = await referencedObjects();
   const missing: string[] = [];
   // Small batches: a handful of hikes × a few dozen photos, no need for anything cleverer.
   for (let i = 0; i < objects.length; i += 16) {
@@ -74,7 +85,8 @@ async function check() {
   if (missing.length) {
     throw new Error(`${missing.length} photo(s) missing from the "${PHOTO_BUCKET}" bucket:\n  ${missing.join("\n  ")}\nRun \`pnpm photos push\`.`);
   }
-  console.log(`✓ all ${objects.length} referenced photo files are in the "${PHOTO_BUCKET}" bucket`);
+  console.log(`✓ all ${objects.length} photo files the published guides use are in the "${PHOTO_BUCKET}" bucket`);
+  if (drafts.length) console.log(`  not checked, drafts: ${drafts.join(", ")}`);
 }
 
 async function listRemote(bucket: Awaited<ReturnType<typeof client>>, slug: string) {

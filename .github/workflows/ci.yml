@@ -45,7 +45,7 @@ jobs:
       - run: pnpm test
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/trailnotes_test
-      - name: Photos referenced by content exist in Supabase
+      - name: Photos of the published guides in content/ exist in Supabase
         run: pnpm photos check
       - run: pnpm build
       # A visitor on the production server just built (nobody is an editor there), and the editor

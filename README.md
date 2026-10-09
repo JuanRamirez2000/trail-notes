@@ -180,7 +180,7 @@ pnpm ingest ~/Pictures/granite-lakes --slug granite-lakes  # photos → pins
 pnpm content check [--store postgres]        # every guide passes the save checks
 pnpm content seed [slug] [--force]           # copy guides: files → database
 pnpm content pull [slug]                     # copy guides: database → files
-pnpm photos check | push [slug] | pull [slug]   # photos referenced exist / upload local photos / download for offline dev
+pnpm photos check | push [slug] | pull [slug]   # published guides' photos exist / upload local photos / download for offline dev
 pnpm editors list | add <email> | remove <email>   # who may use the editor on the live site
 pnpm sample:photos [slug]                    # placeholder JPEGs with real EXIF, for trying the pipeline
 pnpm icons                                   # rerender favicon.ico and apple-icon.png from src/app/icon.svg

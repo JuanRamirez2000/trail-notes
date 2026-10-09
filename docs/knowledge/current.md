@@ -11,7 +11,7 @@ Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whos
   - Storage: the public bucket `hikes` (photos).
   - Storage policies and `public.is_editor()` are in `drizzle/0003_storage_editor_policies.sql`, a hand-written migration (`pnpm db:generate --custom`): Drizzle's schema covers `public` only. Applied to the live database by the owner on 2026-10-08 (`pnpm db:migrate`) and checked there the same day, read-only: the three policies exist for `authenticated`, `anon` can't call `is_editor()`, and with the role and JWT claims set by hand the owner sees the bucket's 60 objects and a made-up user sees none.
   - Tables `hikes`, `hike_revisions`, `editors`, defined in TypeScript in `src/db/schema.ts` (Drizzle). Migrations up to 2026-10-08 are the SQL files in `supabase/migrations/`; `drizzle/0000_baseline.sql` describes their result (checked identical with `pg_dump`) and is recorded as applied in the live database (`drizzle.__drizzle_migrations`). New ones come from `pnpm db:generate` into `drizzle/` and are applied before the code that needs them (see Gotchas). Row-level security is on with explicit "server only" policies: the public key and signed-in browser sessions can read and write nothing; only the server's service-role key can.
-  - The three guides are seeded. Auth: Google provider on, sign-ups closed, one editor (the owner).
+  - Seeded with the repo's three guides on 2026-10-05; see the baseline section for what it holds now. Auth: Google provider on, sign-ups closed, one editor (the owner).
 - **Design source:** Claude Design project `87e465cf-146d-4327-9930-d7562360f28b`. *Trailnotes.dc.html* is the index; *Trailnotes Design System.dc.html* has the palette and type, and *Trail Guide Branded.dc.html* the screens: 1 gallery, 2 guide page, 3a authoring view, 4a component sheet; *Trailnotes Landing.dc.html* is the landing page. The theme is **Fresh Green** (since 2026-10-08; the paper theme before it is in the project's `archive/`). It's readable from a session with the `DesignSync` tool (`list_files` / `get_file`) when the owner asks for it; inline styles map 1:1 onto the tokens in `globals.css`.
 
 ## Baseline hike: Strawberry Peak
@@ -22,7 +22,7 @@ Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whos
 - 6 pins, each at a point where the recording changes character, with one photo per pin (6 of the 19 taken; see [backlog.md](backlog.md) for how they were picked): Red Box (start, 0.0 mi), mountain curve (1.1), saddle (2.4), rocky climb (2.8), steepest pitch (3.4), summit (3.6). Every pin is a `note`, except the trailhead.
 - Captions and the "Before you go" card were written from the recording's grades, elevations and pace. The original photos are in the owner's `~/Downloads/straberry/` (HEIC); the GPX is `~/Downloads/activity_22587017513.gpx`. Both are local only, never committed.
 
-`ridgeline-loop` and `granite-saddle` are drafts (never published) (placeholder photos, made-up routes). They only show under `pnpm dev`. Keep them as fixtures: `granite-saddle` exercises every pin type and section rule.
+`ridgeline-loop` and `granite-saddle` are drafts (never published) (placeholder photos, made-up routes). They only show under `pnpm dev`. Keep them as fixtures: `granite-saddle` exercises every pin type and section rule. **They exist only in the repo now:** the owner deleted both from the live site on 2026-10-09, which removed their rows and their 46 photo files from the bucket, so under `pnpm dev` with photos from Supabase their photos are missing (regenerate them on disk with `pnpm sample:photos` and `pnpm ingest … --storage local --force` on a scratch copy if they're needed). The live database holds Strawberry Peak and `red-rock-canyon-whiting-ranch`, a guide written in the live editor that isn't in `content/` (`pnpm content pull` would bring it).
 
 ## Architecture
 
@@ -141,7 +141,7 @@ What follows from this setup:
 | `pnpm gpx <file.gpx> --slug <slug>` | (Also possible in the app: New hike.) GPX → the hike's track (lat/lng/elevation only), through the store; on a new slug it creates a draft hike. `--guides postgres` for the database |
 | `pnpm icons` | Renders `src/app/favicon.ico` and `apple-icon.png` from `src/app/icon.svg` |
 | `pnpm sample:photos [slug]` | Placeholder JPEGs with real EXIF in `fixtures/sample-photos/<slug>/`, for trying the pipeline |
-| `pnpm photos check\|push\|pull [slug]` | Photos referenced by `content/` exist in Supabase (CI runs this) / upload local photos / download for offline dev |
+| `pnpm photos check\|push\|pull [slug]` | Photos the published guides in `content/` use exist in Supabase (CI runs this; drafts are listed, not checked, since 2026-10-09) / upload local photos / download for offline dev |
 
 CI (`.github/workflows/ci.yml`) runs `content check`, lint, typecheck, tests (with a Postgres 17 service for the Drizzle store), `photos check`, build and the end-to-end tests on every push and PR, with no secrets. If the `SUPABASE_SERVICE_ROLE_KEY` repository secret exists, it also checks every stored guide. On 2026-10-06 that secret was not set, so the step is skipped and CI covers the files in `content/`, not what the live site serves.
 
