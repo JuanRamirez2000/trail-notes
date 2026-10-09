@@ -14,8 +14,45 @@ test("the landing page leads to the gallery and a published guide", async ({ pag
   await expect(page.getByRole("img", { name: /^Elevation along the route/ })).toBeVisible();
 });
 
+test("a guide's photos open full size, and stepping through them moves the guide", async ({ page }) => {
+  await page.goto("/hikes/strawberry-peak");
+  await page.getByRole("button", { name: /^View the photo full size/ }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Photo" });
+  await expect(dialog.getByText("Photo 1 of 6")).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(dialog.getByText("Photo 3 of 6")).toBeVisible();
+  await expect(dialog.getByRole("img")).toHaveAttribute("alt", /.+/);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  // The guide is now at the photo that was left open.
+  await expect(page.locator("#step-saddle")).toBeInViewport();
+});
+
+test("a guide comes with a GPX file, a JPEG card image and structured data", async ({ page, request }) => {
+  const gpx = await request.get("/hikes/strawberry-peak/route.gpx");
+  expect(gpx.headers()["content-type"]).toContain("application/gpx+xml");
+  const xml = await gpx.text();
+  expect(xml.match(/<wpt /g)).toHaveLength(6);
+  expect(xml).toContain("<trkpt ");
+  expect(xml).not.toContain("<time>");
+
+  const card = await request.get("/hikes/strawberry-peak/og.jpg");
+  expect(card.headers()["content-type"]).toBe("image/jpeg");
+  expect((await card.body()).subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
+
+  await page.goto("/hikes/strawberry-peak");
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/hikes\/strawberry-peak\/og\.jpg$/);
+  const data = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  expect(data).toMatchObject({ "@type": "Article", headline: "Strawberry Peak", about: { "@type": "Place" } });
+  await expect(page.getByRole("link", { name: "Download the route (GPX)" }).first()).toHaveAttribute("href", "/hikes/strawberry-peak/route.gpx");
+  expect(await page.locator("img:not([alt]), img[alt='']").count()).toBe(0);
+});
+
 test("a draft has no page and isn't listed", async ({ page, request }) => {
   expect((await request.get("/hikes/granite-saddle")).status()).toBe(404);
+  expect((await request.get("/hikes/granite-saddle/route.gpx")).status()).toBe(404);
+  expect((await request.get("/hikes/granite-saddle/og.jpg")).status()).toBe(404);
   for (const path of ["/", "/hikes"]) {
     await page.goto(path);
     await expect(page.getByText("Granite Saddle"), path).toHaveCount(0);

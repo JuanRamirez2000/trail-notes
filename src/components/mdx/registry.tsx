@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import { BeforeYouGo } from "@/components/hike/BeforeYouGo";
 import { COMPONENT_NAMES, manifest, type ComponentName, type ManifestEntry, type ManifestProps } from "@/lib/mdx/manifest";
 import { ElevationProfile } from "./ElevationProfile";
+import { GpxDownload } from "./GpxDownload";
 import { Minimap } from "./Minimap";
 import { PanoViewer } from "./PanoViewer";
 import { PhotoCard } from "./PhotoCard";
@@ -15,7 +16,7 @@ import { Steps } from "./Steps";
 /**
  * Every component usable inside a hike's index.mdx: the React side of lib/mdx/manifest.ts.
  *
- * To add a feature (video overlay, GPX export…):
+ * To add a feature (a video overlay, a sun and shade view…):
  *   1. build the component (wrap it in <Frame> and read shared state with useHike)
  *   2. describe its props in lib/mdx/manifest.ts
  *   3. add it below
@@ -31,6 +32,7 @@ export const mdxComponents = {
   SafetyPins,
   Minimap,
   ElevationProfile,
+  GpxDownload,
   SafetyPoints,
   Steps,
   StepByStep,

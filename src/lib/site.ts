@@ -14,4 +14,8 @@ export const SITE_DESCRIPTION = "Photo-by-photo hiking guides: every turn, viewp
 export const REPO_URL = "https://github.com/JuanRamirez2000/trail-notes";
 
 /** The pages that list hikes (the landing page's latest guides, the gallery): refreshed whenever a hike appears, changes or goes. */
+/** A guide's social card image (its cover, as a JPEG), and the size it's made at. */
+export const ogImagePath = (slug: string) => `/hikes/${slug}/og.jpg`;
+export const OG_SIZE = { width: 1200, height: 630 };
+
 export const LIST_PATHS = ["/", "/hikes"] as const;

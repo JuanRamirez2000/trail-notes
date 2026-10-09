@@ -24,6 +24,7 @@ export function Step({ waypoint, hidePhoto, auto, children }: StepProps) {
   const wp = useWaypoint(waypoint);
   const active = useHike((s) => s.activeId === waypoint);
   const select = useHike((s) => s.select);
+  const openPhoto = useHike((s) => s.openPhoto);
   if (!wp) return <MissingWaypoint component="Step" id={waypoint} />;
 
   const style = PIN_STYLES[wp.type];
@@ -50,6 +51,7 @@ export function Step({ waypoint, hidePhoto, auto, children }: StepProps) {
           <figure data-waypoint-card={wp.id} className="mt-3.5 overflow-hidden rounded-[10px] border border-line bg-card">
             <div className="relative aspect-video">
               <Photo photoKey={wp.photo.key} alt={wp.photo.alt ?? wp.title} className="absolute inset-0" />
+              <button type="button" onClick={() => openPhoto(wp.id)} aria-label={`View the photo full size: ${wp.title}`} className="absolute inset-0 cursor-zoom-in" />
             </div>
             {(wp.caption || wp.note) && (
               <figcaption className="flex flex-col gap-2 border-t border-dashed border-line-strong px-3 py-2 sm:flex-row sm:items-center sm:gap-3">

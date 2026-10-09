@@ -30,6 +30,7 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
   - Every Mapbox canvas is a landmark called "Map"; a page with several maps has several identical landmarks.
   - The source editors hide the focus outline (`&.cm-focused { outline: none }`); the cursor and active line are the only sign of focus.
   - Phone performance (Lighthouse 76 on the gallery, 86 on a guide) is the cover photo's paint time; untuned.
+- [ ] **`pnpm e2e` stalled on the owner's Mac on the night of 2026-10-08/09.** From about 23:00 the dev server it starts (port 3210) stopped answering for minutes at a time, at a different test each run, with the machine idle; the same happened on the previous commit from a clean build, so it isn't from that night's changes. By hand the same server answered in under a second, and the network tested fine. Unexplained. Every test passed in at least one run except the last two together; CI is the reference until it's understood.
 - [ ] **An orphaned `pnpm start` on port 3101** (started 2026-09-29) was still running on the owner's Mac on 2026-10-07.
 
 ## Refactors worth doing soon (from the same audit)

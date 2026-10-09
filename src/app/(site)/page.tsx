@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { HikeCard } from "@/components/gallery/HikeCard";
 import { EssentialsCard } from "@/components/hike/BeforeYouGo";
+import { PhotoLightbox } from "@/components/hike/PhotoLightbox";
 import { ActivePhotoCard } from "@/components/landing/ActivePhotoCard";
 import { ElevationProfile } from "@/components/mdx/ElevationProfile";
 import { Minimap } from "@/components/mdx/Minimap";
@@ -74,8 +75,7 @@ export default async function HomePage() {
     <>
       <section className="relative border-b border-line">
         <div className="relative h-[220px] border-b-[1.5px] border-line-strong sm:h-[460px] sm:border-b-0">
-          {/* Decorative: the link on it names the hike. */}
-          <Photo photoKey={latest?.cover} alt="" priority sizes="100vw" className="absolute inset-0" />
+          <Photo photoKey={latest?.cover} alt={latest?.cover ? `On the ${latest.title} hike, ${latest.region}` : ""} priority sizes="100vw" className="absolute inset-0" />
           {latest && (
             <Link
               href={`/hikes/${latest.slug}`}
@@ -109,6 +109,7 @@ export default async function HomePage() {
         )}
         {page ? (
           <HikeProvider slug={page.hike.slug} waypoints={page.waypoints} route={page.route} profile={page.profile} essentials={essentials}>
+            <PhotoLightbox />
             {features}
           </HikeProvider>
         ) : (

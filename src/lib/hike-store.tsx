@@ -26,11 +26,15 @@ export type HikeState = {
   view: { waypointId: string; heading: number } | null;
   /** Bumped to ask <GuideScrollSync> to scroll the guide to a waypoint's section. */
   reveal: { id: string; nonce: number } | null;
+  /** The waypoint whose photo is open full-size (components/hike/PhotoLightbox), or null. */
+  photo: string | null;
 
   /** `reveal: true` also scrolls the guide to the waypoint's section. */
   select: (id: string | null, opts?: { reveal?: boolean }) => void;
   stepBy: (delta: 1 | -1, opts?: { reveal?: boolean }) => void;
   setView: (view: HikeState["view"]) => void;
+  /** Opens a waypoint's photo full-size, which also selects it; null closes. */
+  openPhoto: (id: string | null) => void;
 };
 
 function createHikeStore(slug: string, waypoints: HikeWaypoint[], route?: RouteCoords, essentials?: Essentials, profile?: ProfilePoint[] | null) {
@@ -45,6 +49,7 @@ function createHikeStore(slug: string, waypoints: HikeWaypoint[], route?: RouteC
     activeId: steps[0]?.id ?? null,
     view: null,
     reveal: null,
+    photo: null,
 
     select: (id, opts) =>
       set((s) => ({
@@ -61,6 +66,8 @@ function createHikeStore(slug: string, waypoints: HikeWaypoint[], route?: RouteC
     },
 
     setView: (view) => set({ view }),
+
+    openPhoto: (id) => set((s) => ({ photo: id, activeId: id ?? s.activeId })),
   }));
 }
 

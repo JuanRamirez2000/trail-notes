@@ -16,6 +16,7 @@ export type PhotoCardProps = ManifestProps<"PhotoCard">;
 export function PhotoCard({ waypoint, caption }: PhotoCardProps) {
   const wp = useWaypoint(waypoint);
   const select = useHike((s) => s.select);
+  const openPhoto = useHike((s) => s.openPhoto);
   const isActive = useHike((s) => s.activeId === waypoint);
 
   if (!wp) return <MissingWaypoint component="PhotoCard" id={waypoint} />;
@@ -42,11 +43,14 @@ export function PhotoCard({ waypoint, caption }: PhotoCardProps) {
       >
         <div className="relative aspect-video">
           {wp.photo ? (
-            <Photo photoKey={wp.photo.key} alt={wp.photo.alt ?? text} className="absolute inset-0" />
+            <>
+              <Photo photoKey={wp.photo.key} alt={wp.photo.alt ?? text} className="absolute inset-0" />
+              <button type="button" onClick={() => openPhoto(wp.id)} aria-label={`View the photo full size: ${text}`} className="absolute inset-0 cursor-zoom-in" />
+            </>
           ) : (
             <div className="bg-stripes absolute inset-0 flex items-center justify-center font-mono text-xs text-bark">no photo</div>
           )}
-          <Pin type={wp.type} size={26} className="absolute left-2.5 top-2.5" />
+          <Pin type={wp.type} size={26} className="pointer-events-none absolute left-2.5 top-2.5" />
         </div>
       </Frame>
     </div>

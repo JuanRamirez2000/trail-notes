@@ -95,6 +95,14 @@ export const manifest = {
     children: "none",
     snippet: "<ElevationProfile />",
   },
+  GpxDownload: {
+    title: "GPX download",
+    description: "A button to download the route and pins for a map app or GPS watch",
+    category: "Maps",
+    props: z.object({}).strict(),
+    children: "none",
+    snippet: "<GpxDownload />",
+  },
   SafetyPoints: {
     title: "Safety points",
     description: "List of water, bail-outs and ranger stations (also in the sidebar)",
@@ -155,7 +163,7 @@ export const isComponentName = (name: string): name is ComponentName => Object.h
 export type ManifestProps<K extends ComponentName> = z.input<(typeof manifest)[K]["props"]>;
 
 /** Shown greyed-out in the editor's insert menu. */
-export const COMING_LATER = ["Video overlay", "Sun / shade simulator", "Viewshed map", "GPX export"];
+export const COMING_LATER = ["Video overlay", "Sun / shade simulator", "Viewshed map"];
 
 // ── Editor-facing description of a component's props ───────────────────────
 

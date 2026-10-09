@@ -220,7 +220,7 @@ describe("POST / DELETE /api/editor/[slug]/publish", () => {
     const res = await publish("strawberry-peak", { baseVersion: g.version });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, status: "published" });
-    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/", "/hikes"]);
+    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/hikes/strawberry-peak/route.gpx", "/hikes/strawberry-peak/og.jpg", "/", "/hikes"]);
     expect((await guide()).published?.mdx).toBe(g.mdx);
   });
 
@@ -230,6 +230,6 @@ describe("POST / DELETE /api/editor/[slug]/publish", () => {
     expect(res.status).toBe(200);
     const after = await guide("strawberry-peak");
     expect(after).toMatchObject({ status: "draft", published: null, mdx: g.mdx });
-    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/", "/hikes"]);
+    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/hikes/strawberry-peak/route.gpx", "/hikes/strawberry-peak/og.jpg", "/", "/hikes"]);
   });
 });

@@ -3,15 +3,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXContent } from "@/components/mdx/MDXContent";
 import { GuideScrollSync } from "@/components/hike/GuideScrollSync";
+import { PhotoLightbox } from "@/components/hike/PhotoLightbox";
 import { MinimapBar } from "@/components/mdx/Minimap";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { Photo } from "@/components/ui/Photo";
-import { getHikePage, getHikeSummaries } from "@/lib/content";
+import { getHikePage, getHikeSummaries, type HikePage as HikePageData } from "@/lib/content";
 import { DIFFICULTY_LABEL, formatFeet, formatMiles } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
+import { gpxPath } from "@/lib/gpx-export";
 import { HikeProvider } from "@/lib/hike-store";
-import { SITE_NAME } from "@/lib/site";
-import { photoUrl } from "@/lib/storage";
+import { OG_SIZE, ogImagePath, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export async function generateStaticParams() {
   return (await getHikeSummaries()).map((h) => ({ slug: h.slug }));
@@ -25,14 +26,45 @@ export const revalidate = 3600;
 // A hike created after the last deploy gets its page on first visit.
 export const dynamicParams = true;
 
+/**
+ * What the cover shows. A cover that is also a pin's photo has words for it already (the pin's
+ * alt text or caption); one that's on no pin is described by the hike it's from.
+ */
+function coverAlt({ hike, waypoints }: HikePageData): string {
+  const pin = waypoints.find((w) => w.photo?.key === hike.cover);
+  return pin?.photo?.alt ?? pin?.caption ?? `On the ${hike.title} hike, ${hike.region}`;
+}
+
+/** The guide for search engines (schema.org): an article about a place, with its cover and trailhead. */
+function jsonLd(page: HikePageData) {
+  const { hike } = page;
+  const url = `${SITE_URL}/hikes/${hike.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: hike.title,
+    description: hike.summary,
+    url,
+    mainEntityOfPage: url,
+    ...(hike.cover ? { image: [`${SITE_URL}${ogImagePath(hike.slug)}`] } : {}),
+    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    about: {
+      "@type": "Place",
+      name: hike.title,
+      address: hike.region,
+      geo: { "@type": "GeoCoordinates", latitude: hike.trailhead.lat, longitude: hike.trailhead.lng },
+    },
+  };
+}
+
 export async function generateMetadata({ params }: PageProps<"/hikes/[slug]">): Promise<Metadata> {
   const page = await getHikePage((await params).slug);
   if (!page) return {};
   const { hike } = page;
   const url = `/hikes/${hike.slug}`;
   const description = `${hike.summary} ${formatMiles(hike.distanceMi)}, ${formatFeet(hike.elevationGainFt)} of climbing. ${hike.region}.`;
-  // The cover photo is the card's image; a hike without one gets a text-only card.
-  const images = hike.cover ? [{ url: photoUrl(hike.cover), alt: hike.title }] : undefined;
+  // The cover photo is the card's image (as a JPEG, ./og.jpg); a hike without one gets a text-only card.
+  const images = hike.cover ? [{ url: ogImagePath(hike.slug), ...OG_SIZE, type: "image/jpeg", alt: coverAlt(page) }] : undefined;
   return {
     title: hike.title,
     description,
@@ -59,12 +91,14 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   return (
     <HikeProvider slug={slug} waypoints={waypoints} route={route} profile={profile} essentials={hike.essentials}>
       <GuideScrollSync />
+      <PhotoLightbox />
+      {/* "<" is escaped so nothing in a title or summary can close the script element. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(page)).replace(/</g, "\\u003c") }} />
       <article>
         {/* Hero: the cover photo, with the title as a card over it on wide screens and under it on a phone. */}
         <div className="relative">
           <div className="relative h-[200px] border-b-[1.5px] border-line-strong sm:h-[360px]">
-            {/* Decorative here: the title is right beside it. */}
-            <Photo photoKey={hike.cover} alt="" priority sizes="100vw" className="absolute inset-0" />
+            <Photo photoKey={hike.cover} alt={hike.cover ? coverAlt(page) : ""} priority sizes="100vw" className="absolute inset-0" />
             <Link href="/hikes" className="absolute left-3 top-2.5 rounded-full border border-line bg-card px-2.5 text-[15px] text-graphite sm:hidden">
               ← All hikes
             </Link>
@@ -99,6 +133,9 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
           >
             ➤ Get directions to trailhead
           </a>
+          <a href={gpxPath(slug)} download className="mt-2 flex min-h-11 items-center justify-center rounded-[10px] border border-line-strong p-2.5 text-[17px] text-graphite no-underline">
+            ↓ Download the route (GPX)
+          </a>
         </div>
 
         {/* Desktop stat bar */}
@@ -115,7 +152,12 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
             <a href={directionsUrl(hike.trailhead)} target="_blank" rel="noopener" className="rounded-lg bg-forest px-5 py-2.5 text-lg text-paper hover:text-paper">
               ➤ Get directions to trailhead
             </a>
-            <span className="text-caption text-bark">Opens your maps app</span>
+            <span className="text-caption text-bark">
+              Opens your maps app ·{" "}
+              <a href={gpxPath(slug)} download className="text-bark underline underline-offset-2">
+                Download the route (GPX)
+              </a>
+            </span>
           </div>
         </div>
 
