@@ -6,6 +6,8 @@ import { Editor } from "../Editor";
 
 // The views aren't what's under test: the shell's save loop is.
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
+// The delete section at the end of Details navigates away once a hike is deleted.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => undefined }) }));
 vi.mock("next/link", () => ({ default: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
 vi.mock("../AdvancedView", () => ({ AdvancedView: () => null }));
 vi.mock("../pins/PinsView", () => ({ PinsView: () => null }));

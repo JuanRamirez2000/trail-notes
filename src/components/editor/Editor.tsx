@@ -344,9 +344,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
       {view === "details" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <DetailsForm yaml={doc.yaml} waypoints={pins} onChange={setYaml} />
-          {isDraft && (
-            <DeleteDraft slug={slug} title={title} saved={!dirty && save.kind !== "saving"} version={() => versionRef.current} />
-          )}
+          <DeleteDraft slug={slug} title={title} published={!isDraft} saved={!dirty && save.kind !== "saving"} version={() => versionRef.current} />
         </div>
       )}
 

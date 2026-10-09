@@ -108,6 +108,9 @@ test("publish, edit, publish the changes, unpublish", async ({ page }) => {
   await openDetails(page);
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(badge(page)).toHaveText("Published");
+  // A published guide can't be deleted, and Details says what to do instead.
+  await expect(page.getByRole("button", { name: "Delete draft…" })).toBeDisabled();
+  await expect(page.getByText("unpublish it first")).toBeVisible();
 
   // A save changes the working copy only.
   await summary(page).fill("Edited after publishing.");
