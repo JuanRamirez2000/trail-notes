@@ -21,6 +21,8 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/server", () => ({ after: () => undefined }));
 vi.mock("next/cache", () => ({ revalidatePath: (p: string) => void state.revalidated.push(p) }));
 vi.mock("@/lib/auth/server", () => ({ getEditor: async () => state.editor }));
+// Deleting a draft clears its photo folder; here that's nobody's folder.
+vi.mock("@/lib/photo-store", () => ({ getPhotoStore: async () => ({ kind: "local", removeFolder: async () => undefined }), photosBelongToStore: () => true }));
 vi.mock("@/lib/store/server", () => ({ getStore: async () => createStore(localBackend(root)) }));
 
 const { PUT, DELETE, GET: getOne } = await import("../[slug]/route");

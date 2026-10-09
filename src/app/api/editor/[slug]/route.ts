@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { can } from "@/lib/auth/can";
 import { rateLimiter, sameOrigin } from "@/lib/auth/request";
 import { getEditor } from "@/lib/auth/server";
+import { getPhotoStore, photosBelongToStore } from "@/lib/photo-store";
 import { SLUG } from "@/lib/schemas";
 import { getStore } from "@/lib/store/server";
 import { MAX_MDX_BYTES, MAX_WAYPOINTS_BYTES } from "@/lib/store/validate";
@@ -83,6 +84,13 @@ export async function DELETE(req: Request, ctx: RouteContext<"/api/editor/[slug]
   const store = await getStore();
   const result = await store.deleteDraft(slug, { editor, baseVersion: body.baseVersion });
   if (result.ok) {
+    // The draft's photos go with it. A failure here leaves files nobody uses, not a broken guide.
+    try {
+      const photos = await getPhotoStore();
+      if (photosBelongToStore(store.kind, photos.kind)) await photos.removeFolder(slug);
+    } catch (err) {
+      console.error(`Deleted "${slug}", but not its photos:`, err);
+    }
     // Drafts have no public page, but under `pnpm dev` the gallery and the landing page list them.
     LIST_PATHS.forEach((p) => revalidatePath(p));
     return json({ ok: true }, 200);
