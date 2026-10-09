@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { SIDEBAR_CARDS, type SidebarCardId } from "@/lib/schemas";
 import { useActiveWaypoint, useEffectiveHeading, useHike } from "@/lib/hike-store";
 import type { ManifestProps } from "@/lib/mdx/manifest";
+import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type MinimapProps = ManifestProps<"Minimap">;
@@ -30,7 +31,7 @@ function useMinimapState() {
 export function Minimap({ height = 300 }: MinimapProps) {
   const { waypoints, route, steps, select, stepBy, active, heading, stepNo } = useMinimapState();
   return (
-    <Frame
+    <Frame icon={componentIcons.Minimap}
       title="Minimap"
       actions={stepNo && <span className="text-sm">Step {stepNo} of {steps.length}</span>}
       expandable={false}

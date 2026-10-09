@@ -6,6 +6,7 @@ import { Pin } from "@/components/ui/Pin";
 import { useHike } from "@/lib/hike-store";
 import { LEGEND_ORDER, PIN_STYLES } from "@/lib/pins";
 import type { ManifestProps } from "@/lib/mdx/manifest";
+import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type RouteMapProps = ManifestProps<"RouteMap">;
@@ -18,7 +19,7 @@ export function RouteMap({ height = 320, labels = true, terrain = true }: RouteM
   const present = new Set(waypoints.map((w) => w.type));
 
   return (
-    <Frame
+    <Frame icon={componentIcons.RouteMap}
       title="Route map"
       footer={
         <div className="flex flex-wrap items-center gap-4">

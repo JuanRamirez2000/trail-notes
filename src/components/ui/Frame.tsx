@@ -1,9 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/cn";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 type FrameProps = {
+  /** What kind of block this is, in the header's corner. Without one the corner is an empty box. */
+  icon?: LucideIcon;
   title: ReactNode;
   meta?: ReactNode;
   /** Right side of the header, before the expand button. */
@@ -21,7 +24,7 @@ type FrameProps = {
  * Shared frame every guide component renders inside (design: "every block shares one frame").
  * Header: icon · title · meta · expand. Body: full-bleed. Footer: optional, dashed divider.
  */
-export function Frame({ title, meta, actions, footer, expandable = true, className, bodyClassName, id, active, children }: FrameProps) {
+export function Frame({ icon: Icon, title, meta, actions, footer, expandable = true, className, bodyClassName, id, active, children }: FrameProps) {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -48,7 +51,7 @@ export function Frame({ title, meta, actions, footer, expandable = true, classNa
         )}
       >
         <header className="flex min-h-10 items-center gap-2 border-b border-line bg-frame px-3 py-2 text-base">
-          <span className="size-[18px] flex-none rounded border border-line" aria-hidden />
+          {Icon ? <Icon size={18} strokeWidth={1.75} className="flex-none text-forest" aria-hidden /> : <span className="size-[18px] flex-none rounded border border-line" aria-hidden />}
           <span className="truncate">{title}</span>
           {meta && <span className="truncate text-sm text-bark">{meta}</span>}
           <span className="ml-auto flex items-center gap-3 text-bark">

@@ -8,6 +8,7 @@ import { elevationAt, profileExtent, type ProfilePoint } from "@/lib/elevation";
 import { formatFeet, formatMiles } from "@/lib/format";
 import { useHike } from "@/lib/hike-store";
 import type { ManifestProps } from "@/lib/mdx/manifest";
+import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type ElevationProfileProps = ManifestProps<"ElevationProfile">;
@@ -46,7 +47,7 @@ export function ElevationProfile({ height = 180 }: ElevationProfileProps) {
 
   if (!profile || !chart) {
     return (
-      <Frame title="Elevation" expandable={false}>
+      <Frame icon={componentIcons.ElevationProfile} title="Elevation" expandable={false}>
         <p className="px-3 py-4 text-[15px] text-bark">This hike has no recorded track yet, so there&rsquo;s no elevation profile to show.</p>
       </Frame>
     );
@@ -68,7 +69,7 @@ export function ElevationProfile({ height = 180 }: ElevationProfileProps) {
   const nearName = near && Math.abs(near.wp.mile - hover.mile) <= extent.totalMi / 20 ? near.wp.label : null;
 
   return (
-    <Frame title="Elevation" meta={`${formatFeet(extent.minFt)} to ${formatFeet(extent.maxFt)}`} expandable={false}>
+    <Frame icon={componentIcons.ElevationProfile} title="Elevation" meta={`${formatFeet(extent.minFt)} to ${formatFeet(extent.maxFt)}`} expandable={false}>
       <div className="px-3 pt-3 pb-2">
         <div
           className={cn("relative", pins.length > 0 && "cursor-pointer")}

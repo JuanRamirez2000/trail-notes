@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { componentIcons } from "@/components/mdx/icons";
 import { isSafety } from "@/lib/hike";
 import { useHike } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
@@ -15,6 +16,7 @@ export function SafetyList(props: Props) {
   return (
     <WaypointLinks
       title="Safety points"
+      icon={componentIcons.SafetyPoints}
       waypoints={safety}
       primary={(wp) => wp.label}
       detail={(wp) => wp.note ?? PIN_STYLES[wp.type].label}

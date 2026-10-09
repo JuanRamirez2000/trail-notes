@@ -9,6 +9,7 @@ import { sectionId } from "@/lib/hike";
 import { useHike } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
 import type { ManifestProps } from "@/lib/mdx/manifest";
+import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type StepByStepProps = ManifestProps<"StepByStep">;
@@ -21,7 +22,7 @@ export function StepByStep({ showMeta = true }: StepByStepProps) {
   const total = steps.at(-1)?.mile ?? 0;
 
   return (
-    <Frame
+    <Frame icon={componentIcons.StepByStep}
       title="Step-by-step"
       meta={`${steps.length} steps · ${formatMiles(total)}`}
       footer="Tap a step: the minimap highlights it and its photo opens."

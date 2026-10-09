@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Frame } from "@/components/ui/Frame";
 import { Pin } from "@/components/ui/Pin";
@@ -11,6 +12,7 @@ import { scrollBehavior } from "@/lib/motion";
 
 export type WaypointLinksProps = {
   title: string;
+  icon?: LucideIcon;
   waypoints: HikeWaypoint[];
   /** Main text of each row (defaults to the step instruction). */
   primary?: (wp: HikeWaypoint) => string;
@@ -25,7 +27,7 @@ export type WaypointLinksProps = {
 };
 
 /** Clickable list of waypoints: jumps the guide to each one and highlights the active row. */
-export function WaypointLinks({ title, waypoints, primary = (wp) => wp.title, detail, empty, onPick, bare, className }: WaypointLinksProps) {
+export function WaypointLinks({ title, icon, waypoints, primary = (wp) => wp.title, detail, empty, onPick, bare, className }: WaypointLinksProps) {
   const activeId = useHike((s) => s.activeId);
   const select = useHike((s) => s.select);
   const listRef = useRef<HTMLOListElement>(null);
@@ -74,7 +76,7 @@ export function WaypointLinks({ title, waypoints, primary = (wp) => wp.title, de
 
   if (bare) return list;
   return (
-    <Frame title={title} meta={String(waypoints.length)} expandable={false} className="my-0 max-h-full min-h-0" bodyClassName="flex min-h-0 flex-col">
+    <Frame icon={icon} title={title} meta={String(waypoints.length)} expandable={false} className="my-0 max-h-full min-h-0" bodyClassName="flex min-h-0 flex-col">
       {list}
     </Frame>
   );

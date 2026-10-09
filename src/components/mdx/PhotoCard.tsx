@@ -8,6 +8,7 @@ import { waypointHeading } from "./labels";
 import { MissingWaypoint } from "./MissingWaypoint";
 import { PanoViewer } from "./PanoViewer";
 import type { ManifestProps } from "@/lib/mdx/manifest";
+import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type PhotoCardProps = ManifestProps<"PhotoCard">;
@@ -25,7 +26,7 @@ export function PhotoCard({ waypoint, caption }: PhotoCardProps) {
   const text = caption ?? wp.caption ?? wp.title;
   return (
     <div data-waypoint-card={wp.id}>
-      <Frame
+      <Frame icon={componentIcons.PhotoCard}
         title={waypointHeading(wp)}
         active={isActive}
         footer={

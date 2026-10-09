@@ -17,6 +17,7 @@ import { PIN_STYLES } from "@/lib/pins";
 import { photoUrl } from "@/lib/storage";
 import { MissingWaypoint } from "./MissingWaypoint";
 import type { ManifestProps } from "@/lib/mdx/manifest";
+import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type PanoViewerProps = ManifestProps<"PanoViewer">;
@@ -157,7 +158,7 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
 
   return (
     <div data-waypoint-card={current.id}>
-      <Frame
+      <Frame icon={componentIcons.PanoViewer}
         title={`360° view · ${current.label}`}
         active={isActive}
         footer={
@@ -205,7 +206,7 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
 function PanoPlaceholder({ wp, waypoints, route }: { wp: HikeWaypoint; waypoints: HikeWaypoint[]; route: RouteCoords }) {
   return (
     <div data-waypoint-card={wp.id}>
-      <Frame title={`360° view · ${wp.label}`} footer={<span className="text-bark">No 360° photo for this spot yet.</span>}>
+      <Frame icon={componentIcons.PanoViewer} title={`360° view · ${wp.label}`} footer={<span className="text-bark">No 360° photo for this spot yet.</span>}>
         <div className="bg-stripes relative flex h-[220px] items-center justify-center sm:h-[360px]">
           <div className="rounded-lg border border-dashed border-line-strong bg-card px-4 py-2 text-center">
             <div className="font-mono text-xs tracking-[.06em] text-bark uppercase">360° photo</div>

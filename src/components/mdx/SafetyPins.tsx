@@ -9,6 +9,7 @@ import { isSafety } from "@/lib/hike";
 import { useHike } from "@/lib/hike-store";
 import { PIN_STYLES } from "@/lib/pins";
 import type { ManifestProps } from "@/lib/mdx/manifest";
+import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type SafetyPinsProps = ManifestProps<"SafetyPins">;
@@ -22,7 +23,7 @@ export function SafetyPins({ height = 240 }: SafetyPinsProps) {
   const safety = waypoints.filter(isSafety);
 
   return (
-    <Frame title="Safety points" footer="Larger pins with a double halo mark water and bail-outs.">
+    <Frame icon={componentIcons.SafetyPins} title="Safety points" footer="Larger pins with a double halo mark water and bail-outs.">
       <div className="grid sm:grid-cols-[230px_minmax(0,1fr)]">
         <div className="border-b border-line sm:border-r sm:border-b-0" style={{ height }}>
           <TrailMap waypoints={waypoints} route={route} activeId={activeId} safety labels onSelect={(id) => select(id)} className="size-full" />
