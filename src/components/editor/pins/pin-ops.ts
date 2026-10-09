@@ -1,4 +1,5 @@
 import { bearing } from "@/lib/geo";
+import { SNAP_MAX_MI } from "@/lib/ingest";
 import { SLUG, type Track, type WaypointType } from "@/lib/schemas";
 import { locateAllOnTrack, locateOnTrack, trackLine } from "@/lib/track";
 
@@ -14,7 +15,7 @@ type RawPin = Record<string, unknown> & { id: string; order: number; lat: number
 type PinsFile = { waypoints: RawPin[] };
 
 /** Further than this from the recorded track, a dragged or added pin stays where it was put. */
-export const SNAP_MI = 0.05; // ~80 m
+export const SNAP_MI = SNAP_MAX_MI;
 
 const read = (json: string): PinsFile => {
   const data = JSON.parse(json) as PinsFile;

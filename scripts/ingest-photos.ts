@@ -23,9 +23,23 @@ import { parseArgs } from "node:util";
 import exifr from "exifr";
 import sharp from "sharp";
 import { cumulativeMiles } from "../src/lib/geo";
+import {
+  EXIF_OPTIONS,
+  existingNumbering,
+  inferHeadings,
+  kebab,
+  mergeWaypoints,
+  PHOTO_SIZES,
+  photoKey,
+  pinsFromPhotos,
+  readPhotoMeta,
+  SNAP_MAX_MI,
+  sortByCapture,
+  WEBP_QUALITY,
+  type ScannedPhoto,
+} from "../src/lib/ingest";
 import { formatIssues, RESERVED_SLUGS, SLUG, waypointsFileSchema, type Waypoint } from "../src/lib/schemas";
 import { photoObjectPath, type PhotoVariant } from "../src/lib/storage";
-import { existingNumbering, inferHeadings, kebab, mergeWaypoints, round, SNAP_MAX_MI } from "./lib/ingest";
 import { validateHike } from "../src/lib/store/validate";
 import { mustWrite, scriptStore } from "./lib/stores";
 
@@ -36,21 +50,9 @@ try {
 }
 
 const IMAGE_EXT = /\.(jpe?g|png|webp|tiff?|heic|heif)$/i;
-const SIZES: Record<PhotoVariant, { flat: number; pano: number }> = {
-  full: { flat: 2400, pano: 6144 },
-  thumb: { flat: 480, pano: 960 },
-};
 
-type Scanned = {
-  file: string;
-  lat: number;
-  lng: number;
-  takenAt?: Date;
-  heading: number | null;
-  pano: boolean;
-  width: number;
-  height: number;
-};
+/** A photo with a position (the ones without are skipped), and where its file is. */
+type Scanned = ScannedPhoto & { file: string; lat: number; lng: number };
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -74,29 +76,15 @@ if (!dir || !SLUG.test(slug) || RESERVED_SLUGS.includes(slug) || !["local", "sup
 }
 
 async function scan(file: string): Promise<Scanned | { file: string; skip: string }> {
-  const meta = await exifr.parse(file, { gps: true, xmp: true, tiff: true, exif: true }).catch(() => null);
-  if (!meta || typeof meta.latitude !== "number" || typeof meta.longitude !== "number") {
-    return { file, skip: "no GPS in EXIF" };
-  }
+  const exif = await exifr.parse(file, EXIF_OPTIONS).catch(() => null);
   // sharp reports pre-rotation dimensions; autoOrient gives what the viewer will see.
   const { width = 0, height = 0 } = await sharp(file).rotate().metadata().then((m) => ({
     width: m.autoOrient?.width ?? m.width,
     height: m.autoOrient?.height ?? m.height,
   }));
-  const pano = meta.ProjectionType === "equirectangular" || (width > 0 && Math.abs(width / height - 2) < 0.02);
-  // Panos (GPano XMP) store the image-centre heading as PoseHeadingDegrees.
-  const rawHeading = pano ? (meta.PoseHeadingDegrees ?? meta.GPSImgDirection) : meta.GPSImgDirection;
-  const takenAt: Date | undefined = meta.DateTimeOriginal ?? meta.CreateDate ?? undefined;
-  return {
-    file,
-    lat: meta.latitude,
-    lng: meta.longitude,
-    takenAt: takenAt instanceof Date && !Number.isNaN(+takenAt) ? takenAt : undefined,
-    heading: typeof rawHeading === "number" ? ((rawHeading % 360) + 360) % 360 : null,
-    pano,
-    width,
-    height,
-  };
+  const meta = readPhotoMeta(exif, { width, height });
+  if (meta.lat === null || meta.lng === null) return { file, skip: "no GPS in EXIF" };
+  return { ...meta, lat: meta.lat, lng: meta.lng, file, name: path.basename(file), width, height };
 }
 
 type Uploader = (objectPath: string, body: Buffer) => Promise<void>;
@@ -132,12 +120,12 @@ async function makeUploader(): Promise<Uploader> {
 }
 
 async function renderVariant(file: string, pano: boolean, variant: PhotoVariant) {
-  const max = SIZES[variant][pano ? "pano" : "flat"];
+  const max = PHOTO_SIZES[variant][pano ? "pano" : "flat"];
   // sharp drops EXIF/XMP/GPS unless .withMetadata() is called — that's the privacy guarantee.
   return sharp(file)
     .rotate()
     .resize(pano ? { width: max, withoutEnlargement: true } : { width: max, height: max, fit: "inside", withoutEnlargement: true })
-    .webp({ quality: variant === "full" ? 82 : 74 })
+    .webp({ quality: WEBP_QUALITY[variant] })
     .toBuffer();
 }
 
@@ -179,9 +167,7 @@ async function main() {
 
   const results = await Promise.all(files.map(scan));
   const skipped = results.filter((r): r is { file: string; skip: string } => "skip" in r);
-  const photos = results
-    .filter((r): r is Scanned => !("skip" in r))
-    .sort((a, b) => (a.takenAt?.getTime() ?? 0) - (b.takenAt?.getTime() ?? 0) || a.file.localeCompare(b.file));
+  const photos = sortByCapture(results.filter((r): r is Scanned => !("skip" in r)));
   if (!photos.length) throw new Error("None of the photos have GPS data.");
 
   const store = await scriptStore(values.guides);
@@ -202,7 +188,7 @@ async function main() {
   // Headings look at the neighbouring photos, so infer them across the whole folder before
   // dropping the ones that were ingested on an earlier run.
   const headings = inferHeadings(photos);
-  const fresh = photos.map((p, i) => ({ p, heading: headings[i] })).filter(({ p }) => !names.has(kebab(path.basename(p.file))));
+  const fresh = photos.map((p, i) => ({ p, heading: headings[i] })).filter(({ p }) => !names.has(kebab(p.name)));
   const already = photos.length - fresh.length;
   if (!fresh.length) {
     console.log(`Nothing to do: all ${photos.length} photos are already pins of "${slug}".`);
@@ -210,34 +196,17 @@ async function main() {
   }
 
   const upload = await makeUploader();
-  const incoming: Waypoint[] = [];
-  const isNewHike = !existing?.length;
+  const stored = [];
   for (const [i, { p, heading }] of fresh.entries()) {
-    const n = String(next + i).padStart(2, "0");
-    const photoKey = `${slug}/${n}-${kebab(path.basename(p.file))}`;
-    const full = await renderVariant(p.file, p.pano, "full");
+    const key = photoKey(slug, next + i, p.name);
+    const full = await renderVariant(p.file, p.isPano, "full");
     const dims = await sharp(full).metadata();
-    await upload(photoObjectPath(photoKey, "full"), full);
-    await upload(photoObjectPath(photoKey, "thumb"), await renderVariant(p.file, p.pano, "thumb"));
-    const first = isNewHike && i === 0;
-    incoming.push({
-      id: `wp-${n}`,
-      order: 0, // assigned by mergeWaypoints
-      type: first ? "start" : "turn",
-      label: first ? "Trailhead" : `Photo ${n}`,
-      title: "TODO describe this step",
-      lat: round(p.lat),
-      lng: round(p.lng),
-      ...heading,
-      photo: {
-        key: photoKey,
-        kind: p.pano ? "pano" : "flat",
-        width: dims.width,
-        height: dims.height,
-      },
-    });
-    console.log(`  ✓ ${path.basename(p.file)} → ${photoKey}${p.pano ? " (360°)" : ""}`);
+    await upload(photoObjectPath(key, "full"), full);
+    await upload(photoObjectPath(key, "thumb"), await renderVariant(p.file, p.isPano, "thumb"));
+    stored.push({ key, lat: p.lat, lng: p.lng, ...heading, isPano: p.isPano, width: dims.width, height: dims.height });
+    console.log(`  ✓ ${p.name} → ${key}${p.isPano ? " (360°)" : ""}`);
   }
+  const incoming = pinsFromPhotos(stored, { isNewHike: !existing?.length, usedIds: existing?.map((w) => w.id) });
 
   const { waypoints, offTrack } = mergeWaypoints(existing ?? [], incoming, track);
   const file = waypointsFileSchema.safeParse({ waypoints });
@@ -249,7 +218,7 @@ async function main() {
       mustWrite(await store.save(slug, { mdx: record.mdx, waypoints: pins }, { editor: null, baseVersion: record.version }), `Saving the pins of "${slug}"`);
     } else {
       const miles = cumulativeMiles(waypoints).at(-1) ?? 0;
-      const date = (photos[0].takenAt ?? new Date()).toISOString().slice(0, 10);
+      const date = new Date(photos[0].takenAt ?? Date.now()).toISOString().slice(0, 10);
       mustWrite(await store.create(slug, { mdx: mdxStub(waypoints[0], miles, date), waypoints: pins }, { editor: null }), `Creating "${slug}"`);
     }
   }
