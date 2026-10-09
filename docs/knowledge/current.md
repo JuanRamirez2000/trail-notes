@@ -1,6 +1,6 @@
 # Current state
 
-_Last updated 2026-10-08. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)**: every milestone (E0–E5) is in `main`, followed on 2026-10-06/07 by a full audit and its fixes ([changelog.md](changelog.md)). The site reads guides from the Supabase database through Drizzle (`CONTENT_STORE=postgres`, `DATABASE_URL`; switched by the owner, see [v0.1-plan.md](v0.1-plan.md)) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). Sign-in, a live save and the page refresh were verified on the live site on 2026-10-06, and the move to Drizzle with draft/published copies on 2026-10-08 (signed out; the signed-in Publish flow is the owner's to check, [v0.1-plan.md](v0.1-plan.md)); what's still unchecked is in [e2-go-live.md](e2-go-live.md). What's left before the first tagged release (`v0.1.0`): [v0.1-plan.md](v0.1-plan.md) and [todo.md](todo.md). Plan: [v2-plan.md](v2-plan.md)._
+_Last updated 2026-10-08. Version: **V1 shipped** (commit `aa9298f`); **V2 (editing)**: every milestone (E0–E5) is in `main`, followed on 2026-10-06/07 by a full audit and its fixes ([changelog.md](changelog.md)). The site reads guides from the Supabase database through Drizzle (`CONTENT_STORE=postgres`, `DATABASE_URL`; switched by the owner, see [v0.1-plan.md](v0.1-plan.md)) and the editor is open to the owner through Google sign-in (`EDITOR_AUTH=supabase`, sign-ups closed, `juanpram2000@gmail.com` is the owner on the editors list). Sign-in, a live save and the page refresh were verified on the live site on 2026-10-06, and the move to Drizzle with draft/published copies on 2026-10-08 (signed out; the signed-in Publish flow is the owner's to check, [v0.1-plan.md](v0.1-plan.md)); what's still unchecked is a short owner list in [todo.md](todo.md). What's left before the first tagged release (`v0.1.0`): [v0.1-plan.md](v0.1-plan.md) and [todo.md](todo.md). Plan: [v2-plan.md](v2-plan.md)._
 
 Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whose route, turning points and view directions come from a GPS recording (GPX) and the EXIF data of the hiker's photos.
 
@@ -75,6 +75,31 @@ scripts (ingest, gpx, content, editors) ── scripts/lib/stores.ts ──► t
   - A draft can be deleted at the end of the Details view (`DeleteDraft.tsx`), after a second click and only once everything is saved.
   - `writtenProps` (`jsx-source.ts`) is the one rule for which props get written (defaults and unticked optional checkboxes are left out), used by both the Markdown tag writer and the Write view.
 
+## Live setup: sign-in and the database
+
+How the live site was set up (2026-10-05, database access moved to Drizzle on 2026-10-08). These are the steps to repeat for a new environment, or to add an editor.
+
+1. **Google sign-in client** (Google Cloud Console → APIs & Services). Consent screen: External, left in **Testing**, with each editor's Google address under Test users (in Testing nobody else can sign in at all; a new editor who isn't a test user gets Google's own error page before ours). OAuth client, type Web application: JavaScript origins `https://trail-notes-amber.vercel.app` and `http://localhost:3100`; redirect URI `https://fstcgdirhssuaevgxptv.supabase.co/auth/v1/callback` (Google returns to Supabase, Supabase to the site).
+2. **Supabase** → Authentication: enable the Google provider with that client's ID and secret. URL Configuration: Site URL `https://trail-notes-amber.vercel.app`; redirect URLs `https://trail-notes-amber.vercel.app/auth/callback` and `http://localhost:3100/auth/callback`.
+3. **An editor:** with sign-ups on, they sign in once (they land on "That Google account isn't on the editors list": the account now exists), then `pnpm editors add <email> [--role owner]`. Turn **"Allow new users to sign up" off** again afterwards. An account that isn't on the list can do nothing either way; closing sign-ups keeps strangers out of the user list.
+4. **Vercel → Environment Variables (Production):** `DATABASE_URL` (Supabase → Connect → Transaction pooler, port 6543; Sensitive: it is the database owner's password and must never get a `NEXT_PUBLIC_` name), `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `CONTENT_STORE=postgres`, `EDITOR_AUTH=supabase`. Variables apply to new deployments only. To try sign-in on the Mac first, put `EDITOR_AUTH=supabase` in `.env.local`.
+
+Verified on the live site:
+
+- 2026-10-06, by the owner: Google sign-in reaches the editor; saves from the live editor are in `hike_revisions` under the owner's account; the public page picked up a change without a deploy (the first request after it was served `STALE`, the next had the change).
+- 2026-10-08, signed out: the guide page and gallery are 200, `/api/health` says `"store":"postgres"`, and `/editor`, `/editor/new` and the editor's API are 404.
+- Before any of it (2026-10-05, a local production server in `EDITOR_AUTH=supabase` mode): a forged session cookie gets a 404, and `/auth/sign-in` redirects to Supabase with the verifier cookies set and `/auth/callback` as the return address.
+
+What follows from this setup:
+
+- **`content/hikes` and the database are two copies.** The database is what the site shows; the repo copy is seed data, the E2E and test baseline, and what `pnpm dev` reads. Live edits reach the repo only with `pnpm content pull`; `pnpm content seed` refuses to overwrite a stored guide that differs unless `--force`. A seed doesn't refresh the live page: that waits for the hourly refresh or the next deploy.
+- **`pnpm ingest` and `pnpm gpx` write to files** unless given `--guides postgres`. `pnpm photos check` reads the repo's guides, so it won't notice a photo used only by a guide edited live.
+- **A build reads the guides from the database**, so a missing `DATABASE_URL` or a paused project fails the build (the previous deployment stays live).
+- **Every autosave is a row in `hike_revisions`.** Fine at this size; pruning is a later job.
+- **The save rate limit is per server instance** (60 a minute per editor): it stops a runaway tab, not an attacker. The protection is that only listed editors can save.
+- **Session cookies are `HttpOnly`** (not the library default; no browser code reads them). If sign-in completes but `/editor` is still a 404, check that `sb-…-auth-token` cookies are set after the callback.
+- **Supabase links a Google sign-in to an existing account by email.** Step 3 creates accounts by signing in, so this is only relevant if a user is ever created by hand in the dashboard.
+
 ## Commands
 
 | Command | What it does |
@@ -126,7 +151,7 @@ Environment switches: `CONTENT_STORE` (`local` default, `postgres`), `EDITOR_AUT
 - **MDXEditor's stylesheet can load after `globals.css`.** Its theme variables are set on `.mdxeditor` (one class), so ours are written with the class doubled (`.write-editor.write-editor`). Until 2026-10-08 they were single, lost to load order, and the Write toolbar showed MDXEditor's default blue and grey.
 - **The Write view can't show everything the gate accepts.** MDXEditor has no image, code-block, reference-link or footnote support here; when it meets one it reports to `onError`, renders the guide only up to that point and stops reporting edits. `WriteView` therefore steps aside on any `onError`. Don't turn that back into a console message.
 - **Two secrets reach past row-level security:** `DATABASE_URL` (the database owner's connection: the site, and the scripts on the owner's Mac) and the Supabase service-role key (only the photo scripts, for Storage uploads; the site no longer uses it, so it can be removed from Vercel). The app reaches the database only through `getDatabase()` in `src/lib/store/server.ts` (marked `server-only`), used by the store and by `auth/server.ts` for the editors lookup. Neither secret is ever entered into a dashboard or tool from a coding session; the owner does that.
-- **Never create accounts in the real Supabase project from a session**, even test ones. Sign-in can therefore only be verified by the owner; what's unverified is listed in [e2-go-live.md](e2-go-live.md).
+- **Never create accounts in the real Supabase project from a session**, even test ones. Sign-in can therefore only be verified by the owner; what's unverified is listed in [todo.md](todo.md).
 - **MDXEditor writes a trailing space as `&#x20;`.** `WriteView` strips it before the text is saved.
 - **MDXEditor only commits a block's nested text on blur.** `WriteView` asks the nested field to commit 500 ms after a keystroke (dispatching `NESTED_EDITOR_UPDATED_COMMAND` to the field's Lexical editor, found on the element as `__lexicalEditor`), otherwise autosave misses text still being typed. It listens to key/paste events, not `input`: Lexical cancels `beforeinput`, so `input` never fires.
 - **MDXEditor deletes a whole block on Backspace in its empty text field.** `WriteView` swallows that keystroke; blocks are removed with the Remove button.

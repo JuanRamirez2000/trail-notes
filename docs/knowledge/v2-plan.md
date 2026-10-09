@@ -1,6 +1,6 @@
 # V2 plan: editing
 
-_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is live** (2026-10-05: guides in Supabase, Google sign-in, sign-ups closed; a save from the live editor is still to be confirmed, see [e2-go-live.md](e2-go-live.md)). **E3, E4 and E5 are built: every V2 milestone is in `main`.** What's left is the checks on the live site ([e2-go-live.md](e2-go-live.md)) and the leftovers in [todo.md](todo.md)._
+_Drafted 2026-10-01, revised 2026-10-04 and 2026-10-05. Status: E0 and E1 done. **E2 is live** (2026-10-05: guides in Supabase, Google sign-in, sign-ups closed; sign-in and a save from the live editor were confirmed on 2026-10-06, see [current.md](current.md)). **E3, E4 and E5 are built: every V2 milestone is in `main`.** What's left is the owner's checks on the live site (in [todo.md](todo.md)) and the leftovers in [todo.md](todo.md)._
 
 ## Decisions
 
@@ -126,7 +126,7 @@ Original scope:
 - Fix the preview mileage bug ([todo.md](todo.md)).
 - Tests: schema-to-form mapping, and prop validation on Strawberry Peak.
 
-**E2: Guides move to Supabase, with sign-in and guardrails. ✅ Built and switched on 2026-10-05.** All five parts are in `main`. What was verified, what couldn't be without keys, and the owner's steps are in [e2-go-live.md](e2-go-live.md). Differences from the plan below: the sign-in is Google OAuth; the Supabase contract tests run against the real project with namespaced draft rows (no Docker for a local database); the E2E access tests exist only as manual checks so far ([todo.md](todo.md)).
+**E2: Guides move to Supabase, with sign-in and guardrails. ✅ Built and switched on 2026-10-05.** All five parts are in `main`. What was verified, what couldn't be without keys, and the owner's steps are in [current.md](current.md) ("Live setup"). Differences from the plan below: the sign-in is Google OAuth; the Supabase contract tests run against the real project with namespaced draft rows (no Docker for a local database); the E2E access tests exist only as manual checks so far ([todo.md](todo.md)).
 
 The plan as written: the big step before any more editor features. It ships in five parts; the live site keeps working after each.
 

@@ -14,6 +14,14 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
 - [ ] **CI doesn't check the stored guides:** the `DATABASE_URL` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
 - [ ] **PR preview builds fail:** Vercel's Preview environment has no `DATABASE_URL` (owner adds it). Until then only pushes to `main` build on Vercel.
 - [ ] **`SUPABASE_SERVICE_ROLE_KEY` is still set in Vercel** though the site no longer reads it (owner deletes it).
+- [ ] **Live checks only the owner can do** (they need the owner's Google sign-in; setup and what's already verified are in [current.md](current.md)):
+  - Draft and published copies in the live editor: the badge on Strawberry Peak, an edit shows "Published · changes not live" while the public page stays as it was, Publish changes, Unpublish (the page is a 404 on the very next load), Publish again. Checked locally and by `pnpm e2e` on 2026-10-08, not on the live site.
+  - A hike created and published on the live site gets its page without a deploy.
+  - Staying signed in: the session refresh (`src/proxy.ts`) has never seen a real token. If it's wrong you're signed out after about an hour while working.
+  - Signing in ends on `trail-notes-amber.vercel.app`, not on a deployment's own `*.vercel.app` address.
+  - Signed out mid-edit: the next save says you're no longer signed in, and the text stays in the tab.
+  - The daily keep-alive is listed under Cron Jobs in Vercel.
+  - Untested, and only testable by pausing the Supabase project: cached pages keep being served while the database is unreachable.
 - [ ] **Accessibility leftovers** (from the pass of 2026-10-08, none serious):
   - Map pin buttons are named by the pin's label while their visible text starts with the glyph or number (Lighthouse: "visible text labels do not match accessible names"). Hiding the glyph from the name calculation would fix it.
   - Every Mapbox canvas is a landmark called "Map"; a page with several maps has several identical landmarks.
@@ -46,7 +54,7 @@ None changes behaviour; each needs the tests named first.
   - **Frame options per component** ("Show footer", "Allow expand ⤢"): `Frame` has these as code props, but they aren't in the manifest.
   - **A "drop photo or browse" field** on the photo card: waits on photo uploads.
   - **A scroll-synced preview:** the preview scrolls to the selected component, but doesn't follow the source as you scroll.
-- [ ] **E2 live checks (owner):** what's still unverified on the live site is in [e2-go-live.md](e2-go-live.md).
+
 - [ ] E2 leftovers once it's live:
   - An E2E suite (`@playwright/test`): signed out and signed-in non-editor get 404 on `/editor` and the save API; an editor can save; the conflict banner. Today these were checked by hand with ad hoc Playwright scripts and curl.
   - Every autosave writes a revision row; prune or coarsen later.
