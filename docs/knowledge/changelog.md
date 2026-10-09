@@ -8,6 +8,7 @@ Plan: [v0.1-plan.md](v0.1-plan.md).
 
 - **Licence** (`49169d8`): MIT for the code; guides and photos all rights reserved.
 - **Dependencies:** next 16.3.6 → 16.3.8 (two high and four lower advisories: image-optimisation SSRF, ISR cache poisoning, metadata-route disclosure), `source-map-js` 1.2.2 (high, build-time), and patch releases of mdxeditor, vitest and jsdom. `pnpm audit --prod` is clean on 2026-10-08. Minor and major releases (next 16.4, react 19.3, mapbox-gl 3.32, TypeScript 7, ESLint 10) are left for later.
+- **End-to-end tests** (`pnpm e2e`, Playwright, in CI): outsiders get a 404 from the editor and its API, an editor creates a hike and saves, a stale tab gets the conflict banner, and publish, publish changes, unpublish and delete work.
 - **Accessibility pass** (2026-10-08): axe is clean on the gallery, a guide page and every editor view; Lighthouse accessibility is 100 (scores in [current.md](current.md)). Fixed on the way:
   - the gallery had no page heading on a phone;
   - the editor had no `<main>` and no heading, and its "⌘S" hint and line numbers were too faint;

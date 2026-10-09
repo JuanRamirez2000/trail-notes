@@ -48,6 +48,12 @@ jobs:
       - name: Photos referenced by content exist in Supabase
         run: pnpm photos check
       - run: pnpm build
+      # A visitor on the production server just built (nobody is an editor there), and the editor
+      # on a dev server, where it is a local owner. Both read content/, never the database.
+      - name: Browser for the end-to-end tests
+        run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: pnpm e2e
       # Guides in the database aren't covered by a build: a code change (a renamed prop, a stricter
       # rule) could break one without anything failing. This runs the save gate over every stored
       # guide, read-only. It needs the DATABASE_URL repository secret and is skipped without it (and

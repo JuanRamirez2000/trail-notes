@@ -214,12 +214,13 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
         </Link>
         <h1 className="min-w-0 truncate text-xl max-sm:basis-full">{title}</h1>
         <span
+          data-testid="publish-badge"
           className={cn("rounded-full border px-2.5 text-sm", unpublishedChanges ? "border-ochre bg-highlight text-graphite" : "border-line-strong text-bark")}
           title={unpublishedChanges ? "The site still shows the version you last published." : undefined}
         >
           {isDraft ? "Draft" : unpublishedChanges ? "Published · changes not live" : "Published"}
         </span>
-        <span className={cn("ml-auto text-sm", save.kind === "error" || save.kind === "conflict" ? "text-pin-bailout" : "text-bark")}>{status}</span>
+        <span data-testid="save-status" className={cn("ml-auto text-sm", save.kind === "error" || save.kind === "conflict" ? "text-pin-bailout" : "text-bark")}>{status}</span>
         <EditorAccount name={editorName} canSignOut={canSignOut} />
         <a href={`/hikes/${slug}`} target="_blank" rel="noopener" className="rounded-lg border border-line bg-card px-3.5 py-1 text-graphite">
           {isDraft ? "View page ↗" : "View live page ↗"}

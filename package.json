@@ -17,6 +17,7 @@
     "gpx": "tsx scripts/import-gpx.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
     "photos": "tsx scripts/photos.ts",
     "editors": "tsx scripts/editors.ts",
     "db:generate": "drizzle-kit generate",
@@ -56,6 +57,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.3",
     "@types/mdast": "^4.0.4",
