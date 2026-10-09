@@ -4,7 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
-const LINKS = [{ href: "/hikes", label: "Hikes" }];
+const LINKS = [
+  { href: "/hikes", label: "Hikes" },
+  // A section of the landing page, so it's never "the page you're on".
+  { href: "/#features", label: "Features" },
+];
 
 /** The header's links. The section you're in is underlined (the gallery and every guide are "Hikes"). */
 export function SiteNav() {

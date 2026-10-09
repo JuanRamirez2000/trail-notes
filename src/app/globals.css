@@ -10,6 +10,7 @@
 @theme {
   /* Brand palette */
   --color-forest: #3a7a1e; /* Primary · Pine: buttons, links, active */
+  --color-forest-deep: #2f6317; /* Primary, pressed or hovered */
   --color-bark: #5e655a; /* Secondary · Slate: secondary text, metadata */
   --color-ochre: #f2b134; /* Accent · Sunny: highlights, badges */
   --color-paper: #f8f9f6; /* Background · Page */

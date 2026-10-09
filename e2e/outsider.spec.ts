@@ -4,8 +4,10 @@ import { expect, test } from "@playwright/test";
 
 test("the landing page leads to the gallery and a published guide", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Know every turn before you get there." })).toBeVisible();
-  await page.getByRole("link", { name: "Browse the hikes" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Every turn, pin and view in one guide." })).toBeVisible();
+  // The preview is the published guide, live: its steps are there to pick.
+  await expect(page.getByRole("list", { name: "First steps of the guide" }).getByRole("button")).toHaveCount(4);
+  await page.getByRole("link", { name: "Browse hikes" }).first().click();
   await expect(page).toHaveURL(/\/hikes$/);
   await expect(page.getByRole("heading", { level: 1, name: "Find a hike" })).toBeVisible();
   await page.getByRole("main").getByRole("link", { name: /Strawberry Peak/ }).first().click();
