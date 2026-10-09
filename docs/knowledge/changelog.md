@@ -4,6 +4,7 @@ Newest first. Commit hashes refer to `main`.
 
 ## After v0.1.0
 
+- **Landing page, second pass** (2026-10-08): a shorter hero (the latest guide's cover, one line, one button), and the features are now the guide's own blocks, live, from the latest published guide: photo card, route map, elevation profile, minimap with the step list, and "Before you go", each beside a sentence or two. Picking a pin on one moves the others.
 - **Landing page and footer** (2026-10-08): `/` is now a short landing page (what Trailnotes is, the latest guide, what's in a guide) and the gallery moved to `/hikes`. The footer has the wordmark, links to the gallery, the latest guides, the repo and the licence, above the "conditions change" reminder. "All hikes" links, the sitemap and the refresh after publishing follow the move; axe is clean on both pages.
 
 ## v0.1.0 (2026-10-08): the first tagged release

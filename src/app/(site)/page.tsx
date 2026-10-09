@@ -1,103 +1,119 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { HikeCard } from "@/components/gallery/HikeCard";
-import { DifficultyStamp } from "@/components/ui/DifficultyStamp";
+import { EssentialsCard } from "@/components/hike/BeforeYouGo";
+import { ActivePhotoCard } from "@/components/landing/ActivePhotoCard";
+import { ElevationProfile } from "@/components/mdx/ElevationProfile";
+import { Minimap } from "@/components/mdx/Minimap";
+import { RouteMap } from "@/components/mdx/RouteMap";
+import { StepList } from "@/components/sidebar/StepList";
 import { Photo } from "@/components/ui/Photo";
-import { Pin } from "@/components/ui/Pin";
-import { getHikeSummaries } from "@/lib/content";
+import { getHikePage, getHikeSummaries } from "@/lib/content";
 import { formatFeet, formatMiles } from "@/lib/format";
-import type { WaypointType } from "@/lib/schemas";
+import { HikeProvider } from "@/lib/hike-store";
 
 // Lists the latest guides, so it's cached like the gallery: refreshed on publish, hourly as a safety net.
 export const revalidate = 3600;
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
-const eyebrow = "font-mono text-xs font-semibold tracking-[.1em] text-bark uppercase";
+/**
+ * One thing a guide does: a title, a sentence or two, and the guide's own block showing it. The
+ * blocks carry their own vertical margins for a guide's text column; here the row sets the spacing.
+ */
+function Feature({ title, text, children }: { title: string; text: string; children?: ReactNode }) {
+  return (
+    <li className="grid items-center gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+      <div>
+        <h3 className="font-display text-2xl leading-tight font-bold">{title}</h3>
+        <p className="mt-1.5 text-body text-bark">{text}</p>
+      </div>
+      {children && <div className="min-w-0 [&_section]:my-0">{children}</div>}
+    </li>
+  );
+}
 
-/** What a guide gives you, each with the pin it shows up as on the map. */
-const FEATURES: { pin: WaypointType; title: string; text: string }[] = [
-  {
-    pin: "turn",
-    title: "A photo where the trail changes",
-    text: "Junctions, the start of the steep part, the spot where the path is easy to lose: each has a photo, looking the way you'll be walking.",
-  },
-  {
-    pin: "start",
-    title: "The route as it was walked",
-    text: "The line on the map, the mileage of every pin and the elevation profile come from a GPS recording of the hike, not from a drawing.",
-  },
-  {
-    pin: "water",
-    title: "What to know before you go",
-    text: "Parking, water and hazards up front, and the water sources, bail-outs and ranger stations marked along the way.",
-  },
-];
-
-/** The front door: what Trailnotes is, the latest guide, and the way into the gallery. */
+/**
+ * The front door. A short hero, then what a guide does, shown with the latest guide's own blocks:
+ * a guide page without the guide's text. The blocks share one selection, as they do in a guide.
+ */
 export default async function HomePage() {
   const hikes = await getHikeSummaries();
   const [latest, ...rest] = hikes;
+  const page = latest ? await getHikePage(latest.slug) : null;
+  const essentials = page?.hike.essentials;
+
+  // With no guide to show (none published yet), the features are still listed, as text.
+  const features = (
+    <ul className="mt-8 flex flex-col gap-12 lg:gap-16">
+      <Feature title="A photo where the trail changes" text="Junctions, the start of the steep part, the spot where the path is easy to lose. Each has a photo, looking the way you'll be walking.">
+        {page && <ActivePhotoCard />}
+      </Feature>
+      <Feature title="Every photo on the map" text="Each pin is where a photo was taken. Pick one and the photo above, the profile and the small map below all move to it.">
+        {page && <RouteMap height={340} />}
+      </Feature>
+      <Feature title="The climb, mile by mile" text="The route and its elevation come from a GPS recording of the hike, so you can see where the hard part starts and how long it lasts.">
+        {page?.profile && <ElevationProfile />}
+      </Feature>
+      <Feature title="A map that follows you" text="A small map stays beside the guide and points the way the current photo faces. Step through the hike or jump to any part of it.">
+        {page && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Minimap height={260} />
+            <StepList className="max-h-[304px]" />
+          </div>
+        )}
+      </Feature>
+      <Feature title="What to know before you go" text="Parking, water, permits and hazards come first, before the first step.">
+        {essentials && <EssentialsCard essentials={essentials} />}
+      </Feature>
+    </ul>
+  );
 
   return (
     <>
-      <section className="bg-contour border-b border-line">
-        <div className="mx-auto grid w-full max-w-[1200px] items-center gap-8 px-4 py-10 sm:px-7 sm:py-16 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12">
-          <div className="max-w-[640px] rounded-[10px] border border-line bg-card px-5 py-6 shadow-sketch sm:px-8 sm:py-8">
-            <p className={eyebrow}>Photo-by-photo hiking guides</p>
-            <h1 className="mt-2 font-display text-[34px] leading-[1.08] font-bold text-forest sm:text-[46px]">Know every turn before you get there.</h1>
-            <p className="mt-4 text-body">
-              Each guide follows one hike from the trailhead to the top, with a photo at every point where the trail changes, pinned on the map where it was taken.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <Link href="/hikes" className="rounded-lg bg-forest px-5 py-2.5 text-lg text-paper no-underline hover:text-paper">
-                Browse the hikes
-              </Link>
-              {latest && (
-                <Link href={`/hikes/${latest.slug}`} className="text-lg underline underline-offset-4">
-                  Read {latest.title} →
-                </Link>
-              )}
-            </div>
-          </div>
-
+      <section className="relative border-b border-line">
+        <div className="relative h-[220px] border-b-[1.5px] border-line-strong sm:h-[460px] sm:border-b-0">
+          {/* Decorative: the link on it names the hike. */}
+          <Photo photoKey={latest?.cover} alt="" priority sizes="100vw" className="absolute inset-0" />
           {latest && (
-            <Link href={`/hikes/${latest.slug}`} className="group block overflow-hidden rounded-[10px] border border-line bg-card text-graphite no-underline shadow-sketch hover:text-graphite">
-              <div className="relative h-[220px] border-b-[1.5px] border-line-strong sm:h-[260px]">
-                {/* Decorative: the title is in the caption below. */}
-                <Photo photoKey={latest.cover} alt="" priority sizes="(min-width: 1024px) 440px, 100vw" className="absolute inset-0" />
-                <span className="absolute left-3 top-3 rounded-full border border-line bg-card px-2.5 font-mono text-[11px] leading-6 font-semibold tracking-[.08em] text-bark uppercase">
-                  Latest guide
-                </span>
-              </div>
-              <div className="px-4 py-3.5">
-                <div className="font-display text-2xl font-bold group-hover:text-forest">{latest.title}</div>
-                <div className="text-sm text-bark">{latest.region}</div>
-                <div className="mt-2 flex items-center gap-3 text-[15px]">
-                  <span>{formatMiles(latest.distanceMi)}</span>
-                  <span>↑ {formatFeet(latest.elevationGainFt)}</span>
-                  <DifficultyStamp level={latest.difficulty} className="ml-auto" />
-                </div>
-              </div>
+            <Link
+              href={`/hikes/${latest.slug}`}
+              className="absolute top-3 right-3 rounded-full border border-line bg-card px-3 text-[15px] leading-8 text-graphite no-underline hover:text-forest sm:top-auto sm:right-8 sm:bottom-6"
+            >
+              {latest.title} · {formatMiles(latest.distanceMi)} · ↑ {formatFeet(latest.elevationGainFt)} →
             </Link>
           )}
+        </div>
+        <div className="px-4 py-6 sm:absolute sm:bottom-6 sm:left-8 sm:max-w-[500px] sm:rounded-[10px] sm:border sm:border-line sm:bg-card sm:px-7 sm:py-6 sm:shadow-sketch">
+          <h1 className="font-display text-[32px] leading-[1.08] font-bold text-forest sm:text-[40px]">Know every turn before you get there.</h1>
+          <p className="mt-3 text-body">Hiking guides with a photo at every turn, pinned on the map where it was taken.</p>
+          <Link href="/hikes" className="mt-5 inline-block rounded-lg bg-forest px-5 py-2.5 text-lg text-paper no-underline hover:text-paper">
+            Browse the hikes
+          </Link>
         </div>
       </section>
 
       <section aria-labelledby="in-a-guide" className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-7 sm:py-14">
-        <p className={eyebrow}>How it works</p>
-        <h2 id="in-a-guide" className="mt-1 font-display text-h2 font-bold text-forest">
+        <h2 id="in-a-guide" className="font-display text-h2 font-bold text-forest">
           What&rsquo;s in a guide
         </h2>
-        <ul className="mt-6 grid gap-4 md:grid-cols-3">
-          {FEATURES.map((f) => (
-            <li key={f.title} className="rounded-[10px] border border-line bg-card px-5 py-5">
-              <Pin type={f.pin} size={26} />
-              <h3 className="mt-3.5 font-display text-xl font-bold">{f.title}</h3>
-              <p className="mt-1.5 text-bark">{f.text}</p>
-            </li>
-          ))}
-        </ul>
+        {page && (
+          <p className="mt-1 text-bark">
+            These are live, from{" "}
+            <Link href={`/hikes/${page.hike.slug}`} className="underline underline-offset-4">
+              {page.hike.title}
+            </Link>
+            . Try them.
+          </p>
+        )}
+        {page ? (
+          <HikeProvider slug={page.hike.slug} waypoints={page.waypoints} route={page.route} profile={page.profile} essentials={essentials}>
+            {features}
+          </HikeProvider>
+        ) : (
+          features
+        )}
       </section>
 
       {rest.length > 0 && (
