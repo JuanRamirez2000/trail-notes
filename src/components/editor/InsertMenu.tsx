@@ -35,31 +35,36 @@ export function InsertMenu({ onInsert, label = "＋ Insert component ▾" }: { o
               <div className="px-3.5 pt-1.5 text-caption font-semibold text-forest">{category}</div>
               {(Object.keys(registry) as RegisteredComponent[])
                 .filter((name) => registry[name].category === category)
-                .map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => {
-                      onInsert(name);
-                      setOpen(false);
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-1.5 text-left hover:bg-highlight"
-                  >
-                    <span className="size-[26px] flex-none rounded-[5px] border border-line" aria-hidden />
-                    <span className="leading-tight">
-                      <span className="text-[17px]">{registry[name].title}</span>
-                      <br />
-                      <span className="text-caption text-bark">{registry[name].description}</span>
-                    </span>
-                  </button>
-                ))}
+                .map((name) => {
+                  const Icon = registry[name].icon;
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => {
+                        onInsert(name);
+                        setOpen(false);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-1.5 text-left hover:bg-highlight"
+                    >
+                      <span className="flex size-[30px] flex-none items-center justify-center rounded-[5px] border border-line text-forest" aria-hidden>
+                        <Icon size={18} strokeWidth={1.75} />
+                      </span>
+                      <span className="leading-tight">
+                        <span className="text-[17px]">{registry[name].title}</span>
+                        <br />
+                        <span className="text-caption text-bark">{registry[name].description}</span>
+                      </span>
+                    </button>
+                  );
+                })}
             </div>
           ))}
           <div className="mx-3.5 mt-1.5 border-t border-dashed border-line-strong pt-1.5 text-caption tracking-[.06em] text-bark uppercase">
             Coming later
           </div>
           {COMING_LATER.map((f) => (
-            <div key={f} className="py-0.5 pr-3.5 pl-[50px] text-[15px] text-line-strong">
+            <div key={f} className="py-0.5 pr-3.5 pl-[54px] text-[15px] text-line-strong">
               {f}
             </div>
           ))}

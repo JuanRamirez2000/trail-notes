@@ -16,6 +16,7 @@ import {
   UndoRedo,
   useLexicalNodeRemove,
   useMdastNodeUpdater,
+  useNestedEditorContext,
   usePublisher,
   type JsxEditorProps,
   type JsxProperties,
@@ -206,7 +207,29 @@ function Block({ mdastNode }: JsxEditorProps) {
   const { selectedId, select, panel, waypoints } = useWrite();
   const update = useMdastNodeUpdater<MdxJsxFlowElement>();
   const remove = useLexicalNodeRemove();
+  const { parentEditor, lexicalNode } = useNestedEditorContext();
   const name = mdastNode.name ?? "";
+
+  // Moving a block swaps it with its neighbour in the document: a paragraph, a heading or
+  // another block. Whether there is a neighbour either side is read after every change to the
+  // document, so the buttons are right after a move or after text is added around the block.
+  const [canMove, setCanMove] = useState({ up: false, down: false });
+  useEffect(() => {
+    const read = () =>
+      parentEditor.getEditorState().read(() => {
+        const node = lexicalNode.getLatest();
+        const next = { up: node.getPreviousSibling() !== null, down: node.getNextSibling() !== null };
+        setCanMove((now) => (now.up === next.up && now.down === next.down ? now : next));
+      });
+    read();
+    return parentEditor.registerUpdateListener(read);
+  }, [parentEditor, lexicalNode]);
+  const move = (by: -1 | 1) =>
+    parentEditor.update(() => {
+      const node = lexicalNode.getLatest();
+      if (by === -1) node.getPreviousSibling()?.insertBefore(node);
+      else node.getNextSibling()?.insertAfter(node);
+    });
 
   // MDXEditor only copies a block's own text into the document when that field loses focus, so
   // autosave wouldn't see what's being typed, and closing the tab mid-sentence would lose it.
@@ -274,6 +297,8 @@ function Block({ mdastNode }: JsxEditorProps) {
             component={{ name, props, raw }}
             waypoints={waypoints}
             onChange={(next) => update({ attributes: writtenProps(name, next, raw).map(toAttribute) })}
+            onMove={move}
+            canMove={canMove}
             onRemove={() => {
               select(null);
               remove();

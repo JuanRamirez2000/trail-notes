@@ -14,6 +14,9 @@ type FormProps = {
   waypoints: HikeWaypoint[];
   onChange: (props: Record<string, unknown>) => void;
   onDuplicate?: () => void;
+  /** Moves the block one place earlier (-1) or later (1) in the document. The Write view has it. */
+  onMove?: (by: -1 | 1) => void;
+  canMove?: { up: boolean; down: boolean };
   onRemove: () => void;
 };
 
@@ -41,7 +44,7 @@ export function ComponentSettings({ component, waypoints, onChange, onDuplicate,
 }
 
 /** The generated form for one component. Rendered by the Markdown view's panel and, through a portal, by a selected block in the Write view. */
-export function SettingsForm({ component, waypoints, onChange, onDuplicate, onRemove }: FormProps) {
+export function SettingsForm({ component, waypoints, onChange, onDuplicate, onMove, canMove, onRemove }: FormProps) {
   const entry = manifest[component.name];
   const fields = propFields(component.name);
   const set = (name: string, value: unknown) => onChange({ ...component.props, [name]: value });
@@ -72,6 +75,20 @@ export function SettingsForm({ component, waypoints, onChange, onDuplicate, onRe
         <p className="text-[13px] text-bark">
           Its text is written inside the block (in Markdown: between <code>&lt;{component.name}&gt;</code> and <code>&lt;/{component.name}&gt;</code>).
         </p>
+      )}
+
+      {onMove && (
+        <div>
+          <div className="mb-[3px] text-[13px] text-bark">Position in the guide</div>
+          <div className="flex gap-2">
+            <button type="button" disabled={!canMove?.up} onClick={() => onMove(-1)} className="cursor-pointer rounded-lg border border-line bg-card px-3 py-0.5 disabled:cursor-default disabled:opacity-40">
+              ↑ Move up
+            </button>
+            <button type="button" disabled={!canMove?.down} onClick={() => onMove(1)} className="cursor-pointer rounded-lg border border-line bg-card px-3 py-0.5 disabled:cursor-default disabled:opacity-40">
+              ↓ Move down
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="flex gap-2">

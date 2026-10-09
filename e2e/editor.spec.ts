@@ -85,6 +85,25 @@ test("a second tab with an older copy gets the conflict banner and saves nothing
   await expect(summary(page)).toHaveValue("The first tab got there first.");
 });
 
+test("a block can be moved in the Write view, and the insert menu shows an icon per block", async ({ page }) => {
+  await page.goto(`/editor/${slug}`);
+  // A new draft is a route map followed by a heading.
+  const block = page.locator('[data-write-block="RouteMap"]');
+  await block.click({ position: { x: 24, y: 16 } });
+  const up = page.getByRole("button", { name: "↑ Move up" });
+  const down = page.getByRole("button", { name: "↓ Move down" });
+  await expect(up).toBeDisabled();
+  await down.click();
+  await expect(up).toBeEnabled();
+  await expect(status(page)).toHaveText(/^Saved /);
+  const mdx = await readFile(path.join(HIKES, slug, "index.mdx"), "utf8");
+  expect(mdx.indexOf("## The route")).toBeLessThan(mdx.indexOf("<RouteMap"));
+
+  await page.getByRole("button", { name: /Insert block/ }).click();
+  const items = page.getByRole("button").filter({ has: page.locator("svg.lucide") });
+  await expect(items).toHaveCount(12);
+});
+
 test("publish, edit, publish the changes, unpublish", async ({ page }) => {
   await openDetails(page);
   await page.getByRole("button", { name: "Publish", exact: true }).click();
