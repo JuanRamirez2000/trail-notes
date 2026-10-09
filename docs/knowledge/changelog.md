@@ -2,9 +2,9 @@
 
 Newest first. Commit hashes refer to `main`.
 
-## v0.1.0 (in progress, from 2026-10-08): the first tagged release
+## v0.1.0 (2026-10-08): the first tagged release
 
-Plan: [v0.1-plan.md](v0.1-plan.md).
+Tagged `v0.1.0` on `main`. Planned with the owner on 2026-10-08 as twelve steps, each one verified commit: licence, app icons, dependency patches, delete a draft, Write view placeholders, the database layer on Drizzle, history and restore, draft and published copies, the elevation profile, an accessibility pass, the end-to-end suite, and retiring `e2-go-live.md`. The Fresh Green theme was added along the way. MIT for the code; guides and photos stay all rights reserved. Left out on purpose: photo uploads from the app (needs an iOS/HEIC spike), a phone layout for the editor, Write view support for images and code blocks, a Content-Security-Policy, and the refactors in [todo.md](todo.md). What the owner still has to do or check is in [todo.md](todo.md).
 
 - **Licence** (`49169d8`): MIT for the code; guides and photos all rights reserved.
 - **Dependencies:** next 16.3.6 → 16.3.8 (two high and four lower advisories: image-optimisation SSRF, ISR cache poisoning, metadata-route disclosure), `source-map-js` 1.2.2 (high, build-time), and patch releases of mdxeditor, vitest and jsdom. `pnpm audit --prod` is clean on 2026-10-08. Minor and major releases (next 16.4, react 19.3, mapbox-gl 3.32, TypeScript 7, ESLint 10) are left for later.

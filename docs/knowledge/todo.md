@@ -2,12 +2,12 @@
 
 Grouped by the version each item belongs to. Move items to [changelog.md](changelog.md) when they ship; put larger unscheduled ideas in [backlog.md](backlog.md).
 
-## Before the first tagged release
+## Left over from v0.1.0 (owner)
 
 From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are in; these need the owner or a decision.
 
 - [ ] **Capture times in old copies (owner's call).** The stored pins of the three guides were cleaned on 2026-10-07 (through the store, keeping the stored text), and nothing public carries `takenAt` any more. It is still in:
-  - rows of `hike_revisions` saved before then (server-only, never public);
+  - rows of `hike_revisions` saved before then (server-only, never public; 12 of 15 rows on 2026-10-08);
   - the public repo's git history (`content/hikes/*/waypoints.json` before 2026-10-07). Removing it means rewriting history and force-pushing.
 - [ ] **Backups.** The free Supabase plan has none, and the database is the only copy of edits made on the live site. A scheduled `pnpm content pull` (committed, or to a private place) would cover the text; the photo originals exist only on the owner's Mac.
 - [ ] **Nothing watches `/api/health`.** It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
@@ -27,7 +27,6 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
   - Every Mapbox canvas is a landmark called "Map"; a page with several maps has several identical landmarks.
   - The source editors hide the focus outline (`&.cm-focused { outline: none }`); the cursor and active line are the only sign of focus.
   - Phone performance (Lighthouse 76 on the gallery, 86 on a guide) is the cover photo's paint time; untuned.
-- [ ] **The release itself** is planned step by step in [v0.1-plan.md](v0.1-plan.md) (`v0.1.0`, MIT for the code, decided 2026-10-08).
 - [ ] **An orphaned `pnpm start` on port 3101** (started 2026-09-29) was still running on the owner's Mac on 2026-10-07.
 
 ## Refactors worth doing soon (from the same audit)
