@@ -22,6 +22,13 @@
       "when": 1791440971067,
       "tag": "0002_published_copy",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791523380936,
+      "tag": "0003_storage_editor_policies",
+      "breakpoints": true
     }
   ]
 }

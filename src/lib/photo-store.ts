@@ -1,6 +1,7 @@
 import "server-only";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { authMode, sessionClient } from "./auth/server";
 import { PHOTO_BUCKET, storageBackend } from "./storage";
 
 /**
@@ -9,8 +10,9 @@ import { PHOTO_BUCKET, storageBackend } from "./storage";
  * public URLs).
  *
  * The backend follows NEXT_PUBLIC_PHOTO_STORAGE, like the URLs:
- *   supabase → the bucket, with the service-role key. The browser uploads straight to Supabase
- *              through signed URLs, so photo bytes never pass through this server.
+ *   supabase → the bucket, as the signed-in editor (their session, the public key, and the
+ *              bucket's policies). The browser uploads straight to Supabase through signed
+ *              URLs, so photo bytes never pass through this server.
  *   local    → public/photos, `pnpm dev` only (the end-to-end tests run on it).
  */
 export type Upload = { url: string; headers: Record<string, string> };
@@ -25,7 +27,7 @@ export interface PhotoStore {
   removeFolder(slug: string): Promise<void>;
 }
 
-/** The store can't be used as configured (a missing key). The message is safe to show an editor. */
+/** The store can't be used as configured. The message is safe to show an editor. */
 export class PhotoStoreUnavailable extends Error {}
 
 /** The largest file the bucket accepts. */
@@ -57,11 +59,14 @@ export async function writeLocalPhoto(slug: string, name: string, body: Uint8Arr
 }
 
 async function supabaseStore(): Promise<PhotoStore> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new PhotoStoreUnavailable("Photo uploads aren't set up on this server: it has no SUPABASE_SERVICE_ROLE_KEY.");
-  const { createClient } = await import("@supabase/supabase-js");
-  const bucket = createClient(url, key, { auth: { persistSession: false } }).storage.from(PHOTO_BUCKET);
+  // As the signed-in editor, with the public key: the bucket's policies let people on the editors
+  // list add, list and delete photos (drizzle/0003_storage_editor_policies.sql). The server holds
+  // no key that could do more. Without a session there is nobody to act as: under `pnpm dev` the
+  // editor is a local owner with no sign-in, so it can't write to the shared bucket by accident.
+  if (authMode() !== "supabase") {
+    throw new PhotoStoreUnavailable("Photos are in the shared bucket, which takes uploads from signed-in editors only. For pnpm dev, set NEXT_PUBLIC_PHOTO_STORAGE=local, or EDITOR_AUTH=supabase and sign in.");
+  }
+  const bucket = (await sessionClient()).storage.from(PHOTO_BUCKET);
   // Not needed to use a signed URL, but harmless, and it's what Supabase's own client sends.
   const publicKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const headers = { ...UPLOAD_HEADERS, "x-upsert": "false", ...(publicKey ? { apikey: publicKey } : {}) };
@@ -73,8 +78,10 @@ async function supabaseStore(): Promise<PhotoStore> {
   };
   const remove = async (objects: string[]) => {
     if (!objects.length) return;
-    const { error } = await bucket.remove(objects);
+    const { data, error } = await bucket.remove(objects);
     if (error) throw new Error(`Deleting photos: ${error.message}`);
+    // A delete the bucket's policies don't allow isn't an error: it removes nothing and says so.
+    if (!data?.length) throw new Error("Deleting photos: storage removed nothing. Is migration 0003 (storage policies) applied?");
   };
   return {
     kind: "supabase",
