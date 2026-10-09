@@ -1,5 +1,5 @@
 import { trackSchema, formatIssues } from "../schemas";
-import type { ContentStore, HikeRecord, RawHike, RawWrite, StoreBackend, WriteResult } from "./types";
+import { DELETE_DELAY_HOURS, type ContentStore, type DeleteResult, type HikeRecord, type RawHike, type RawWrite, type StoreBackend, type WriteResult } from "./types";
 import { validateHike, waypointsText } from "./validate";
 
 /** A stored track that can't be read is never written back as "no track": that would delete it. */
@@ -16,6 +16,7 @@ function toRecord(h: RawHike): HikeRecord {
     status: h.status,
     published,
     changed: !!published && (published.mdx !== h.mdx || published.waypoints !== waypoints),
+    deleteAfter: h.deleteAfter,
     version: h.version,
     updatedAt: h.updatedAt,
     updatedBy: h.updatedBy,
@@ -41,7 +42,7 @@ export function createStore(backend: StoreBackend): ContentStore {
 
     async list() {
       const rows = await backend.list();
-      return rows.map(({ slug, status, details, publishedDetails, changed, updatedAt, updatedBy }) => ({ slug, status, details, publishedDetails, changed, updatedAt, updatedBy }));
+      return rows.map(({ slug, status, details, publishedDetails, changed, deleteAfter, updatedAt, updatedBy }) => ({ slug, status, details, publishedDetails, changed, deleteAfter, updatedAt, updatedBy }));
     },
 
     async read(slug) {
@@ -62,6 +63,7 @@ export function createStore(backend: StoreBackend): ContentStore {
     async publish(slug, { editor, baseVersion }): Promise<WriteResult> {
       const current = await backend.get(slug);
       if (!current) return { ok: false, kind: "not_found" };
+      if (current.deleteAfter) return { ok: false, kind: "invalid", problems: ["This hike is scheduled for deletion. Restore it before publishing."] };
       // Saves are validated, but files can be edited by hand: nothing invalid goes public.
       const p = await prepare(slug, current.mdx, current.waypointsText ?? waypointsText(current.waypoints));
       if (!p.ok) return { ok: false, kind: "invalid", problems: p.problems };
@@ -110,7 +112,15 @@ export function createStore(backend: StoreBackend): ContentStore {
       return r ? { mdx: r.mdx, waypoints: waypointsText(r.waypoints) } : null;
     },
 
-    deleteDraft: (slug, { baseVersion }) => backend.deleteDraft(slug, baseVersion),
+    async scheduleDelete(slug, { editor, baseVersion, now = new Date() }): Promise<DeleteResult> {
+      const deleteAfter = new Date(now.getTime() + DELETE_DELAY_HOURS * 3_600_000).toISOString();
+      const r = await backend.scheduleDelete(slug, baseVersion, deleteAfter, editor);
+      if (r.ok) return { ok: true, deleteAfter };
+      // "exists" is an insert's answer; a schedule can only be stale or aimed at nothing.
+      return r.kind === "conflict" ? r : { ok: false, kind: "not_found" };
+    },
+
+    cancelDelete: async (slug) => ((await backend.cancelDelete(slug)) ? { ok: true } : { ok: false, kind: "not_found" }),
 
     remove: (slug) => backend.remove(slug),
   };

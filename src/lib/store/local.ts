@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { frontmatterSchema, SLUG, trackSchema, type Track } from "../schemas";
-import type { BackendResult, DeleteResult, RawHike, RawWrite, StoreBackend } from "./types";
+import type { BackendResult, RawHike, RawWrite, StoreBackend } from "./types";
 import { splitFrontmatter, waypointsText } from "./validate";
 
 /**
@@ -56,6 +56,7 @@ export function localBackend(root = contentDir()): StoreBackend {
       details: details.success ? details.data : null,
       status: published ? "published" : "draft",
       published,
+      deleteAfter: existsSync(path.join(d, DELETE_AFTER)) ? (await readFile(path.join(d, DELETE_AFTER), "utf8")).trim() || null : null,
       version: versionOf(mdx, wpText, trackText),
       updatedAt: (await stat(mdxPath)).mtime.toISOString(),
       updatedBy: null,
@@ -122,12 +123,13 @@ export function localBackend(root = contentDir()): StoreBackend {
       const hikes = await Promise.all(entries.filter((e) => e.isDirectory() && SLUG.test(e.name)).map((e) => load(e.name)));
       return hikes
         .filter((h): h is RawHike => h !== null)
-        .map(({ slug, details, status, published, mdx, waypointsText: wp, version, updatedAt, updatedBy }) => ({
+        .map(({ slug, details, status, published, mdx, waypointsText: wp, deleteAfter, version, updatedAt, updatedBy }) => ({
           slug,
           details,
           status,
           publishedDetails: published?.details ?? null,
           changed: !!published && (published.mdx !== mdx || published.waypointsText !== wp),
+          deleteAfter,
           version,
           updatedAt,
           updatedBy,
@@ -179,14 +181,22 @@ export function localBackend(root = contentDir()): StoreBackend {
     history: async () => [],
     revision: async () => null,
 
-    deleteDraft: (slug, baseVersion) =>
-      inTurn(slug, async (): Promise<DeleteResult> => {
+    // The schedule is a file beside the guide, outside the version: a hike's text doesn't change by being scheduled.
+    scheduleDelete: (slug, baseVersion, deleteAfter) =>
+      inTurn(slug, async (): Promise<BackendResult> => {
         const current = await load(slug);
         if (!current) return { ok: false, kind: "not_found" };
-        if (current.status !== "draft") return { ok: false, kind: "published" };
         if (current.version !== baseVersion) return { ok: false, kind: "conflict", version: current.version };
-        await rm(dir(slug), { recursive: true, force: true });
-        return { ok: true };
+        await rm(path.join(dir(slug), PUBLISHED), { recursive: true, force: true });
+        await writeFile(path.join(dir(slug), DELETE_AFTER), `${deleteAfter}\n`);
+        return { ok: true, version: current.version };
+      }),
+
+    cancelDelete: (slug) =>
+      inTurn(slug, async () => {
+        if (!(await load(slug))) return false;
+        await rm(path.join(dir(slug), DELETE_AFTER), { force: true });
+        return true;
       }),
 
     async remove(slug) {
@@ -197,6 +207,7 @@ export function localBackend(root = contentDir()): StoreBackend {
 
 const trackFileText = (track: Track) => `${JSON.stringify(track)}\n`;
 const PUBLISHED = "published";
+const DELETE_AFTER = ".delete-after";
 
 function safe<T>(fn: () => T): T | undefined {
   try {

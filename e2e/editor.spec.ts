@@ -1,12 +1,12 @@
 import { existsSync } from "node:fs";
-import { readdir, readFile, rm } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_HIKES } from "./env";
 
 /**
  * The editor as its (local) owner, on a hike made for the run: create, save, a conflicting tab,
- * publish, unpublish, delete. Serial: each step continues from the one before.
+ * publish, unpublish, photos, delete and restore. Serial: each step continues from the one before.
  */
 test.describe.configure({ mode: "serial" });
 
@@ -109,9 +109,8 @@ test("publish, edit, publish the changes, unpublish", async ({ page }) => {
   await openDetails(page);
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(badge(page)).toHaveText("Published");
-  // A published guide can't be deleted, and Details says what to do instead.
-  await expect(page.getByRole("button", { name: "Delete draft…" })).toBeDisabled();
-  await expect(page.getByText("unpublish it first")).toBeVisible();
+  // Deleting a published guide is allowed, and Details says what it does to the page.
+  await expect(page.getByText("The public page comes down straight away.")).toBeVisible();
 
   // A save changes the working copy only.
   await summary(page).fill("Edited after publishing.");
@@ -170,13 +169,37 @@ test("photos dropped into Pins are resized, uploaded and pinned; an unplaced one
   await expect(page.getByRole("list", { name: "Pins in route order" }).getByText("Photo 01")).toBeVisible();
 });
 
-test("delete the draft", async ({ page }) => {
+test("deleting a hike takes 72 hours: it's marked deleted, can be restored, and is removed once the time is up", async ({ page }) => {
   await openDetails(page);
-  await page.getByRole("button", { name: "Delete draft…" }).click();
+  await expect(page.getByText("Deleting takes 72 hours.")).toBeVisible();
+  await page.getByRole("button", { name: "Delete hike…" }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page).toHaveURL(/\/editor$/);
+
+  // Marked as deleted, with the way back; nothing is gone yet.
+  await expect(badge(page)).toHaveText("Deleted");
+  await expect(page.getByText("This hike was deleted.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeDisabled();
+  expect(await stored()).toHaveLength(4);
+  expect((await page.request.get(`/hikes/${slug}`)).status()).toBe(404);
+
+  await page.getByRole("button", { name: "Restore this hike" }).click();
+  await expect(badge(page)).toHaveText("Draft");
+  expect((await page.request.get(`/hikes/${slug}`)).status()).toBe(200); // under dev, a draft has a page
+
+  // Delete it again; the list says when it goes.
+  await page.getByRole("tab", { name: "Details" }).click();
+  await page.getByRole("button", { name: "Delete hike…" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(badge(page)).toHaveText("Deleted");
+  await page.goto("/editor");
+  await expect(page.getByRole("link", { name: new RegExp(title) })).toContainText("Deleted · removed in about 3 days");
+  expect(await stored()).toHaveLength(4);
+
+  // Three days later (the schedule is a file beside the guide): opening the editor removes it, photos included.
+  await writeFile(path.join(HIKES, slug, ".delete-after"), new Date(Date.now() - 60_000).toISOString());
+  await page.goto("/editor");
   await expect(page.getByText(title)).toHaveCount(0);
   expect((await page.request.get(`/editor/${slug}`)).status()).toBe(404);
-  // Its photos went with it.
+  expect(existsSync(path.join(HIKES, slug))).toBe(false);
   expect(await stored()).toEqual([]);
 });

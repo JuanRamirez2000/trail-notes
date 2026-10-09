@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { timeLeft } from "@/lib/format";
 import { joinGuide, readDetails, splitGuide } from "@/lib/frontmatter";
 import { elevationProfile } from "@/lib/elevation";
 import { routeCoords } from "@/lib/hike";
@@ -35,6 +36,8 @@ type Props = {
   initialVersion: string;
   /** What the public site shows, or null for a draft. */
   initialPublished: HikeContent | null;
+  /** When the hike will be removed for good, if it was deleted; null otherwise. */
+  initialDeleteAfter: string | null;
   track: Track | null;
   editorName: string;
   canSignOut: boolean;
@@ -56,7 +59,7 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * between four views of the same document. Write, Details and Pins are how guides are meant to
  * be made; Advanced is the raw source underneath them.
  */
-export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, initialPublished, track, editorName, canSignOut }: Props) {
+export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, initialPublished, initialDeleteAfter, track, editorName, canSignOut }: Props) {
   const [mdx, setMdx] = useState(initialMdx);
   const [waypoints, setWaypoints] = useState(initialWaypoints);
   const [view, setView] = useState<View>("write");
@@ -72,6 +75,15 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
   const [published, setPublished] = useState(initialPublished);
   const [publishing, setPublishing] = useState(false);
   const isDraft = published === null;
+  // Deleted in the editor, and not yet removed for good: it can still be restored.
+  const [deleteAfter, setDeleteAfter] = useState(initialDeleteAfter);
+  const [restoring, setRestoring] = useState(false);
+  async function restore() {
+    setRestoring(true);
+    const res = await fetch(`/api/editor/${slug}/restore`, { method: "POST" }).catch(() => null);
+    if (res?.ok) setDeleteAfter(null);
+    setRestoring(false);
+  }
   const unpublishedChanges = !!published && (published.mdx !== mdx || published.waypoints !== waypoints);
   const parsed = useMemo(() => parseWaypoints(waypoints, track), [waypoints, track]);
   const pins = useMemo(() => (parsed.ok ? parsed.waypoints : []), [parsed]);
@@ -218,7 +230,7 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
           className={cn("rounded-full border px-2.5 text-sm", unpublishedChanges ? "border-ochre bg-highlight text-graphite" : "border-line-strong text-bark")}
           title={unpublishedChanges ? "The site still shows the version you last published." : undefined}
         >
-          {isDraft ? "Draft" : unpublishedChanges ? "Published · changes not live" : "Published"}
+          {deleteAfter ? "Deleted" : isDraft ? "Draft" : unpublishedChanges ? "Published · changes not live" : "Published"}
         </span>
         <span data-testid="save-status" className={cn("ml-auto text-sm", save.kind === "error" || save.kind === "conflict" ? "text-pin-bailout" : "text-bark")}>{status}</span>
         <EditorAccount name={editorName} canSignOut={canSignOut} />
@@ -228,8 +240,8 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
         {(isDraft || unpublishedChanges) && (
           <button
             type="button"
-            disabled={!canPublish}
-            title={canPublish ? undefined : "Waiting for your changes to be saved"}
+            disabled={!canPublish || !!deleteAfter}
+            title={deleteAfter ? "Restore the hike before publishing it" : canPublish ? undefined : "Waiting for your changes to be saved"}
             onClick={() => changePublished("publish")}
             className="cursor-pointer rounded-lg bg-forest px-3.5 py-1 text-paper disabled:cursor-default disabled:opacity-60"
           >
@@ -250,6 +262,17 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
           Save <span className="text-bark">⌘S</span>
         </button>
       </div>
+
+      {deleteAfter && (
+        <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-pin-bailout bg-card px-5 py-2.5">
+          <p className="min-w-0 flex-1 basis-72">
+            <strong>This hike was deleted.</strong> It isn&rsquo;t public, and it will be removed for good {timeLeft(deleteAfter)}, with its photos and history. Until then you can restore it.
+          </p>
+          <button type="button" disabled={restoring} onClick={restore} className="cursor-pointer rounded-lg bg-forest px-3.5 py-1 text-paper disabled:opacity-60">
+            {restoring ? "Restoring…" : "Restore this hike"}
+          </button>
+        </div>
+      )}
 
       {/* View switch */}
       <div role="tablist" aria-label="Editor view" className="flex items-end gap-1 border-b border-line bg-paper-deep px-5 pt-1.5">
@@ -344,7 +367,20 @@ export function Editor({ slug, initialMdx, initialWaypoints, initialVersion, ini
       {view === "details" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <DetailsForm yaml={doc.yaml} waypoints={pins} onChange={setYaml} />
-          <DeleteDraft slug={slug} title={title} published={!isDraft} saved={!dirty && save.kind !== "saving"} version={() => versionRef.current} />
+          {!deleteAfter && (
+            <DeleteDraft
+              slug={slug}
+              title={title}
+              published={!isDraft}
+              saved={!dirty && save.kind !== "saving"}
+              version={() => versionRef.current}
+              onDeleted={(at) => {
+                // Deleting unpublishes it at once.
+                setPublished(null);
+                setDeleteAfter(at);
+              }}
+            />
+          )}
         </div>
       )}
 

@@ -18,6 +18,13 @@ export type EditorRole = "owner" | "editor";
  */
 export type HikeStatus = "draft" | "published";
 
+/**
+ * How long a hike stays restorable after it's deleted in the editor. Deleting takes the public
+ * page down at once and sets the hike's `deleteAfter`; the hike, its history and its photos are
+ * removed for good the first time the editor is opened after that (src/lib/purge.ts).
+ */
+export const DELETE_DELAY_HOURS = 72;
+
 export type HikeSummary = {
   slug: string;
   status: HikeStatus;
@@ -31,6 +38,8 @@ export type HikeSummary = {
   publishedDetails: Frontmatter | null;
   /** Published, and the working copy has changes the site doesn't show yet. */
   changed: boolean;
+  /** Set when the hike is scheduled for deletion: it's removed for good after this time. */
+  deleteAfter: string | null;
   updatedAt: string | null;
   updatedBy: string | null;
 };
@@ -50,6 +59,8 @@ export type HikeRecord = {
   published: PublishedCopy | null;
   /** Published, and the working copy differs from it. */
   changed: boolean;
+  /** Set when the hike is scheduled for deletion: it's removed for good after this time. */
+  deleteAfter: string | null;
   /** Opaque token for "the state I loaded"; send it back with a save. */
   version: string;
   updatedAt: string | null;
@@ -74,12 +85,7 @@ export type WriteResult =
   | { ok: false; kind: "not_found" }
   | { ok: false; kind: "exists" };
 
-export type DeleteResult =
-  | { ok: true }
-  | { ok: false; kind: "conflict"; version: string }
-  | { ok: false; kind: "not_found" }
-  /** Only drafts can be deleted; a published guide has to be unpublished first. */
-  | { ok: false; kind: "published" };
+export type DeleteResult = { ok: true; deleteAfter: string } | { ok: false; kind: "conflict"; version: string } | { ok: false; kind: "not_found" };
 
 export interface ContentStore {
   readonly kind: "local" | "postgres";
@@ -102,11 +108,14 @@ export interface ContentStore {
   /** The text and pins of one saved version, or null if there's no such version. */
   revision(slug: string, version: string): Promise<HikeContent | null>;
   /**
-   * Deletes a draft from the editor, with its history: only while it's a draft, and only at the
-   * version the editor last saw. There's no undo.
+   * The editor's delete: takes the hike's published copy down now and schedules the rest for
+   * deletion DELETE_DELAY_HOURS after `now`. Only at the version the editor last saw. Until then
+   * it can still be opened and edited, but not published; `cancelDelete` brings it back as a draft.
    */
-  deleteDraft(slug: string, opts: WriteOptions): Promise<DeleteResult>;
-  /** Removes a hike and its history, whatever its state. For tests and scripts. */
+  scheduleDelete(slug: string, opts: WriteOptions & { now?: Date }): Promise<DeleteResult>;
+  /** Takes a hike off the deletion schedule. It stays a draft: publishing it again is a separate step. */
+  cancelDelete(slug: string): Promise<{ ok: true } | { ok: false; kind: "not_found" }>;
+  /** Removes a hike and its history, whatever its state. For the purge of expired hikes, tests and scripts. */
   remove(slug: string): Promise<void>;
 }
 
@@ -128,6 +137,7 @@ export type RawHike = {
   status: HikeStatus;
   /** The published copy, as stored (`waypoints` parsed; `waypointsText` when the backend keeps text). */
   published: { mdx: string; waypoints: unknown; waypointsText?: string; details: Frontmatter | null; at: string | null } | null;
+  deleteAfter: string | null;
   version: string;
   updatedAt: string | null;
   updatedBy: string | null;
@@ -153,7 +163,9 @@ export interface StoreBackend {
   history(slug: string, limit: number): Promise<Revision[]>;
   /** `waypoints` parsed, as stored. */
   revision(slug: string, version: string): Promise<{ mdx: string; waypoints: unknown } | null>;
-  /** Delete, only if it's still a draft at `baseVersion` (checked atomically where the backend can). */
-  deleteDraft(slug: string, baseVersion: string): Promise<DeleteResult>;
+  /** Clear the published copy and set `deleteAfter`, only if the working copy is still at `baseVersion`. */
+  scheduleDelete(slug: string, baseVersion: string, deleteAfter: string, editor: Editor | null): Promise<BackendResult>;
+  /** Clear `deleteAfter`. False if there's no such hike. */
+  cancelDelete(slug: string): Promise<boolean>;
   remove(slug: string): Promise<void>;
 }

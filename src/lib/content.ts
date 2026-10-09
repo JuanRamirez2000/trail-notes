@@ -23,6 +23,8 @@ const workingCopies = () => process.env.NODE_ENV === "development";
 export const getHikeSummaries = cache(async (): Promise<HikeSummary[]> => {
   const hikes = await (await getStore()).list();
   return hikes
+    // A hike that was deleted in the editor is gone from every page, `pnpm dev` included.
+    .filter((h) => !h.deleteAfter)
     .map((h) => (workingCopies() ? h.details : h.publishedDetails))
     .filter((d): d is Frontmatter => d !== null)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -44,7 +46,7 @@ export const getHikePage = cache(async (slug: string): Promise<HikePage | null> 
   if (!SLUG.test(slug)) return null;
   const record = await (await getStore()).read(slug);
   const copy = workingCopies() ? record : record?.published;
-  if (!record || !copy) return null;
+  if (!record || !copy || record.deleteAfter) return null;
   const summary = (await getHikeSummaries()).find((h) => h.slug === slug);
   if (!summary) return null; // stored but currently invalid (hand-edited files): nothing to show
   const pins = waypointsFileSchema.parse(JSON.parse(copy.waypoints)).waypoints;

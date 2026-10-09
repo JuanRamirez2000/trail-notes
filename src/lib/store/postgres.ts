@@ -2,7 +2,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import type { Database } from "../../db/client";
 import { hikeRevisions, hikes } from "../../db/schema";
-import type { BackendResult, DeleteResult, Editor, RawHike, RawWrite, StoreBackend } from "./types";
+import type { BackendResult, Editor, RawHike, RawWrite, StoreBackend } from "./types";
 
 /**
  * Guides in Postgres through Drizzle (tables: src/db/schema.ts). In production that's the
@@ -24,6 +24,7 @@ const summary = {
   publishedDetails: hikes.publishedDetails,
   // json columns hold the text as written, so comparing text is comparing what was saved.
   changed: sql<boolean>`${hikes.publishedMdx} is not null and (${hikes.publishedMdx} <> ${hikes.mdx} or ${hikes.publishedWaypoints}::text <> ${hikes.waypoints}::text)`,
+  deleteAfter: hikes.deleteAfter,
   version: hikes.version,
   updatedAt: hikes.updatedAt,
   updatedBy: hikes.updatedByLabel,
@@ -49,7 +50,7 @@ export function postgresBackend(db: Database): StoreBackend {
 
     async list() {
       const rows = await db.select(summary).from(hikes).orderBy(asc(hikes.slug));
-      return rows.map((r) => ({ ...r, version: String(r.version), updatedAt: r.updatedAt.toISOString() }));
+      return rows.map((r) => ({ ...r, deleteAfter: r.deleteAfter?.toISOString() ?? null, version: String(r.version), updatedAt: r.updatedAt.toISOString() }));
     },
 
     async get(slug): Promise<RawHike | null> {
@@ -66,6 +67,7 @@ export function postgresBackend(db: Database): StoreBackend {
           r.publishedMdx === null
             ? null
             : { mdx: r.publishedMdx, waypoints: r.publishedWaypoints, details: r.publishedDetails, at: r.publishedAt?.toISOString() ?? null },
+        deleteAfter: r.deleteAfter?.toISOString() ?? null,
         version: String(r.version),
         updatedAt: r.updatedAt.toISOString(),
         updatedBy: r.updatedByLabel,
@@ -141,23 +143,25 @@ export function postgresBackend(db: Database): StoreBackend {
       return r ?? null;
     },
 
-    deleteDraft: (slug, baseVersion) =>
-      db.transaction(async (tx): Promise<DeleteResult> => {
-        const [row] = await tx
-          .delete(hikes)
-          .where(and(eq(hikes.slug, slug), eq(hikes.status, "draft"), eq(hikes.version, asVersion(baseVersion))))
-          .returning({ slug: hikes.slug });
-        if (row) {
-          // Its history goes too, so the address can be used again from revision 1.
-          await tx.delete(hikeRevisions).where(eq(hikeRevisions.slug, slug));
-          return { ok: true };
-        }
-        const now = await current(tx, slug);
-        if (!now) return { ok: false, kind: "not_found" };
-        if (now.status !== "draft") return { ok: false, kind: "published" };
-        return { ok: false, kind: "conflict", version: String(now.version) };
+    scheduleDelete: (slug, baseVersion, deleteAfter, editor) =>
+      changeStatus(slug, baseVersion, {
+        publishedMdx: null,
+        publishedWaypoints: null,
+        publishedDetails: null,
+        publishedVersion: null,
+        publishedAt: null,
+        status: "draft",
+        deleteAfter: new Date(deleteAfter),
+        updatedBy: userId(editor),
+        updatedByLabel: label(editor),
       }),
 
+    async cancelDelete(slug) {
+      const rows = await db.update(hikes).set({ deleteAfter: null }).where(eq(hikes.slug, slug)).returning({ slug: hikes.slug });
+      return rows.length > 0;
+    },
+
+    // The history goes too, so the address can be used again from revision 1.
     async remove(slug) {
       await db.transaction(async (tx) => {
         await tx.delete(hikeRevisions).where(eq(hikeRevisions.slug, slug));

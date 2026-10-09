@@ -21,14 +21,13 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/server", () => ({ after: () => undefined }));
 vi.mock("next/cache", () => ({ revalidatePath: (p: string) => void state.revalidated.push(p) }));
 vi.mock("@/lib/auth/server", () => ({ getEditor: async () => state.editor }));
-// Deleting a draft clears its photo folder; here that's nobody's folder.
-vi.mock("@/lib/photo-store", () => ({ getPhotoStore: async () => ({ kind: "local", removeFolder: async () => undefined }), photosBelongToStore: () => true }));
 vi.mock("@/lib/store/server", () => ({ getStore: async () => createStore(localBackend(root)) }));
 
 const { PUT, DELETE, GET: getOne } = await import("../[slug]/route");
 const { POST, GET: getAll } = await import("../route");
 const { GET: getHistory } = await import("../[slug]/history/route");
 const { POST: publishRoute, DELETE: unpublishRoute, GET: getPublish } = await import("../[slug]/publish/route");
+const { POST: restoreRoute } = await import("../[slug]/restore/route");
 const { GET: getRevision } = await import("../[slug]/history/[version]/route");
 
 const ORIGIN = "https://trailnotes.example";
@@ -154,20 +153,39 @@ describe("DELETE /api/editor/[slug]", () => {
     expect(await store.read("ridgeline-loop")).not.toBeNull();
   });
 
-  it("refuses a published guide and a stale version", async () => {
-    const published = await guide();
-    const res = await del("cedar-ridge", { baseVersion: published.version });
-    expect(res.status).toBe(409);
-    expect(await res.json()).toMatchObject({ problems: [expect.stringMatching(/Unpublish it first/)] });
-    expect(await store.read("cedar-ridge")).not.toBeNull();
+  it("refuses a stale version", async () => {
     expect(await (await del("ridgeline-loop", { baseVersion: "stale" })).json()).toMatchObject({ conflict: true });
+    expect((await guide("ridgeline-loop")).deleteAfter).toBeNull();
   });
 
-  it("deletes a draft at the version last seen", async () => {
-    const g = await guide("ridgeline-loop");
-    expect((await del("ridgeline-loop", { baseVersion: g.version })).status).toBe(200);
-    expect(await store.read("ridgeline-loop")).toBeNull();
-    expect(state.revalidated).toEqual(["/", "/hikes"]);
+  it("takes a published guide off the site now and schedules it for deletion in 72 hours", async () => {
+    const g = await guide();
+    expect(g.status).toBe("published");
+    const before = Date.now();
+    const res = await del("cedar-ridge", { baseVersion: g.version });
+    expect(res.status).toBe(200);
+    const { deleteAfter } = (await res.json()) as { deleteAfter: string };
+    expect(new Date(deleteAfter).getTime() - before).toBeGreaterThanOrEqual(72 * 3_600_000);
+    expect(new Date(deleteAfter).getTime() - before).toBeLessThan(72 * 3_600_000 + 60_000);
+    // Still stored, text and all, but no longer published; the public pages are refreshed.
+    expect(await guide()).toMatchObject({ status: "draft", published: null, deleteAfter, mdx: g.mdx });
+    expect(state.revalidated).toEqual(["/hikes/cedar-ridge", "/hikes/cedar-ridge/route.gpx", "/hikes/cedar-ridge/og.jpg", "/", "/hikes"]);
+    // And it can't be published while it's scheduled.
+    expect((await publishRoute(request("POST", "/api/editor/cedar-ridge/publish", { baseVersion: g.version }), { params: Promise.resolve({ slug: "cedar-ridge" }) })).status).toBe(422);
+  });
+
+  it("restores it as a draft, for editors only", async () => {
+    const restore = (slug: string, headers?: Record<string, string>) => restoreRoute(request("POST", `/api/editor/${slug}/restore`, {}, headers), { params: Promise.resolve({ slug }) });
+    state.editor = null;
+    expect((await restore("cedar-ridge")).status).toBe(404);
+    state.editor = OWNER;
+    expect((await restore("cedar-ridge", { origin: "https://evil.example" })).status).toBe(403);
+    expect((await restore("no-such-hike")).status).toBe(404);
+    expect((await restore("cedar-ridge")).status).toBe(200);
+    const g = await guide();
+    expect(g).toMatchObject({ status: "draft", deleteAfter: null });
+    // Published again, so the tests after this one find it as they expect.
+    expect((await publishRoute(request("POST", "/api/editor/cedar-ridge/publish", { baseVersion: g.version }), { params: Promise.resolve({ slug: "cedar-ridge" }) })).status).toBe(200);
   });
 });
 

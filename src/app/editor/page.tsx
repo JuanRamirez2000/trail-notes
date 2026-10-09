@@ -5,6 +5,8 @@ import { EditorAccount } from "@/components/editor/EditorAccount";
 import { Wordmark } from "@/components/ui/Logo";
 import { can } from "@/lib/auth/can";
 import { authMode, getEditor } from "@/lib/auth/server";
+import { timeLeft } from "@/lib/format";
+import { purgeExpiredHikes } from "@/lib/purge";
 import { getStore } from "@/lib/store/server";
 
 export const metadata: Metadata = { title: "Editor", robots: { index: false } };
@@ -14,6 +16,9 @@ export const dynamic = "force-dynamic";
 export default async function EditorIndex() {
   const editor = await getEditor();
   if (!can(editor, "list")) notFound();
+  // Hikes deleted more than 72 hours ago are removed for good here: see src/lib/purge.ts for why
+  // it happens on an editor's visit and not on a timer.
+  await purgeExpiredHikes();
   const store = await getStore();
   const hikes = await store.list();
 
@@ -35,7 +40,7 @@ export default async function EditorIndex() {
         {store.kind !== "local"
           ? "Saves go to the database. The site shows what you last published; publish again to put changes live."
           : "Saves write to files on this machine (content/hikes unless CONTENT_DIR says otherwise); nothing here reaches the live site."}{" "}
-        Photos are added in each hike&rsquo;s Pins view. To delete a hike, open it and go to the end of Details.
+        Photos are added in each hike&rsquo;s Pins view. To delete a hike, open it and go to the end of Details; a deleted hike can be restored for 72 hours.
       </p>
       <ul className="mt-6 divide-y divide-line rounded-[10px] border border-line bg-card">
         {hikes.map((h) => (
@@ -49,7 +54,11 @@ export default async function EditorIndex() {
                 </span>
               </span>
               <span className="flex flex-none items-center gap-3 text-sm text-bark">
-                <span className="rounded-full border border-line-strong px-2.5">{h.status === "draft" ? "Draft" : h.changed ? "Published · changes not live" : "Published"}</span>
+                {h.deleteAfter ? (
+                  <span className="rounded-full border border-pin-bailout px-2.5 text-pin-bailout">Deleted · removed {timeLeft(h.deleteAfter)}</span>
+                ) : (
+                  <span className="rounded-full border border-line-strong px-2.5">{h.status === "draft" ? "Draft" : h.changed ? "Published · changes not live" : "Published"}</span>
+                )}
                 Edit →
               </span>
             </Link>

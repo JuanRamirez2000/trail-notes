@@ -40,6 +40,11 @@ export const hikes = pgTable(
     /** The working copy's version when it was published. */
     publishedVersion: integer(),
     publishedAt: timestamp({ withTimezone: true }),
+    /**
+     * Set when the hike was deleted in the editor: it's unpublished at once and removed for good
+     * after this time (src/lib/purge.ts). Null for every other hike.
+     */
+    deleteAfter: timestamp({ withTimezone: true }),
     /** Bumped on every save; a save must name the version it's based on. */
     version: integer().notNull().default(1),
     /** Auth user id; null for scripts and the local dev owner. */

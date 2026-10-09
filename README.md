@@ -44,6 +44,8 @@ Open `/editor`. Under `pnpm dev` you're a local owner. On the live site the edit
 5. **Details.** Title, stats, the "Before you go" card and the sidebar order.
 6. **Publish.** Until then the guide is a draft with no public page. After publishing, edits are saved to a working copy and the public page changes only when you press **Publish changes**.
 
+**Deleting a hike** (the end of Details) takes 72 hours. Its public page comes down straight away, and the hike stays in the editor marked as deleted, with a **Restore this hike** button. After 72 hours the guide, its photos and its history are removed for good the next time someone opens the editor.
+
 The editor's five views are the same guide seen five ways:
 
 | View | What it's for |
@@ -197,7 +199,7 @@ Supabase Storage holds the photos, in a public bucket (`hikes`) that accepts web
 
 - **From the editor**, the server works as the signed-in editor: the bucket's policies let people on the editors list add, list and delete photos, and nobody else. The browser uploads straight to Supabase through short-lived signed URLs. The site holds no admin key.
 - **From the scripts** (`pnpm ingest --storage supabase`, `pnpm photos push|pull`), uploads use `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`. It bypasses every rule, so it stays on your machine.
-- **Deleting** a photo is only possible from Unplaced in the editor, and the server refuses while the saved guide or the published page still uses it. Deleting a draft removes its photos.
+- **Deleting** a photo is only possible from Unplaced in the editor, and the server refuses while the saved guide or the published page still uses it. A deleted hike's photos go when the hike is removed for good.
 - **`public/photos`** is a gitignored, dev-only stand-in (`NEXT_PUBLIC_PHOTO_STORAGE=local`). Production builds refuse it.
 
 ---

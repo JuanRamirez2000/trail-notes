@@ -24,6 +24,7 @@ export default async function EditHike({ params }: PageProps<"/editor/[slug]">) 
       initialWaypoints={hike.waypoints}
       initialVersion={hike.version}
       initialPublished={hike.published && { mdx: hike.published.mdx, waypoints: hike.published.waypoints }}
+      initialDeleteAfter={hike.deleteAfter}
       track={hike.track}
       editorName={editor.name}
       canSignOut={authMode() === "supabase"}

@@ -81,6 +81,7 @@ test("the editor's API is a 404 for every method", async ({ request, baseURL }) 
     ["DELETE", "/api/editor/cedar-ridge"],
     ["POST", "/api/editor/cedar-ridge/publish"],
     ["DELETE", "/api/editor/cedar-ridge/publish"],
+    ["POST", "/api/editor/cedar-ridge/restore"],
     ["GET", "/api/editor/cedar-ridge/history"],
     ["GET", "/api/editor/cedar-ridge/history/1"],
     ["GET", "/api/editor/cedar-ridge/photos"],

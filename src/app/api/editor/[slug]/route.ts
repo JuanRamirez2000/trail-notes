@@ -1,12 +1,10 @@
-import { revalidatePath } from "next/cache";
 import { can } from "@/lib/auth/can";
 import { rateLimiter, sameOrigin } from "@/lib/auth/request";
 import { getEditor } from "@/lib/auth/server";
-import { getPhotoStore, photosBelongToStore } from "@/lib/photo-store";
+import { refreshPublic } from "@/lib/refresh-public";
 import { SLUG } from "@/lib/schemas";
 import { getStore } from "@/lib/store/server";
 import { MAX_MDX_BYTES, MAX_WAYPOINTS_BYTES } from "@/lib/store/validate";
-import { LIST_PATHS } from "@/lib/site";
 
 /** Room for both texts plus JSON overhead; anything larger is refused before it's read. */
 const MAX_BODY_BYTES = MAX_MDX_BYTES + MAX_WAYPOINTS_BYTES + 10_000;
@@ -61,8 +59,10 @@ export async function PUT(req: Request, ctx: RouteContext<"/api/editor/[slug]">)
 }
 
 /**
- * Deletes a draft. The same checks as a save; the store then refuses a guide that is published
- * (unpublish it first) or that changed since the editor last saw it.
+ * Deletes a hike, in two stages. Now: its public page comes down and it's marked for deletion.
+ * After DELETE_DELAY_HOURS: it's removed for good, with its history and photos (src/lib/purge.ts).
+ * In between it can be restored (./restore/route.ts). The same checks as a save; the store
+ * refuses a hike that changed since the editor last saw it.
  */
 export async function DELETE(req: Request, ctx: RouteContext<"/api/editor/[slug]">) {
   const { slug } = await ctx.params;
@@ -82,20 +82,12 @@ export async function DELETE(req: Request, ctx: RouteContext<"/api/editor/[slug]
   if (typeof body?.baseVersion !== "string") return json({ ok: false, problems: ["Expected { baseVersion } as a string."] }, 400);
 
   const store = await getStore();
-  const result = await store.deleteDraft(slug, { editor, baseVersion: body.baseVersion });
+  const result = await store.scheduleDelete(slug, { editor, baseVersion: body.baseVersion });
   if (result.ok) {
-    // The draft's photos go with it. A failure here leaves files nobody uses, not a broken guide.
-    try {
-      const photos = await getPhotoStore();
-      if (photosBelongToStore(store.kind, photos.kind)) await photos.removeFolder(slug);
-    } catch (err) {
-      console.error(`Deleted "${slug}", but not its photos:`, err);
-    }
-    // Drafts have no public page, but under `pnpm dev` the gallery and the landing page list them.
-    LIST_PATHS.forEach((p) => revalidatePath(p));
-    return json({ ok: true }, 200);
+    // It may have been published a moment ago: its page, and every page that lists it, goes now.
+    refreshPublic(slug, req);
+    return json({ ok: true, deleteAfter: result.deleteAfter }, 200);
   }
-  if (result.kind === "published") return json({ ok: false, problems: ["Only a draft can be deleted. Unpublish it first."] }, 409);
   if (result.kind === "conflict") return json({ ok: false, conflict: true, version: result.version }, 409);
   return notFound();
 }

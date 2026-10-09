@@ -167,21 +167,32 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       expect(await store.save("zz-no-such-hike", { mdx, waypoints }, { editor, baseVersion: "x" })).toEqual({ ok: false, kind: "not_found" });
     });
 
-    it("deletes a draft only at the version last seen, and never a published guide", async () => {
-      expect(await store.deleteDraft(slug, { editor, baseVersion: "stale-version" })).toEqual({ ok: false, kind: "conflict", version });
-      expect(await store.deleteDraft("zz-no-such-hike", { editor, baseVersion: "x" })).toEqual({ ok: false, kind: "not_found" });
+    it("deleting unpublishes now and schedules the rest; until it's removed the hike can be restored", async () => {
+      expect(await store.scheduleDelete(slug, { editor, baseVersion: "stale-version" })).toEqual({ ok: false, kind: "conflict", version });
+      expect(await store.scheduleDelete("zz-no-such-hike", { editor, baseVersion: "x" })).toEqual({ ok: false, kind: "not_found" });
+      expect(await store.cancelDelete("zz-no-such-hike")).toEqual({ ok: false, kind: "not_found" });
 
       expect(await store.publish(slug, { editor, baseVersion: version })).toMatchObject({ ok: true });
-      expect(await store.deleteDraft(slug, { editor, baseVersion: version })).toEqual({ ok: false, kind: "published" });
-      expect(await store.read(slug)).not.toBeNull();
+      const now = new Date("2026-10-09T12:00:00.000Z");
+      const deleteAfter = "2026-10-12T12:00:00.000Z"; // 72 hours on
+      expect(await store.scheduleDelete(slug, { editor, baseVersion: version, now })).toEqual({ ok: true, deleteAfter });
 
-      expect(await store.unpublish(slug, { editor, baseVersion: version })).toMatchObject({ ok: true, status: "draft" });
-      expect(await store.deleteDraft(slug, { editor, baseVersion: version })).toEqual({ ok: true });
+      // Off the site at once, but all still there, at the same version.
+      expect(await store.read(slug)).toMatchObject({ status: "draft", published: null, deleteAfter, version, mdx: (await store.read(slug))!.mdx });
+      expect((await store.list()).find((h) => h.slug === slug)).toMatchObject({ status: "draft", publishedDetails: null, deleteAfter });
+      expect(await store.publish(slug, { editor, baseVersion: version })).toMatchObject({ ok: false, kind: "invalid", problems: [expect.stringMatching(/scheduled for deletion/)] });
+
+      // Restored, it's an ordinary draft again, and can be published.
+      expect(await store.cancelDelete(slug)).toEqual({ ok: true });
+      expect(await store.read(slug)).toMatchObject({ status: "draft", deleteAfter: null, version });
+      expect(await store.publish(slug, { editor, baseVersion: version })).toMatchObject({ ok: true, status: "published" });
+
+      await store.remove(slug);
       expect(await store.read(slug)).toBeNull();
       expect((await store.list()).some((h) => h.slug === slug)).toBe(false);
     });
 
-    it("can create a hike again at the address of a deleted draft", async () => {
+    it("can create a hike again at the address of a removed one", async () => {
       const r = await store.create(slug, { mdx, waypoints, track }, { editor });
       expect(r).toMatchObject({ ok: true, status: "draft" });
       expect(r.ok && r.version).toBe((await store.read(slug))!.version);

@@ -1,12 +1,9 @@
-import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import { can } from "@/lib/auth/can";
 import { rateLimiter, sameOrigin } from "@/lib/auth/request";
 import { getEditor } from "@/lib/auth/server";
-import { gpxPath } from "@/lib/gpx-export";
+import { refreshPublic } from "@/lib/refresh-public";
 import { SLUG } from "@/lib/schemas";
 import { getStore } from "@/lib/store/server";
-import { LIST_PATHS, ogImagePath } from "@/lib/site";
 
 const allow = rateLimiter({ limit: 30, windowMs: 60_000 });
 const notFound = () => new Response("Not found", { status: 404 });
@@ -37,15 +34,7 @@ async function change(req: Request, ctx: RouteContext<"/api/editor/[slug]/publis
   const store = await getStore();
   const result = await store[action](slug, { editor, baseVersion: body.baseVersion });
   if (result.ok) {
-    revalidatePath(`/hikes/${slug}`);
-    // The guide's GPX file and social card image are cached beside its page.
-    revalidatePath(gpxPath(slug));
-    revalidatePath(ogImagePath(slug));
-    LIST_PATHS.forEach((p) => revalidatePath(p));
-    // From a route, revalidatePath only marks the pages: the next visitor is still handed the old
-    // copy while a fresh one is made. That visitor is us, so nobody else is served a guide that was
-    // just taken down, or the version from before it was published.
-    after(() => Promise.allSettled([`/hikes/${slug}`, ...LIST_PATHS].map((p) => fetch(new URL(p, req.url), { cache: "no-store" }))));
+    refreshPublic(slug, req);
     return json({ ok: true, status: result.status, at: new Date().toISOString() }, 200);
   }
   if (result.kind === "invalid") return json({ ok: false, problems: result.problems }, 422);

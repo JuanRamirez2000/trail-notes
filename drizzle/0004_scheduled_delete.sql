@@ -1,0 +1,1 @@
+ALTER TABLE "hikes" ADD COLUMN "delete_after" timestamp with time zone;

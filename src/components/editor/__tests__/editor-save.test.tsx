@@ -33,7 +33,7 @@ afterEach(() => {
 
 const PUBLISHED = { mdx: MDX, waypoints: PINS };
 const open = (published: typeof PUBLISHED | null = PUBLISHED) =>
-  render(<Editor slug="cedar-ridge" initialMdx={MDX} initialWaypoints={PINS} initialVersion="1" initialPublished={published} track={null} editorName="Owner" canSignOut={false} />);
+  render(<Editor slug="cedar-ridge" initialMdx={MDX} initialWaypoints={PINS} initialVersion="1" initialPublished={published} initialDeleteAfter={null} track={null} editorName="Owner" canSignOut={false} />);
 const click = (name: string) => act(async () => void fireEvent.click(screen.getByRole("button", { name })));
 /** An edit, made the way an author would: the title in the Details form. */
 const retitle = async (title: string) => {

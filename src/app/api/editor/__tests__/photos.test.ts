@@ -49,7 +49,7 @@ vi.mock("@/lib/photo-store", async (original) => {
 });
 
 const { GET, POST, DELETE } = await import("../[slug]/photos/route");
-const { DELETE: deleteDraft } = await import("../[slug]/route");
+const { purgeExpiredHikes } = await import("@/lib/purge");
 
 const ORIGIN = "https://trailnotes.example";
 const store = createStore(localBackend(root));
@@ -182,21 +182,40 @@ describe("DELETE photos", () => {
   });
 });
 
-describe("deleting a draft", () => {
-  const drop = (slug: string, baseVersion: string) =>
-    deleteDraft(new Request(`${ORIGIN}/api/editor/${slug}`, { method: "DELETE", headers: { origin: ORIGIN, host: "trailnotes.example" }, body: JSON.stringify({ baseVersion }) }), { params: Promise.resolve({ slug }) });
+describe("removing deleted hikes for good", () => {
+  const DAY = 24 * 3_600_000;
+  const schedule = async (slug: string, daysAgo: number) => {
+    const g = (await store.read(slug))!;
+    expect(await store.scheduleDelete(slug, { editor: OWNER, baseVersion: g.version, now: new Date(Date.now() - daysAgo * DAY) })).toMatchObject({ ok: true });
+  };
 
-  it("removes its photo folder, and leaves the other hikes' photos", async () => {
+  it("leaves a hike deleted less than 72 hours ago, photos and all", async () => {
     both("ridgeline-loop/01-a").forEach((f) => state.files.add(f));
-    const g = (await store.read("ridgeline-loop"))!;
-    expect((await drop("ridgeline-loop", g.version)).status).toBe(200);
-    expect([...state.files].some((f) => f.startsWith("ridgeline-loop/"))).toBe(false);
-    expect(state.files.size).toBe(14);
+    await schedule("ridgeline-loop", 2);
+    expect(await purgeExpiredHikes()).toEqual([]);
+    expect(await store.read("ridgeline-loop")).not.toBeNull();
+    expect(state.files.has("ridgeline-loop/01-a.full.webp")).toBe(true);
+    await store.cancelDelete("ridgeline-loop");
   });
 
-  it("keeps the photos when the draft wasn't deleted", async () => {
-    const g = (await store.read("cedar-ridge"))!;
-    expect((await drop("cedar-ridge", g.version)).status).toBe(409); // published
+  it("removes one deleted more than 72 hours ago, with its photo folder and nobody else's", async () => {
+    both("ridgeline-loop/01-a").forEach((f) => state.files.add(f));
+    await schedule("ridgeline-loop", 4);
+    expect(await purgeExpiredHikes()).toEqual(["ridgeline-loop"]);
+    expect(await store.read("ridgeline-loop")).toBeNull();
+    expect([...state.files].some((f) => f.startsWith("ridgeline-loop/"))).toBe(false);
     expect(state.files.size).toBe(14);
+    expect(await store.read("cedar-ridge")).not.toBeNull();
+  });
+
+  it("keeps the hike for the next visit when its photos can't be removed now", async () => {
+    await schedule("granite-saddle", 4);
+    state.down = true;
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await purgeExpiredHikes()).toEqual([]);
+    quiet.mockRestore();
+    expect(await store.read("granite-saddle")).not.toBeNull();
+    state.down = false;
+    expect(await purgeExpiredHikes()).toEqual(["granite-saddle"]);
   });
 });
