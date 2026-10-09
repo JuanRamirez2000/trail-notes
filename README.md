@@ -14,17 +14,17 @@ cp .env.example .env.local   # add your Mapbox token
 pnpm dev                     # http://localhost:3100
 ```
 
-With nothing else set, the site reads the guides in `content/hikes`, and http://localhost:3100/editor opens without a sign-in (the dev server listens on this machine only). Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set. Photos come from Supabase; to keep them on disk instead, set `NEXT_PUBLIC_PHOTO_STORAGE=local` (dev only) and run `pnpm photos pull` once.
+Real guides live in the database, not in this repo. With nothing else set, `pnpm dev` keeps guides as files in `content/hikes` (a gitignored folder that starts empty), and http://localhost:3100/editor opens without a sign-in (the dev server listens on this machine only), so you can create a hike straight away. To browse the made-up test guides instead, run `CONTENT_DIR=fixtures/hikes pnpm dev`; to work on copies of the real ones, `pnpm content pull`. Maps render as a hand-drawn sketch until `NEXT_PUBLIC_MAPBOX_TOKEN` is set. Photos come from Supabase; to keep them on disk instead, set `NEXT_PUBLIC_PHOTO_STORAGE=local` (dev only) and run `pnpm photos pull` once.
 
 ```bash
 pnpm test        # unit tests (Vitest)
 pnpm lint
 pnpm typecheck   # next typegen + tsc
-pnpm build
-pnpm e2e         # end-to-end tests (Playwright), after pnpm build
+pnpm build       # needs guides to build on: CONTENT_DIR=fixtures/hikes, or the database variables
+pnpm e2e         # end-to-end tests (Playwright); builds the site on the fixture guides first
 ```
 
-CI (`.github/workflows/ci.yml`) runs all of these, plus `pnpm content check` and `pnpm photos check`, on every push and pull request.
+CI (`.github/workflows/ci.yml`) runs all of these, plus `pnpm content check`, on every push and pull request, on the fixtures in `fixtures/`.
 
 ---
 
@@ -83,7 +83,8 @@ src/lib/schemas.ts, compiles the MDX, refuses code and stale versions
 ```
 
 ```
-content/hikes/<slug>/      guides as files: index.mdx, waypoints.json (the pins), track.json, published/
+content/hikes/<slug>/      guides as files, on your machine only (gitignored): index.mdx, waypoints.json (the pins), track.json, published/
+fixtures/                  invented guides and photos for the tests (make-fixture-guide), and sample JPEGs with EXIF
 scripts/                   ingest-photos, import-gpx, photos, content, editors, make-icons, make-sample-photos
 src/
   app/(site)/              landing page (/), gallery (/hikes), guide (/hikes/[slug], with route.gpx and og.jpg)
@@ -164,7 +165,7 @@ It then works in guides, is checked on save, appears in the editor's insert menu
 
 ## Working with files and scripts
 
-Everything above also works without the editor, on the guides in `content/hikes`. Add `--guides postgres` to write to the database instead (it needs `DATABASE_URL`).
+Everything above also works without the editor, on guides kept as files in `content/hikes` on your machine (nothing there is committed). Add `--guides postgres` to write to the database instead (it needs `DATABASE_URL`).
 
 ```bash
 pnpm gpx ~/Downloads/activity.gpx --slug granite-lakes     # the recorded route; creates a draft on a new slug
@@ -186,7 +187,7 @@ pnpm sample:photos [slug]                    # placeholder JPEGs with real EXIF,
 pnpm icons                                   # rerender favicon.ico and apple-icon.png from src/app/icon.svg
 ```
 
-The repo's guides: `strawberry-peak` is the real one (a recorded route, six photos) and the reference for tests. `ridgeline-loop` and `granite-saddle` are drafts with placeholder photos, kept as fixtures; `granite-saddle` uses every pin type.
+The guides in `fixtures/hikes` are invented, for the tests: `cedar-ridge` is published, with a track and six photos, and `ridgeline-loop` and `granite-saddle` are drafts (`granite-saddle` uses every pin type).
 
 ---
 
@@ -211,7 +212,7 @@ Supabase Storage holds the photos, in a public bucket (`hikes`) that accepts web
    - Optional: `NEXT_PUBLIC_SITE_URL` once the site has its own domain
 3. **Sign-in.** Google sign-in through Supabase Auth, and `pnpm editors add <email>` for each editor. The steps are in [docs/knowledge/current.md](docs/knowledge/current.md#live-setup-sign-in-and-the-database).
 
-Without the database variables the site serves the guides committed in `content/hikes` and the editor is closed. With them, a published guide is live within seconds and needs no deploy. `.env.example` describes every variable.
+A deployment needs the database variables: no guides are committed to the repo. A published guide is live within seconds and needs no deploy. `.env.example` describes every variable.
 
 ---
 

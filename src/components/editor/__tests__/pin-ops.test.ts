@@ -4,9 +4,9 @@ import { deriveWaypoints } from "@/lib/hike";
 import { waypointsFileSchema, type Track } from "@/lib/schemas";
 import { addPin, aimPin, freeId, movePin, referencesTo, removePin, renamePin, reorderPin, snapToTrack, updatePin } from "../pins/pin-ops";
 
-const JSON_TEXT = readFileSync("content/hikes/strawberry-peak/waypoints.json", "utf8");
-const MDX = readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8");
-const TRACK = JSON.parse(readFileSync("content/hikes/strawberry-peak/track.json", "utf8")) as Track;
+const JSON_TEXT = readFileSync("fixtures/hikes/cedar-ridge/waypoints.json", "utf8");
+const MDX = readFileSync("fixtures/hikes/cedar-ridge/index.mdx", "utf8");
+const TRACK = JSON.parse(readFileSync("fixtures/hikes/cedar-ridge/track.json", "utf8")) as Track;
 const pins = (json: string) => waypointsFileSchema.parse(JSON.parse(json)).waypoints;
 const ids = (json: string) => pins(json).sort((a, b) => a.order - b.order).map((w) => w.id);
 const byId = (json: string, id: string) => pins(json).find((w) => w.id === id)!;
@@ -39,7 +39,8 @@ describe("pin operations on the baseline hike", () => {
 
   it("moving a pin along the track changes its mileage on the page", () => {
     const mile = (json: string) => deriveWaypoints(pins(json), TRACK).find((w) => w.id === "saddle")!.mile;
-    const [lng, lat] = TRACK.points[60]; // a point early on the way up
+    // a point on the way up, between the pin before it and where it is now
+    const [lng, lat] = TRACK.points.find(([, la]) => la > byId(JSON_TEXT, "mountain-curve").lat + 0.004)!;
     const out = movePin(JSON_TEXT, "saddle", { lat, lng }, TRACK);
     expect(mile(JSON_TEXT)).toBeCloseTo(2.4, 1);
     expect(mile(out)).toBeLessThan(mile(JSON_TEXT));

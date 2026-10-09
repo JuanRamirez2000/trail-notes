@@ -4,10 +4,10 @@ import { parseGpx } from "../gpx";
 import { toGpx } from "../gpx-export";
 import { trackSchema, waypointsFileSchema } from "../schemas";
 
-const dir = "content/hikes/strawberry-peak";
+const dir = "fixtures/hikes/cedar-ridge";
 const track = trackSchema.parse(JSON.parse(readFileSync(`${dir}/track.json`, "utf8")));
 const { waypoints } = waypointsFileSchema.parse(JSON.parse(readFileSync(`${dir}/waypoints.json`, "utf8")));
-const guide = { title: "Strawberry Peak", summary: "Out and back from Red Box.", url: "https://example.test/hikes/strawberry-peak", track, waypoints };
+const guide = { title: "Cedar Ridge", summary: "Out and back from Cedar Gap.", url: "https://example.test/hikes/cedar-ridge", track, waypoints };
 
 describe("toGpx", () => {
   const gpx = toGpx(guide);

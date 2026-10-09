@@ -7,12 +7,12 @@ import { createStore } from "@/lib/store/store";
 import type { Editor } from "@/lib/store/types";
 
 /**
- * The photo routes, called the way Next calls them, against a temp copy of content/hikes and a
- * photo store kept in memory. Strawberry Peak is the useful case: it's published, its pins use
+ * The photo routes, called the way Next calls them, against a temp copy of fixtures/hikes and a
+ * photo store kept in memory. Cedar Ridge is the useful case: it's published, its pins use
  * six photos, and its cover (03-img-8958) is on no pin.
  */
 const root = mkdtempSync(path.join(tmpdir(), "trailnotes-photos-"));
-cpSync("content/hikes", root, { recursive: true });
+cpSync("fixtures/hikes", root, { recursive: true });
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 const OWNER: Editor = { id: "owner-1", name: "Owner", role: "owner" };
@@ -70,16 +70,16 @@ beforeEach(() => {
   state.storeKind = "local";
   state.down = false;
   state.signed = [];
-  state.files = new Set(["01-img-8950", "02-img-8956", "03-img-8958", "04-img-8959", "05-img-8962", "06-img-8968", "07-img-8957"].flatMap((n) => both(`strawberry-peak/${n}`)));
+  state.files = new Set(["01-img-8950", "02-img-8956", "03-img-8958", "04-img-8959", "05-img-8962", "06-img-8968", "07-img-8957"].flatMap((n) => both(`cedar-ridge/${n}`)));
 });
 
 describe("the photo routes", () => {
   it("are a 404 for anyone who isn't an editor, and for a hike that doesn't exist", async () => {
     for (const who of [null, { id: "x", name: "X", role: "viewer" }]) {
       state.editor = who;
-      expect((await call(GET, "GET", "strawberry-peak")).status).toBe(404);
-      expect((await call(POST, "POST", "strawberry-peak", { files: [file("a.jpg")] }, { origin: "https://evil.example" })).status).toBe(404);
-      expect((await call(DELETE, "DELETE", "strawberry-peak", { key: "strawberry-peak/07-img-8957" })).status).toBe(404);
+      expect((await call(GET, "GET", "cedar-ridge")).status).toBe(404);
+      expect((await call(POST, "POST", "cedar-ridge", { files: [file("a.jpg")] }, { origin: "https://evil.example" })).status).toBe(404);
+      expect((await call(DELETE, "DELETE", "cedar-ridge", { key: "cedar-ridge/07-img-8957" })).status).toBe(404);
     }
     state.editor = OWNER;
     expect((await call(GET, "GET", "no-such-hike")).status).toBe(404);
@@ -89,13 +89,13 @@ describe("the photo routes", () => {
   });
 
   it("refuse a change that doesn't come from the site's own pages", async () => {
-    expect((await call(POST, "POST", "strawberry-peak", { files: [file("a.jpg")] }, { origin: "https://evil.example" })).status).toBe(403);
-    expect((await call(DELETE, "DELETE", "strawberry-peak", { key: "strawberry-peak/99-x" }, { origin: "https://evil.example" })).status).toBe(403);
+    expect((await call(POST, "POST", "cedar-ridge", { files: [file("a.jpg")] }, { origin: "https://evil.example" })).status).toBe(403);
+    expect((await call(DELETE, "DELETE", "cedar-ridge", { key: "cedar-ridge/99-x" }, { origin: "https://evil.example" })).status).toBe(403);
   });
 
   it("say so when photo storage isn't set up", async () => {
     state.down = true;
-    const res = await call(POST, "POST", "strawberry-peak", { files: [file("a.jpg")] });
+    const res = await call(POST, "POST", "cedar-ridge", { files: [file("a.jpg")] });
     expect(res.status).toBe(503);
     expect((await res.json()).problems).toEqual(["No key."]);
   });
@@ -103,48 +103,48 @@ describe("the photo routes", () => {
 
 describe("GET photos", () => {
   it("lists the hike's photos as keys, once each", async () => {
-    const res = await call(GET, "GET", "strawberry-peak");
+    const res = await call(GET, "GET", "cedar-ridge");
     expect(res.status).toBe(200);
-    expect((await res.json()).keys).toEqual(["01-img-8950", "02-img-8956", "03-img-8958", "04-img-8959", "05-img-8962", "06-img-8968", "07-img-8957"].map((n) => `strawberry-peak/${n}`));
+    expect((await res.json()).keys).toEqual(["01-img-8950", "02-img-8956", "03-img-8958", "04-img-8959", "05-img-8962", "06-img-8968", "07-img-8957"].map((n) => `cedar-ridge/${n}`));
   });
 });
 
 describe("POST photos", () => {
   it("numbers new photos after everything stored, and signs both variants of each", async () => {
-    const res = await call(POST, "POST", "strawberry-peak", { files: [file("IMG_9001.JPG"), file("Summit view (2).heic")] });
+    const res = await call(POST, "POST", "cedar-ridge", { files: [file("IMG_9001.JPG"), file("Summit view (2).heic")] });
     expect(res.status).toBe(200);
     const { photos } = await res.json();
-    expect(photos.map((p: { key: string }) => p.key)).toEqual(["strawberry-peak/08-img-9001", "strawberry-peak/09-summit-view-2"]);
-    expect(state.signed).toEqual([...both("strawberry-peak/08-img-9001"), ...both("strawberry-peak/09-summit-view-2")]);
+    expect(photos.map((p: { key: string }) => p.key)).toEqual(["cedar-ridge/08-img-9001", "cedar-ridge/09-summit-view-2"]);
+    expect(state.signed).toEqual([...both("cedar-ridge/08-img-9001"), ...both("cedar-ridge/09-summit-view-2")]);
     expect(photos[0].full.url).toContain("08-img-9001.full.webp");
     expect(photos[0].thumb.url).toContain("08-img-9001.thumb.webp");
   });
 
   it("numbers after the pins too, when their files are missing from storage", async () => {
     state.files.clear();
-    const { photos } = await (await call(POST, "POST", "strawberry-peak", { files: [file("a.jpg")] })).json();
-    expect(photos[0].key).toBe("strawberry-peak/08-a");
+    const { photos } = await (await call(POST, "POST", "cedar-ridge", { files: [file("a.jpg")] })).json();
+    expect(photos[0].key).toBe("cedar-ridge/08-a");
   });
 
   it("makes the path itself: a name can't choose a folder or a file", async () => {
-    const { photos } = await (await call(POST, "POST", "strawberry-peak", { files: [file("../../granite-saddle/01-x.full.webp")] })).json();
-    expect(photos[0].key).toBe("strawberry-peak/08-granite-saddle-01-x-full");
+    const { photos } = await (await call(POST, "POST", "cedar-ridge", { files: [file("../../granite-saddle/01-x.full.webp")] })).json();
+    expect(photos[0].key).toBe("cedar-ridge/08-granite-saddle-01-x-full");
   });
 
   it("refuses a malformed request, too many photos, or one that's too large", async () => {
     const tooMany = Array.from({ length: 31 }, (_, i) => file(`p${i}.jpg`));
     for (const bad of ["{ not json", "null", {}, { files: [] }, { files: tooMany }, { files: [file("a.jpg", 21 * 1024 * 1024)] }, { files: [file("...")] }, { files: [{ name: "a.jpg" }] }, { files: [file("a.jpg", 1.5)] }]) {
-      expect((await call(POST, "POST", "strawberry-peak", bad)).status, JSON.stringify(bad).slice(0, 60)).toBe(400);
+      expect((await call(POST, "POST", "cedar-ridge", bad)).status, JSON.stringify(bad).slice(0, 60)).toBe(400);
     }
     expect(state.signed).toEqual([]);
   });
 });
 
 describe("DELETE photos", () => {
-  const remove = (key: unknown, slug = "strawberry-peak") => call(DELETE, "DELETE", slug, { key });
+  const remove = (key: unknown, slug = "cedar-ridge") => call(DELETE, "DELETE", slug, { key });
 
   it("refuses a photo a pin uses, and the cover, which no pin uses", async () => {
-    for (const key of ["strawberry-peak/07-img-8957", "strawberry-peak/03-img-8958"]) {
+    for (const key of ["cedar-ridge/07-img-8957", "cedar-ridge/03-img-8958"]) {
       const res = await remove(key);
       expect(res.status, key).toBe(409);
       expect((await res.json()).problems[0]).toMatch(/still used/);
@@ -153,32 +153,32 @@ describe("DELETE photos", () => {
   });
 
   it("refuses a photo only the published page still uses", async () => {
-    const g = (await store.read("strawberry-peak"))!;
+    const g = (await store.read("cedar-ridge"))!;
     const pins = JSON.parse(g.waypoints) as { waypoints: { id: string; photo?: unknown }[] };
     for (const w of pins.waypoints) if (w.id === "saddle") delete w.photo;
-    const saved = await store.save("strawberry-peak", { mdx: g.mdx, waypoints: JSON.stringify(pins, null, 2) }, { editor: OWNER, baseVersion: g.version });
+    const saved = await store.save("cedar-ridge", { mdx: g.mdx, waypoints: JSON.stringify(pins, null, 2) }, { editor: OWNER, baseVersion: g.version });
     expect(saved.ok).toBe(true);
-    expect((await remove("strawberry-peak/07-img-8957")).status).toBe(409);
-    expect(state.files.has("strawberry-peak/07-img-8957.full.webp")).toBe(true);
+    expect((await remove("cedar-ridge/07-img-8957")).status).toBe(409);
+    expect(state.files.has("cedar-ridge/07-img-8957.full.webp")).toBe(true);
   });
 
   it("deletes both files of a photo nothing uses, and isn't fooled by a longer name", async () => {
-    both("strawberry-peak/08-extra").forEach((f) => state.files.add(f));
-    both("strawberry-peak/07-img-895").forEach((f) => state.files.add(f));
-    expect((await remove("strawberry-peak/08-extra")).status).toBe(200);
-    expect((await remove("strawberry-peak/07-img-895")).status).toBe(200);
+    both("cedar-ridge/08-extra").forEach((f) => state.files.add(f));
+    both("cedar-ridge/07-img-895").forEach((f) => state.files.add(f));
+    expect((await remove("cedar-ridge/08-extra")).status).toBe(200);
+    expect((await remove("cedar-ridge/07-img-895")).status).toBe(200);
     expect(state.files.size).toBe(14);
   });
 
   it("only takes a key in this hike's folder", async () => {
-    for (const key of ["granite-saddle/01-img-3101", "strawberry-peak/../granite-saddle/01-img-3101", "strawberry-peak", 7, undefined]) expect((await remove(key)).status, String(key)).toBe(400);
+    for (const key of ["granite-saddle/01-img-3101", "cedar-ridge/../granite-saddle/01-img-3101", "cedar-ridge", 7, undefined]) expect((await remove(key)).status, String(key)).toBe(400);
   });
 
   it("deletes nothing when the guides are in files but the photos are in shared storage", async () => {
     state.storeKind = "postgres"; // with the fake store's kind "local": a mismatch either way round
-    both("strawberry-peak/08-extra").forEach((f) => state.files.add(f));
-    expect((await remove("strawberry-peak/08-extra")).status).toBe(409);
-    expect(state.files.has("strawberry-peak/08-extra.full.webp")).toBe(true);
+    both("cedar-ridge/08-extra").forEach((f) => state.files.add(f));
+    expect((await remove("cedar-ridge/08-extra")).status).toBe(409);
+    expect(state.files.has("cedar-ridge/08-extra.full.webp")).toBe(true);
   });
 });
 
@@ -195,8 +195,8 @@ describe("deleting a draft", () => {
   });
 
   it("keeps the photos when the draft wasn't deleted", async () => {
-    const g = (await store.read("strawberry-peak"))!;
-    expect((await drop("strawberry-peak", g.version)).status).toBe(409); // published
+    const g = (await store.read("cedar-ridge"))!;
+    expect((await drop("cedar-ridge", g.version)).status).toBe(409); // published
     expect(state.files.size).toBe(14);
   });
 });

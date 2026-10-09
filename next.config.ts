@@ -26,7 +26,8 @@ for (const [name, allowed] of [
 
 // Photos live in Supabase; /public/photos is a gitignored dev-only copy, so a production build
 // on the local backend would ship broken images.
-if (!isDev && process.env.NEXT_PUBLIC_PHOTO_STORAGE !== "supabase") {
+// The end-to-end run (scripts/e2e.ts) is the exception: it builds on fixture photos it has just put there.
+if (!isDev && process.env.NEXT_PUBLIC_PHOTO_STORAGE !== "supabase" && process.env.E2E_BUILD !== "1") {
   throw new Error(
     "Production builds need NEXT_PUBLIC_PHOTO_STORAGE=supabase (and NEXT_PUBLIC_SUPABASE_URL). The local photo backend is dev-only.",
   );
@@ -48,9 +49,6 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   headers: async () => [{ source: "/:path*", headers: securityHeaders }],
-  // When guides are read from files (CONTENT_STORE unset or "local"), pages are re-rendered on the
-  // server after deploy, so content/hikes must ship inside the server bundle, not just exist at build.
-  outputFileTracingIncludes: { "/**": ["./content/hikes/**/*"] },
   images: {
     remotePatterns: supabaseHost
       ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]

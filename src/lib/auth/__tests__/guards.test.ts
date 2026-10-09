@@ -37,8 +37,8 @@ describe("can", () => {
     for (const action of ["list", "read", "save", "create"] as const) expect(can(null, action, "x")).toBe(false);
   });
   it("lets an editor on the list act", () => {
-    expect(can(owner, "save", "strawberry-peak")).toBe(true);
-    expect(can({ ...owner, role: "editor" }, "save", "strawberry-peak")).toBe(true);
+    expect(can(owner, "save", "cedar-ridge")).toBe(true);
+    expect(can({ ...owner, role: "editor" }, "save", "cedar-ridge")).toBe(true);
   });
   it("refuses a role it doesn't know", () => {
     expect(can({ ...owner, role: "viewer" as never }, "save", "x")).toBe(false);

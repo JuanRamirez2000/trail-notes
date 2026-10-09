@@ -6,11 +6,11 @@ import type { Track } from "../schemas";
 import { validateHike } from "../store/validate";
 
 const FORM: NewHikeForm = { title: "Mount Lawlor: the east ridge", slug: "mount-lawlor", region: "Angeles National Forest", summary: 'A short, steep climb with "big" views.', difficulty: "moderate", date: "2026-10-05" };
-const TRACK = JSON.parse(readFileSync("content/hikes/strawberry-peak/track.json", "utf8")) as Track;
+const TRACK = JSON.parse(readFileSync("fixtures/hikes/cedar-ridge/track.json", "utf8")) as Track;
 
 describe("slugify", () => {
   it.each([
-    ["Strawberry Peak (via Red Box)", "strawberry-peak-via-red-box"],
+    ["Cedar Ridge (via Cedar Gap)", "cedar-ridge-via-cedar-gap"],
     ["  Cañón del Río — Loop  ", "canon-del-rio-loop"],
     ["!!!", ""],
   ])("%s → %s", (title, slug) => expect(slugify(title)).toBe(slug));
@@ -25,10 +25,10 @@ describe("buildNewHike", () => {
       title: "Mount Lawlor: the east ridge",
       summary: 'A short, steep climb with "big" views.',
       distanceMi: 7.3,
-      elevationGainFt: 1830,
+      elevationGainFt: TRACK.elevationGainFt,
       trailhead: { lat: TRACK.points[0][1], lng: TRACK.points[0][0] },
     });
-    expect(JSON.parse(hike.waypoints).waypoints).toMatchObject([{ id: "trailhead", type: "start", lat: 34.259122, lng: -118.104093 }]);
+    expect(JSON.parse(hike.waypoints).waypoints).toMatchObject([{ id: "trailhead", type: "start", lat: TRACK.points[0][1], lng: TRACK.points[0][0] }]);
     expect(hike.mdx).toContain("<RouteMap />");
     expect(hike.mdx).not.toMatch(/^draft:/m); // a new hike is a draft because nothing is published yet
   });

@@ -37,19 +37,24 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Guides in content/ pass the save gate
+      # No real guide is in the repo (they're in the database): everything here runs on fixtures/.
+      - name: Fixture guides pass the save gate
         run: pnpm content check
+        env:
+          CONTENT_DIR: fixtures/hikes
       - run: pnpm lint
       - name: Typecheck (next typegen + tsc)
         run: pnpm typecheck
       - run: pnpm test
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/trailnotes_test
-      - name: Photos of the published guides in content/ exist in Supabase
-        run: pnpm photos check
-      - run: pnpm build
-      # A visitor on the production server just built (nobody is an editor there), and the editor
-      # on a dev server, where it is a local owner. Both read content/, never the database.
+      - name: Build as production does (photos from Supabase)
+        run: pnpm build
+        env:
+          CONTENT_DIR: fixtures/hikes
+      # `pnpm e2e` builds again, on a copy of the fixture guides with their photos on disk, then
+      # runs a visitor against that build (nobody is an editor there) and the editor on a dev
+      # server, where it is a local owner. Neither can reach the database or the bucket.
       - name: Browser for the end-to-end tests
         run: pnpm exec playwright install --with-deps chromium
       - name: End-to-end tests

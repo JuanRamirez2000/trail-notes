@@ -16,6 +16,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { frontmatterSchema, waypointsFileSchema } from "../src/lib/schemas";
 import { PHOTO_BUCKET, photoObjectPath, type PhotoVariant } from "../src/lib/storage";
+import { contentDir } from "../src/lib/store/local";
 
 try {
   process.loadEnvFile(".env.local");
@@ -23,7 +24,7 @@ try {
   // optional: CI passes env directly
 }
 
-const HIKES = path.join(process.cwd(), "content/hikes");
+const HIKES = contentDir();
 const LOCAL = path.join(process.cwd(), "public/photos");
 const VARIANTS: PhotoVariant[] = ["full", "thumb"];
 const [cmd, only] = process.argv.slice(2);

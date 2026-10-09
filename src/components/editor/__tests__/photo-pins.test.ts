@@ -33,7 +33,7 @@ describe("addPhotoPins", () => {
 
   it("snaps onto the track, slots in by trail mileage, and leaves existing pins exactly as written", () => {
     const existing = [
-      { id: "trailhead", order: 10, type: "start", label: "Red Box", title: "Start here", lat: 34, lng: -118, heading: null, headingSource: null, custom: "kept" },
+      { id: "trailhead", order: 10, type: "start", label: "Cedar Gap", title: "Start here", lat: 34, lng: -118, heading: null, headingSource: null, custom: "kept" },
       { id: "top", order: 20, type: "note", label: "Top", title: "Summit", lat: 34.01, lng: -118, heading: null, headingSource: null },
     ];
     // 34.004 on the way up (20 m off the line), then 34.003: behind it, so on the way back down.

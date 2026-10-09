@@ -15,10 +15,10 @@ describe("local files: things only files can do", () => {
   const store = createStore(localBackend(root));
 
   it("notices an edit made outside the editor as a conflict", async () => {
-    const real = createStore(localBackend()); // content/hikes, read-only here
-    const sp = (await real.read("strawberry-peak"))!;
+    const real = createStore(localBackend(path.resolve("fixtures/hikes"))); // fixtures/hikes, read-only here
+    const sp = (await real.read("cedar-ridge"))!;
     const slug = "zz-outside-edit";
-    const mdx = sp.mdx.replace("slug: strawberry-peak", `slug: ${slug}`);
+    const mdx = sp.mdx.replace("slug: cedar-ridge", `slug: ${slug}`);
     const created = await store.create(slug, { mdx, waypoints: sp.waypoints }, { editor: null });
     expect(created.ok).toBe(true);
     writeFileSync(path.join(root, slug, "index.mdx"), mdx.replace("7.3 miles", "7.4 miles"));
@@ -28,8 +28,8 @@ describe("local files: things only files can do", () => {
 
   it("still opens a hand-edited guide that is invalid, flagged in the list", async () => {
     const slug = "zz-broken";
-    const sp = (await createStore(localBackend()).read("strawberry-peak"))!;
-    await store.create(slug, { mdx: sp.mdx.replace("slug: strawberry-peak", `slug: ${slug}`), waypoints: sp.waypoints }, { editor: null });
+    const sp = (await createStore(localBackend(path.resolve("fixtures/hikes"))).read("cedar-ridge"))!;
+    await store.create(slug, { mdx: sp.mdx.replace("slug: cedar-ridge", `slug: ${slug}`), waypoints: sp.waypoints }, { editor: null });
     writeFileSync(path.join(root, slug, "index.mdx"), "---\ntitle: Broken\n---\n\nNo details.\n");
     writeFileSync(path.join(root, slug, "waypoints.json"), "{ not json");
     const hike = await store.read(slug);
@@ -44,8 +44,8 @@ describe("local files: things only files can do", () => {
 
   it("doesn't delete a track file it can't read when the guide is saved", async () => {
     const slug = "zz-bad-track";
-    const sp = (await createStore(localBackend()).read("strawberry-peak"))!;
-    const mdx = sp.mdx.replace("slug: strawberry-peak", `slug: ${slug}`);
+    const sp = (await createStore(localBackend(path.resolve("fixtures/hikes"))).read("cedar-ridge"))!;
+    const mdx = sp.mdx.replace("slug: cedar-ridge", `slug: ${slug}`);
     await store.create(slug, { mdx, waypoints: sp.waypoints, track: sp.track }, { editor: null });
     const trackPath = path.join(root, slug, "track.json");
     const broken = readFileSync(trackPath, "utf8").replace(/"distanceMi":[\d.]+/, '"distanceMi":"far"');
@@ -61,19 +61,19 @@ describe("local files: things only files can do", () => {
 
   it("lets only one of two saves from the same version through", async () => {
     const slug = "zz-two-saves";
-    const sp = (await createStore(localBackend()).read("strawberry-peak"))!;
-    const mdx = sp.mdx.replace("slug: strawberry-peak", `slug: ${slug}`);
+    const sp = (await createStore(localBackend(path.resolve("fixtures/hikes"))).read("cedar-ridge"))!;
+    const mdx = sp.mdx.replace("slug: cedar-ridge", `slug: ${slug}`);
     const created = await store.create(slug, { mdx, waypoints: sp.waypoints }, { editor: null });
     const base = created.ok ? created.version : "";
     const results = await Promise.all(["7.4 miles", "7.5 miles"].map((d) => store.save(slug, { mdx: mdx.replace("7.3 miles", d), waypoints: sp.waypoints }, { editor: null, baseVersion: base })));
     expect(results.map((r) => (r.ok ? "ok" : r.kind)).sort()).toEqual(["conflict", "ok"]);
   });
 
-  it("reads every real guide in content/hikes", async () => {
-    const hikes = await createStore(localBackend()).list();
+  it("reads every real guide in fixtures/hikes", async () => {
+    const hikes = await createStore(localBackend(path.resolve("fixtures/hikes"))).list();
     // The baseline and the two sample drafts; other hikes may be added next to them.
-    expect(hikes.map((h) => h.slug)).toEqual(expect.arrayContaining(["granite-saddle", "ridgeline-loop", "strawberry-peak"]));
+    expect(hikes.map((h) => h.slug)).toEqual(expect.arrayContaining(["granite-saddle", "ridgeline-loop", "cedar-ridge"]));
     expect(hikes.every((h) => h.details !== null)).toBe(true);
-    expect(hikes.find((h) => h.slug === "strawberry-peak")?.status).toBe("published");
+    expect(hikes.find((h) => h.slug === "cedar-ridge")?.status).toBe("published");
   });
 });

@@ -1,10 +1,18 @@
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { frontmatterSchema, SLUG, trackSchema, type Track } from "../schemas";
 import type { BackendResult, DeleteResult, RawHike, RawWrite, StoreBackend } from "./types";
 import { splitFrontmatter, waypointsText } from "./validate";
+
+/**
+ * Where guides kept as files live: CONTENT_DIR, else `content/hikes`. That folder isn't in the
+ * repo (real guides are in the database); it's a working folder on this machine, filled by
+ * `pnpm content pull` or by creating hikes in the editor under `pnpm dev`. The tests and the
+ * end-to-end suite point at copies of `fixtures/hikes` instead.
+ */
+export const contentDir = () => path.resolve(process.env.CONTENT_DIR || "content/hikes");
 
 /**
  * Guides as files: `<root>/<slug>/{index.mdx, waypoints.json, track.json?}` is the working copy,
@@ -14,7 +22,7 @@ import { splitFrontmatter, waypointsText } from "./validate";
  * The version is a hash of the files, so an edit made outside the editor (a script, a text
  * editor, git) is noticed as a conflict too. Who saved isn't recorded; files have git for that.
  */
-export function localBackend(root = path.join(process.cwd(), "content/hikes")): StoreBackend {
+export function localBackend(root = contentDir()): StoreBackend {
   const dir = (slug: string) => {
     // The slug pattern is what keeps reads and writes inside the root (no "..", no slashes).
     if (!SLUG.test(slug)) throw new Error(`Invalid slug "${slug}"`);
@@ -99,7 +107,10 @@ export function localBackend(root = path.join(process.cwd(), "content/hikes")): 
   // A missing folder is an error, not "no hikes": if the files didn't ship with a deploy, a page
   // refresh must fail (and keep the last good page) rather than turn every guide into a 404.
   const missingRoot = () => {
-    if (!existsSync(root)) throw new Error(`Guides folder not found: ${root}`);
+    if (existsSync(root)) return;
+    // Under `pnpm dev` the folder is this machine's working folder: starting empty is fine.
+    if (process.env.NODE_ENV === "development") mkdirSync(root, { recursive: true });
+    else throw new Error(`Guides folder not found: ${root}. Set CONTENT_DIR, or CONTENT_STORE=postgres to read the database.`);
   };
 
   return {

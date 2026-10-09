@@ -7,7 +7,7 @@ import type { ContentStore } from "./types";
 
 /**
  * Which store this server uses, from CONTENT_STORE:
- *   local    → files in content/hikes (the default: `pnpm dev`, tests)
+ *   local    → files in CONTENT_DIR, else content/hikes (the default: `pnpm dev`; see ./local.ts)
  *   postgres → the database (Supabase in production) through Drizzle; needs DATABASE_URL
  *
  * Chosen explicitly rather than by "is a connection string present", so a missing one is a loud

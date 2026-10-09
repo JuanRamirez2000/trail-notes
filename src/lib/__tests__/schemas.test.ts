@@ -4,8 +4,8 @@ import { formatIssues, frontmatterSchema, trackSchema, waypointSchema, waypoints
 import { wp } from "./fixtures";
 
 const FRONTMATTER = {
-  title: "Strawberry Peak",
-  slug: "strawberry-peak",
+  title: "Cedar Ridge",
+  slug: "cedar-ridge",
   region: "Angeles National Forest",
   summary: "Out-and-back.",
   distanceMi: 7.3,
@@ -80,9 +80,9 @@ describe("what a pin may carry", () => {
     expect(JSON.stringify(read)).not.toContain("2026-04-19");
   });
 
-  it("has no capture times in the guides in content/", () => {
-    for (const slug of ["strawberry-peak", "granite-saddle", "ridgeline-loop"]) {
-      expect(readFileSync(`content/hikes/${slug}/waypoints.json`, "utf8")).not.toContain("takenAt");
+  it("has no capture times in the fixture guides", () => {
+    for (const slug of ["cedar-ridge", "granite-saddle", "ridgeline-loop"]) {
+      expect(readFileSync(`fixtures/hikes/${slug}/waypoints.json`, "utf8")).not.toContain("takenAt");
     }
   });
 });

@@ -12,8 +12,8 @@ vi.mock("next/link", () => ({ default: ({ children }: { children: React.ReactNod
 vi.mock("../AdvancedView", () => ({ AdvancedView: () => null }));
 vi.mock("../pins/PinsView", () => ({ PinsView: () => null }));
 
-const MDX = readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8");
-const PINS = readFileSync("content/hikes/strawberry-peak/waypoints.json", "utf8");
+const MDX = readFileSync("fixtures/hikes/cedar-ridge/index.mdx", "utf8");
+const PINS = readFileSync("fixtures/hikes/cedar-ridge/waypoints.json", "utf8");
 
 type Sent = { url: string; method: string; body: { mdx: string; baseVersion: string }; answer: (status: number, data: unknown) => void };
 let sent: Sent[];
@@ -33,7 +33,7 @@ afterEach(() => {
 
 const PUBLISHED = { mdx: MDX, waypoints: PINS };
 const open = (published: typeof PUBLISHED | null = PUBLISHED) =>
-  render(<Editor slug="strawberry-peak" initialMdx={MDX} initialWaypoints={PINS} initialVersion="1" initialPublished={published} track={null} editorName="Owner" canSignOut={false} />);
+  render(<Editor slug="cedar-ridge" initialMdx={MDX} initialWaypoints={PINS} initialVersion="1" initialPublished={published} track={null} editorName="Owner" canSignOut={false} />);
 const click = (name: string) => act(async () => void fireEvent.click(screen.getByRole("button", { name })));
 /** An edit, made the way an author would: the title in the Details form. */
 const retitle = async (title: string) => {
@@ -46,21 +46,21 @@ const answer = (i: number, status: number, data: unknown) => act(async () => voi
 describe("the editor's save loop", () => {
   it("sends one save at a time, and bases the next on the version the first returned", async () => {
     open();
-    await retitle("Strawberry Peak A");
+    await retitle("Cedar Ridge A");
     await wait(1600);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ method: "PUT", body: { baseVersion: "1" } });
-    expect(sent[0].body.mdx).toMatch(/^title: Strawberry Peak A$/m);
+    expect(sent[0].body.mdx).toMatch(/^title: Cedar Ridge A$/m);
 
     // A second change, and its autosave, while the first save is still on its way.
-    await retitle("Strawberry Peak B");
+    await retitle("Cedar Ridge B");
     await wait(1600);
     expect(sent).toHaveLength(1);
 
     await answer(0, 200, { ok: true, version: "2" });
     expect(sent).toHaveLength(2);
     expect(sent[1].body).toMatchObject({ baseVersion: "2" });
-    expect(sent[1].body.mdx).toMatch(/^title: Strawberry Peak B$/m);
+    expect(sent[1].body.mdx).toMatch(/^title: Cedar Ridge B$/m);
 
     await answer(1, 200, { ok: true, version: "3" });
     expect(screen.queryByText(/changed since you opened it/)).toBeNull();
@@ -71,9 +71,9 @@ describe("the editor's save loop", () => {
 
   it("stops at a real conflict and doesn't retry", async () => {
     open();
-    await retitle("Strawberry Peak A");
+    await retitle("Cedar Ridge A");
     await wait(1600);
-    await retitle("Strawberry Peak B");
+    await retitle("Cedar Ridge B");
     await wait(1600);
     await answer(0, 409, { ok: false, conflict: true, version: "9" });
     expect(screen.getByText(/changed since you opened it/)).toBeTruthy();
@@ -89,7 +89,7 @@ describe("the editor's save loop", () => {
     };
     open();
     expect(leave()).toBe(false);
-    await retitle("Strawberry Peak A");
+    await retitle("Cedar Ridge A");
     expect(leave()).toBe(true);
     await wait(1600);
     expect(leave()).toBe(true);
@@ -104,14 +104,14 @@ describe("publishing from the editor", () => {
     expect(screen.getByText("Published")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Publish changes" })).toBeNull();
 
-    await retitle("Strawberry Peak A");
+    await retitle("Cedar Ridge A");
     expect(screen.getByText("Published · changes not live")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Publish changes" }) as HTMLButtonElement).disabled).toBe(true);
 
     await wait(1600);
     await answer(0, 200, { ok: true, version: "2" });
     await click("Publish changes");
-    expect(sent[1]).toMatchObject({ url: "/api/editor/strawberry-peak/publish", method: "POST", body: { baseVersion: "2" } });
+    expect(sent[1]).toMatchObject({ url: "/api/editor/cedar-ridge/publish", method: "POST", body: { baseVersion: "2" } });
     await answer(1, 200, { ok: true, status: "published" });
     expect(screen.getByText("Published")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Publish changes" })).toBeNull();
@@ -127,7 +127,7 @@ describe("publishing from the editor", () => {
 
     confirm.mockReturnValue(true);
     await click("Unpublish");
-    expect(sent[0]).toMatchObject({ url: "/api/editor/strawberry-peak/publish", method: "DELETE", body: { baseVersion: "1" } });
+    expect(sent[0]).toMatchObject({ url: "/api/editor/cedar-ridge/publish", method: "DELETE", body: { baseVersion: "1" } });
     await answer(0, 200, { ok: true, status: "draft" });
     expect(screen.getByText("Draft")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();

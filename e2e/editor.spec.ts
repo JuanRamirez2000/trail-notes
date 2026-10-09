@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { E2E_HIKES } from "./env";
 
 /**
  * The editor as its (local) owner, on a hike made for the run: create, save, a conflicting tab,
@@ -11,7 +12,7 @@ test.describe.configure({ mode: "serial" });
 
 const slug = `zz-e2e-${Date.now().toString(36)}`;
 const title = `E2E ${slug}`;
-const HIKES = path.join(process.cwd(), "content/hikes");
+const HIKES = E2E_HIKES;
 const PHOTOS = path.join(process.cwd(), "public/photos");
 const SAMPLES = path.join(process.cwd(), "fixtures/sample-photos/ridgeline-loop");
 /** A 1 × 1 PNG: a picture with no EXIF, so no position. */

@@ -8,10 +8,10 @@ import type { Editor } from "@/lib/store/types";
 
 /**
  * The editor's two API routes, called the way Next calls them, against a temp copy of
- * content/hikes. Who is signed in and which store is used are the only things replaced.
+ * fixtures/hikes. Who is signed in and which store is used are the only things replaced.
  */
 const root = mkdtempSync(path.join(tmpdir(), "trailnotes-routes-"));
-cpSync("content/hikes", root, { recursive: true });
+cpSync("fixtures/hikes", root, { recursive: true });
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 const OWNER: Editor = { id: "owner-1", name: "Owner", role: "owner" };
@@ -33,7 +33,7 @@ const { GET: getRevision } = await import("../[slug]/history/[version]/route");
 
 const ORIGIN = "https://trailnotes.example";
 const store = createStore(localBackend(root));
-const guide = async (slug = "strawberry-peak") => (await store.read(slug))!;
+const guide = async (slug = "cedar-ridge") => (await store.read(slug))!;
 
 function request(method: string, url: string, body: unknown, headers: Record<string, string> = {}) {
   return new Request(`${ORIGIN}${url}`, {
@@ -56,7 +56,7 @@ describe("PUT /api/editor/[slug]", () => {
     const g = await guide();
     for (const who of [null, { id: "x", name: "X", role: "viewer" }]) {
       state.editor = who;
-      expect((await put("strawberry-peak", { mdx: g.mdx, waypoints: g.waypoints, baseVersion: g.version }, { origin: "https://evil.example" })).status).toBe(404);
+      expect((await put("cedar-ridge", { mdx: g.mdx, waypoints: g.waypoints, baseVersion: g.version }, { origin: "https://evil.example" })).status).toBe(404);
     }
     expect((await getOne()).status).toBe(404);
     expect((await getAll()).status).toBe(404);
@@ -65,8 +65,8 @@ describe("PUT /api/editor/[slug]", () => {
   it("refuses a request that doesn't come from the site's own pages", async () => {
     const g = await guide();
     const body = { mdx: g.mdx, waypoints: g.waypoints, baseVersion: g.version };
-    expect((await put("strawberry-peak", body, { origin: "https://evil.example" })).status).toBe(403);
-    expect((await put("strawberry-peak", body, { origin: "null" })).status).toBe(403);
+    expect((await put("cedar-ridge", body, { origin: "https://evil.example" })).status).toBe(403);
+    expect((await put("cedar-ridge", body, { origin: "null" })).status).toBe(403);
   });
 
   it("answers bad addresses and unknown hikes with a 404, and malformed bodies with a 400", async () => {
@@ -74,19 +74,19 @@ describe("PUT /api/editor/[slug]", () => {
     const body = { mdx: g.mdx, waypoints: g.waypoints, baseVersion: g.version };
     expect((await put("../etc", body)).status).toBe(404);
     expect((await put("no-such-hike", body)).status).toBe(404);
-    for (const bad of ["{ not json", "null", "[]", { mdx: g.mdx }, { ...body, baseVersion: 3 }]) expect((await put("strawberry-peak", bad)).status).toBe(400);
+    for (const bad of ["{ not json", "null", "[]", { mdx: g.mdx }, { ...body, baseVersion: 3 }]) expect((await put("cedar-ridge", bad)).status).toBe(400);
   });
 
   it("saves a valid change once to the working copy, and refuses the same version twice", async () => {
     const g = await guide();
     const body = { mdx: g.mdx.replace("7.3 miles", "7.4 miles"), waypoints: g.waypoints, baseVersion: g.version };
-    const ok = await put("strawberry-peak", body);
+    const ok = await put("cedar-ridge", body);
     expect(ok.status).toBe(200);
     // The public pages show the published copy, which a save doesn't change.
     expect(state.revalidated).toEqual([]);
     expect((await guide()).mdx).toContain("7.4 miles");
     expect((await guide()).published?.mdx).toContain("7.3 miles");
-    const stale = await put("strawberry-peak", { ...body, mdx: g.mdx });
+    const stale = await put("cedar-ridge", { ...body, mdx: g.mdx });
     expect(stale.status).toBe(409);
     expect((await guide()).mdx).toContain("7.4 miles");
   });
@@ -102,15 +102,15 @@ describe("PUT /api/editor/[slug]", () => {
   it("refuses a body that is too large, with or without a length header", async () => {
     const g = await guide();
     const big = { mdx: "x".repeat(800_000), waypoints: g.waypoints, baseVersion: g.version };
-    expect((await put("strawberry-peak", big)).status).toBe(413);
-    expect((await put("strawberry-peak", big, { "content-length": "900000" })).status).toBe(413);
+    expect((await put("cedar-ridge", big)).status).toBe(413);
+    expect((await put("cedar-ridge", big, { "content-length": "900000" })).status).toBe(413);
   });
 });
 
 describe("POST /api/editor", () => {
   const draft = async (slug: string) => {
     const g = await guide();
-    return { slug, mdx: g.mdx.replace("slug: strawberry-peak", `slug: ${slug}`), waypoints: g.waypoints };
+    return { slug, mdx: g.mdx.replace("slug: cedar-ridge", `slug: ${slug}`), waypoints: g.waypoints };
   };
 
   it("creates a hike, keeping only the track's own fields", async () => {
@@ -141,7 +141,7 @@ describe("POST /api/editor", () => {
 });
 
 describe("DELETE /api/editor/[slug]", () => {
-  // ridgeline-loop is a draft in content/hikes; strawberry-peak is published.
+  // ridgeline-loop is a draft in fixtures/hikes; cedar-ridge is published.
   it("is a 404 for anyone who isn't an editor, and a 403 from another site", async () => {
     const g = await guide("ridgeline-loop");
     state.editor = null;
@@ -156,10 +156,10 @@ describe("DELETE /api/editor/[slug]", () => {
 
   it("refuses a published guide and a stale version", async () => {
     const published = await guide();
-    const res = await del("strawberry-peak", { baseVersion: published.version });
+    const res = await del("cedar-ridge", { baseVersion: published.version });
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({ problems: [expect.stringMatching(/Unpublish it first/)] });
-    expect(await store.read("strawberry-peak")).not.toBeNull();
+    expect(await store.read("cedar-ridge")).not.toBeNull();
     expect(await (await del("ridgeline-loop", { baseVersion: "stale" })).json()).toMatchObject({ conflict: true });
   });
 
@@ -178,21 +178,21 @@ describe("GET /api/editor/[slug]/history and /history/[version]", () => {
   it("is a 404 for anyone who isn't an editor", async () => {
     for (const who of [null, { id: "x", name: "X", role: "viewer" }]) {
       state.editor = who;
-      expect((await history("strawberry-peak")).status).toBe(404);
-      expect((await revision("strawberry-peak", "1")).status).toBe(404);
+      expect((await history("cedar-ridge")).status).toBe(404);
+      expect((await revision("cedar-ridge", "1")).status).toBe(404);
     }
   });
 
   it("answers bad addresses with a 404", async () => {
     expect((await history("../etc")).status).toBe(404);
-    for (const v of ["x", "-1", "1e3", "1234567890"]) expect((await revision("strawberry-peak", v)).status).toBe(404);
+    for (const v of ["x", "-1", "1e3", "1234567890"]) expect((await revision("cedar-ridge", v)).status).toBe(404);
   });
 
   it("lists nothing for guides in files, which keep no history (git does)", async () => {
-    const res = await history("strawberry-peak");
+    const res = await history("cedar-ridge");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ revisions: [], kept: false });
-    expect((await revision("strawberry-peak", "1")).status).toBe(404);
+    expect((await revision("cedar-ridge", "1")).status).toBe(404);
   });
 });
 
@@ -204,32 +204,32 @@ describe("POST / DELETE /api/editor/[slug]/publish", () => {
   it("is a 404 for anyone who isn't an editor, and a 403 from another site", async () => {
     const g = await guide();
     state.editor = null;
-    expect((await publish("strawberry-peak", { baseVersion: g.version })).status).toBe(404);
-    expect((await unpublish("strawberry-peak", { baseVersion: g.version })).status).toBe(404);
+    expect((await publish("cedar-ridge", { baseVersion: g.version })).status).toBe(404);
+    expect((await unpublish("cedar-ridge", { baseVersion: g.version })).status).toBe(404);
     expect((await getPublish()).status).toBe(404);
     state.editor = OWNER;
-    expect((await publish("strawberry-peak", { baseVersion: g.version }, { origin: "https://evil.example" })).status).toBe(403);
-    for (const bad of ["{ not json", {}, { baseVersion: 1 }]) expect((await publish("strawberry-peak", bad)).status).toBe(400);
+    expect((await publish("cedar-ridge", { baseVersion: g.version }, { origin: "https://evil.example" })).status).toBe(403);
+    for (const bad of ["{ not json", {}, { baseVersion: 1 }]) expect((await publish("cedar-ridge", bad)).status).toBe(400);
     expect((await publish("no-such-hike", { baseVersion: "x" })).status).toBe(404);
     expect(state.revalidated).toEqual([]);
   });
 
   it("publishes the working copy, refreshes the pages, and refuses a stale version", async () => {
     const g = await guide();
-    expect((await publish("strawberry-peak", { baseVersion: "stale" })).status).toBe(409);
-    const res = await publish("strawberry-peak", { baseVersion: g.version });
+    expect((await publish("cedar-ridge", { baseVersion: "stale" })).status).toBe(409);
+    const res = await publish("cedar-ridge", { baseVersion: g.version });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, status: "published" });
-    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/hikes/strawberry-peak/route.gpx", "/hikes/strawberry-peak/og.jpg", "/", "/hikes"]);
+    expect(state.revalidated).toEqual(["/hikes/cedar-ridge", "/hikes/cedar-ridge/route.gpx", "/hikes/cedar-ridge/og.jpg", "/", "/hikes"]);
     expect((await guide()).published?.mdx).toBe(g.mdx);
   });
 
   it("unpublishes, keeping the working copy", async () => {
-    const g = await guide("strawberry-peak");
-    const res = await unpublish("strawberry-peak", { baseVersion: g.version });
+    const g = await guide("cedar-ridge");
+    const res = await unpublish("cedar-ridge", { baseVersion: g.version });
     expect(res.status).toBe(200);
-    const after = await guide("strawberry-peak");
+    const after = await guide("cedar-ridge");
     expect(after).toMatchObject({ status: "draft", published: null, mdx: g.mdx });
-    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/hikes/strawberry-peak/route.gpx", "/hikes/strawberry-peak/og.jpg", "/", "/hikes"]);
+    expect(state.revalidated).toEqual(["/hikes/cedar-ridge", "/hikes/cedar-ridge/route.gpx", "/hikes/cedar-ridge/og.jpg", "/", "/hikes"]);
   });
 });

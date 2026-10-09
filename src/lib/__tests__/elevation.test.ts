@@ -35,8 +35,8 @@ describe("elevationProfile", () => {
     expect(thin.map((p) => p[0])).toEqual([...thin.map((p) => p[0])].sort((a, b) => a - b));
   });
 
-  it("matches Strawberry Peak's recorded stats", () => {
-    const track = trackSchema.parse(JSON.parse(readFileSync("content/hikes/strawberry-peak/track.json", "utf8")));
+  it("matches Cedar Ridge's recorded stats", () => {
+    const track = trackSchema.parse(JSON.parse(readFileSync("fixtures/hikes/cedar-ridge/track.json", "utf8")));
     const extent = profileExtent(elevationProfile(track)!);
     expect(extent.totalMi).toBe(track.distanceMi);
     expect(Math.abs(extent.maxFt - track.maxElevationFt)).toBeLessThanOrEqual(10);

@@ -6,7 +6,7 @@
  *   pnpm content seed [slug] [--force]  copy content/hikes → the database, through the store
  *   pnpm content pull [slug]            copy the database → content/hikes (refresh the repo's copy on purpose)
  *
- * `content/hikes` is seed data, fixtures and the test baseline; in production the database is what
+ * `content/hikes` is a working folder on this machine, not part of the repo; in production the database is what
  * the site shows. Seeding never overwrites a stored guide that differs unless --force is given.
  * The database commands need DATABASE_URL (.env.local).
  */

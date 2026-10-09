@@ -1,0 +1,112 @@
+{
+  "waypoints": [
+    {
+      "id": "trailhead",
+      "order": 10,
+      "type": "start",
+      "label": "Cedar Gap",
+      "title": "Start at the Cedar Gap pullout",
+      "caption": "The route starts at a gravel pullout at about 4,660 ft. The first mile climbs steadily.",
+      "lat": 44.3,
+      "lng": -121.8,
+      "heading": 20,
+      "headingSource": "exif",
+      "photo": {
+        "key": "cedar-ridge/01-img-8950",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      }
+    },
+    {
+      "id": "mountain-curve",
+      "order": 20,
+      "type": "note",
+      "label": "Mountain curve",
+      "title": "The climb eases and the trail wraps around the slope",
+      "caption": "After the first mile the grade eases, and the trail stays nearly level as it rounds the hillside.",
+      "lat": 44.31488,
+      "lng": -121.795165,
+      "heading": 310,
+      "headingSource": "exif",
+      "photo": {
+        "key": "cedar-ridge/02-img-8956",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      }
+    },
+    {
+      "id": "saddle",
+      "order": 30,
+      "type": "note",
+      "label": "Saddle",
+      "title": "Cross the saddle",
+      "caption": "The low point between the level stretch and the final climb, 2.4 mi in. A natural place for a break.",
+      "lat": 44.330351,
+      "lng": -121.801837,
+      "heading": 350,
+      "headingSource": "exif",
+      "photo": {
+        "key": "cedar-ridge/07-img-8957",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      }
+    },
+    {
+      "id": "rocky-climb",
+      "order": 40,
+      "type": "note",
+      "label": "Rocky climb",
+      "title": "The rocky climb begins",
+      "caption": "From here to the top the trail is steep and rocky. Budget as long for this part as for everything before it.",
+      "lat": 44.330083,
+      "lng": -121.809668,
+      "heading": 15,
+      "headingSource": "exif",
+      "photo": {
+        "key": "cedar-ridge/04-img-8959",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      }
+    },
+    {
+      "id": "steepest-pitch",
+      "order": 50,
+      "type": "note",
+      "label": "Steepest pitch",
+      "title": "Steepest pitch: loose rock underfoot",
+      "caption": "The steepest part of the route. Slow and careful, especially on the way down.",
+      "lat": 44.333229,
+      "lng": -121.820517,
+      "heading": 40,
+      "headingSource": "exif",
+      "photo": {
+        "key": "cedar-ridge/05-img-8962",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      }
+    },
+    {
+      "id": "high-point",
+      "order": 60,
+      "type": "note",
+      "label": "Summit",
+      "title": "Reach the summit and turn around",
+      "caption": "The high point of the route. The way back is the way you came.",
+      "lat": 44.335985,
+      "lng": -121.823194,
+      "heading": 180,
+      "headingSource": "exif",
+      "photo": {
+        "key": "cedar-ridge/06-img-8968",
+        "kind": "flat",
+        "width": 1800,
+        "height": 2400
+      }
+    }
+  ]
+}

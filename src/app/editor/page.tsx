@@ -34,7 +34,7 @@ export default async function EditorIndex() {
       <p className="mt-2 text-bark">
         {store.kind !== "local"
           ? "Saves go to the database. The site shows what you last published; publish again to put changes live."
-          : "Saves write to content/hikes on this machine; published copies are in each hike's published/ folder."}{" "}
+          : "Saves write to files on this machine (content/hikes unless CONTENT_DIR says otherwise); nothing here reaches the live site."}{" "}
         Photos are added in each hike&rsquo;s Pins view. To delete a hike, open it and go to the end of Details.
       </p>
       <ul className="mt-6 divide-y divide-line rounded-[10px] border border-line bg-card">

@@ -4,12 +4,12 @@ import type { ContentStore, Editor } from "../types";
 
 /**
  * The behaviour every ContentStore must have, whatever it stores to. Run against each backend
- * (local.test.ts, supabase.test.ts) with Strawberry Peak, the baseline hike, as the fixture.
+ * (local.test.ts, supabase.test.ts) with Cedar Ridge, the baseline hike, as the fixture.
  * `slug` must be unique to the run; the suite creates it and removes it.
  */
 export function describeStoreContract(name: string, makeStore: () => ContentStore | Promise<ContentStore>, slug: string) {
-  const fixture = (file: string) => readFileSync(`content/hikes/strawberry-peak/${file}`, "utf8");
-  const mdx = fixture("index.mdx").replace("slug: strawberry-peak", `slug: ${slug}`);
+  const fixture = (file: string) => readFileSync(`fixtures/hikes/cedar-ridge/${file}`, "utf8");
+  const mdx = fixture("index.mdx").replace("slug: cedar-ridge", `slug: ${slug}`);
   const waypoints = fixture("waypoints.json");
   const track = JSON.parse(fixture("track.json"));
   const editor: Editor = { id: "00000000-0000-4000-8000-000000000001", name: "Contract Test", role: "owner" };
@@ -42,7 +42,7 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
 
     it("lists it with its validated details", async () => {
       const row = (await store.list()).find((h) => h.slug === slug);
-      expect(row).toMatchObject({ status: "draft", details: { title: "Strawberry Peak", distanceMi: 7.3 }, publishedDetails: null, changed: false });
+      expect(row).toMatchObject({ status: "draft", details: { title: "Cedar Ridge", distanceMi: 7.3 }, publishedDetails: null, changed: false });
       expect((await store.read(slug))!).toMatchObject({ published: null, changed: false });
     });
 
@@ -65,7 +65,7 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
     it.each([
       ["a mistyped prop", (m: string) => m.replace("<RouteMap height={420} />", "<RouteMap heigth={1} />"), /unknown prop "heigth"/],
       ["code in the guide", (m: string) => `${m}\n{process.env.SECRET}\n`, /can't contain \{…\} expressions/],
-      ["an import", (m: string) => m.replace("\n\n*The route", "\n\nimport x from 'fs'\n\n*The route"), /import or export/],
+      ["an import", (m: string) => m.replace("\n\n*This guide", "\n\nimport x from 'fs'\n\n*This guide"), /import or export/],
       ["a script tag", (m: string) => `${m}\n<script>alert(1)</script>\n`, /isn't allowed in a guide/],
       ["a pin that doesn't exist", (m: string) => m.replace('<Step waypoint="saddle" />', '<Step waypoint="nowhere" />'), /doesn't match any waypoint/],
       ["invalid details", (m: string) => m.replace("difficulty: hard", "difficulty: brutal"), /difficulty/],
@@ -118,16 +118,16 @@ export function describeStoreContract(name: string, makeStore: () => ContentStor
       expect(hike).toMatchObject({ status: "published", changed: false, version, published: { mdx: working.mdx, waypoints: working.waypoints } });
       expect(Date.parse(hike.published!.at!)).not.toBeNaN();
       let row = (await store.list()).find((h) => h.slug === slug)!;
-      expect(row).toMatchObject({ status: "published", changed: false, publishedDetails: { title: "Strawberry Peak" } });
+      expect(row).toMatchObject({ status: "published", changed: false, publishedDetails: { title: "Cedar Ridge" } });
 
       // A save changes the working copy only.
-      const edited = working.mdx.replace("title: Strawberry Peak", "title: Strawberry Peak (edited)");
+      const edited = working.mdx.replace("title: Cedar Ridge", "title: Cedar Ridge (edited)");
       const saved = await store.save(slug, { mdx: edited, waypoints }, { editor, baseVersion: version });
       expect(saved).toMatchObject({ ok: true, status: "published" });
       hike = (await store.read(slug))!;
       expect(hike).toMatchObject({ mdx: edited, changed: true, published: { mdx: working.mdx } });
       row = (await store.list()).find((h) => h.slug === slug)!;
-      expect(row).toMatchObject({ changed: true, details: { title: "Strawberry Peak (edited)" }, publishedDetails: { title: "Strawberry Peak" } });
+      expect(row).toMatchObject({ changed: true, details: { title: "Cedar Ridge (edited)" }, publishedDetails: { title: "Cedar Ridge" } });
 
       // Publishing again brings the published copy up to date.
       expect(await store.publish(slug, { editor, baseVersion: hike.version })).toMatchObject({ ok: true });

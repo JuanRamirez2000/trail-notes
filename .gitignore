@@ -49,3 +49,9 @@ next-env.d.ts
 
 # photos live in Supabase Storage; this is the dev-only local backend (`pnpm photos pull`)
 /public/photos/
+
+# guides kept as files on this machine (`pnpm content pull`, or made in the editor under `pnpm dev`);
+# real guides live in the database, and the tests use fixtures/hikes
+/content/
+# the end-to-end run's copy of the fixture guides
+/.e2e/

@@ -82,7 +82,7 @@ Last line.
 `;
 
 const cases: [string, string][] = [
-  ...["strawberry-peak", "granite-saddle", "ridgeline-loop"].map((slug) => [slug, readFileSync(`content/hikes/${slug}/index.mdx`, "utf8")] as [string, string]),
+  ...["cedar-ridge", "granite-saddle", "ridgeline-loop"].map((slug) => [slug, readFileSync(`fixtures/hikes/${slug}/index.mdx`, "utf8")] as [string, string]),
   ["tricky syntax", TRICKY],
 ];
 
@@ -94,8 +94,8 @@ describe("MDXEditor round trip (V2 Write mode)", () => {
     expect((await roundTrip(out)).out).toBe(out);
   });
 
-  it("leaves the baseline guide (Strawberry Peak) byte-for-byte unchanged apart from the final newline", async () => {
-    const src = readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8");
+  it("leaves the baseline guide (Cedar Ridge) byte-for-byte unchanged apart from the final newline", async () => {
+    const src = readFileSync("fixtures/hikes/cedar-ridge/index.mdx", "utf8");
     expect(`${(await roundTrip(src)).out}\n`).toBe(src);
   });
 });

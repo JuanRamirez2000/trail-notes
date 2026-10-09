@@ -1,8 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_ENV } from "./e2e/env";
 
 /**
- * End-to-end tests (`pnpm e2e`, after `pnpm build`). Two servers, both on the guides in
- * `content/hikes` and never the database, whatever `.env.local` says:
+ * End-to-end tests. Run them with `pnpm e2e` (scripts/e2e.ts), which copies the fixture guides
+ * to .e2e/hikes, builds the site on them and then runs this. Two servers, both on that folder and
+ * on photos in public/photos, never the database or the bucket (e2e/env.ts):
  *
  *  - `next start` on 3211: the site as a visitor gets it. With `EDITOR_AUTH` unset a production
  *    server has no editors, so everyone is an outsider (e2e/outsider.spec.ts).
@@ -10,14 +12,11 @@ import { defineConfig, devices } from "@playwright/test";
  *    way to reach the editor without a real Google account (e2e/editor.spec.ts). Next allows one
  *    `next dev` per folder, so stop `pnpm dev` first.
  *
- * The editor tests work on a hike they create (`zz-e2e-…`) and delete, and keep its photos in
- * `public/photos` (the dev server runs with `NEXT_PUBLIC_PHOTO_STORAGE=local`).
+ * The editor tests work on a hike they create (`zz-e2e-…`) and delete.
  */
 const SITE = "http://127.0.0.1:3211";
 const EDITOR = "http://127.0.0.1:3210";
-const env = { CONTENT_STORE: "local", EDITOR_AUTH: "", NEXT_TELEMETRY_DISABLED: "1" };
-// The editor tests upload photos: onto this machine's disk (public/photos), never to the bucket.
-const editorEnv = { ...env, NEXT_PUBLIC_PHOTO_STORAGE: "local" };
+const env = E2E_ENV;
 
 export default defineConfig({
   testDir: "e2e",
@@ -35,6 +34,6 @@ export default defineConfig({
   ],
   webServer: [
     { command: "pnpm exec next start --port 3211 --hostname 127.0.0.1", url: `${SITE}/api/health`, env, reuseExistingServer: false, timeout: 60_000 },
-    { command: "pnpm exec next dev --port 3210 --hostname 127.0.0.1", url: `${EDITOR}/api/health`, env: editorEnv, reuseExistingServer: false, timeout: 120_000 },
+    { command: "pnpm exec next dev --port 3210 --hostname 127.0.0.1", url: `${EDITOR}/api/health`, env, reuseExistingServer: false, timeout: 120_000 },
   ],
 });

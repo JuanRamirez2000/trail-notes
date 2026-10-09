@@ -4,8 +4,8 @@ import { splitGuide } from "@/lib/frontmatter";
 import { waypointsFileSchema } from "@/lib/schemas";
 import { insertSection, missingSections } from "../write/missing-sections";
 
-const BODY = splitGuide(readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8")).body;
-const PINS = waypointsFileSchema.parse(JSON.parse(readFileSync("content/hikes/strawberry-peak/waypoints.json", "utf8"))).waypoints;
+const BODY = splitGuide(readFileSync("fixtures/hikes/cedar-ridge/index.mdx", "utf8")).body;
+const PINS = waypointsFileSchema.parse(JSON.parse(readFileSync("fixtures/hikes/cedar-ridge/waypoints.json", "utf8"))).waypoints;
 const ids = (body: string) => missingSections(body, PINS).map((s) => s.waypoint.id);
 const steps = (body: string) => [...body.matchAll(/<Step waypoint="([^"]+)"/g)].map((m) => m[1]);
 

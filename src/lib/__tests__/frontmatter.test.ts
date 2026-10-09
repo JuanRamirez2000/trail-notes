@@ -3,23 +3,23 @@ import { describe, expect, it } from "vitest";
 import { blankFrontmatter, joinGuide, readDetails, setDetail, splitGuide, yamlProblems } from "../frontmatter";
 import { frontmatterSchema } from "../schemas";
 
-const YAML = `title: Strawberry Peak
-slug: strawberry-peak
+const YAML = `title: Cedar Ridge
+slug: cedar-ridge
 # the summary shows on the gallery card
-summary: An out-and-back from Red Box.
+summary: An out-and-back from Cedar Gap.
 distanceMi: 7.3
 trailhead:
   lat: 34.259122
   lng: -118.104093
 essentials:
-  parking: Red Box parking area.
+  parking: Cedar Gap parking area.
   hazards:
     - Steep, rocky climb.
 date: 2026-04-19`;
 
 describe("splitGuide / joinGuide", () => {
-  it.each(["strawberry-peak", "granite-saddle", "ridgeline-loop"])("round-trips %s byte for byte", (slug) => {
-    const mdx = readFileSync(`content/hikes/${slug}/index.mdx`, "utf8");
+  it.each(["cedar-ridge", "granite-saddle", "ridgeline-loop"])("round-trips %s byte for byte", (slug) => {
+    const mdx = readFileSync(`fixtures/hikes/${slug}/index.mdx`, "utf8");
     expect(joinGuide(splitGuide(mdx))).toBe(mdx);
   });
 
@@ -36,7 +36,7 @@ describe("splitGuide / joinGuide", () => {
 describe("setDetail", () => {
   it("changes one value and leaves every other line, comment and order alone", () => {
     expect(setDetail(YAML, ["distanceMi"], 7.4)).toBe(YAML.replace("distanceMi: 7.3", "distanceMi: 7.4"));
-    expect(setDetail(YAML, ["essentials", "parking"], "Lot at Red Box.")).toBe(YAML.replace("Red Box parking area.", "Lot at Red Box."));
+    expect(setDetail(YAML, ["essentials", "parking"], "Lot at Cedar Gap.")).toBe(YAML.replace("Cedar Gap parking area.", "Lot at Cedar Gap."));
     expect(setDetail(YAML, ["trailhead", "lat"], 34.26)).toBe(YAML.replace("34.259122", "34.26"));
   });
 
@@ -60,9 +60,9 @@ describe("setDetail", () => {
   });
 
   it("keeps the real guide's details valid after an edit", () => {
-    const { yaml } = splitGuide(readFileSync("content/hikes/strawberry-peak/index.mdx", "utf8"));
+    const { yaml } = splitGuide(readFileSync("fixtures/hikes/cedar-ridge/index.mdx", "utf8"));
     const edited = setDetail(setDetail(yaml, ["sidebar"], ["steps", "minimap"]), ["estTime"], "4 hours");
-    expect(frontmatterSchema.parse(readDetails(edited))).toMatchObject({ sidebar: ["steps", "minimap"], estTime: "4 hours", title: "Strawberry Peak" });
+    expect(frontmatterSchema.parse(readDetails(edited))).toMatchObject({ sidebar: ["steps", "minimap"], estTime: "4 hours", title: "Cedar Ridge" });
   });
 });
 
