@@ -5,6 +5,7 @@ import { rateLimiter, sameOrigin } from "@/lib/auth/request";
 import { getEditor } from "@/lib/auth/server";
 import { SLUG } from "@/lib/schemas";
 import { getStore } from "@/lib/store/server";
+import { LIST_PATHS } from "@/lib/site";
 
 const allow = rateLimiter({ limit: 30, windowMs: 60_000 });
 const notFound = () => new Response("Not found", { status: 404 });
@@ -36,11 +37,11 @@ async function change(req: Request, ctx: RouteContext<"/api/editor/[slug]/publis
   const result = await store[action](slug, { editor, baseVersion: body.baseVersion });
   if (result.ok) {
     revalidatePath(`/hikes/${slug}`);
-    revalidatePath("/");
+    LIST_PATHS.forEach((p) => revalidatePath(p));
     // From a route, revalidatePath only marks the pages: the next visitor is still handed the old
     // copy while a fresh one is made. That visitor is us, so nobody else is served a guide that was
     // just taken down, or the version from before it was published.
-    after(() => Promise.allSettled([`/hikes/${slug}`, "/"].map((p) => fetch(new URL(p, req.url), { cache: "no-store" }))));
+    after(() => Promise.allSettled([`/hikes/${slug}`, ...LIST_PATHS].map((p) => fetch(new URL(p, req.url), { cache: "no-store" }))));
     return json({ ok: true, status: result.status, at: new Date().toISOString() }, 200);
   }
   if (result.kind === "invalid") return json({ ok: false, problems: result.problems }, 422);

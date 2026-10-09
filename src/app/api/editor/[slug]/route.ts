@@ -5,6 +5,7 @@ import { getEditor } from "@/lib/auth/server";
 import { SLUG } from "@/lib/schemas";
 import { getStore } from "@/lib/store/server";
 import { MAX_MDX_BYTES, MAX_WAYPOINTS_BYTES } from "@/lib/store/validate";
+import { LIST_PATHS } from "@/lib/site";
 
 /** Room for both texts plus JSON overhead; anything larger is refused before it's read. */
 const MAX_BODY_BYTES = MAX_MDX_BYTES + MAX_WAYPOINTS_BYTES + 10_000;
@@ -82,8 +83,8 @@ export async function DELETE(req: Request, ctx: RouteContext<"/api/editor/[slug]
   const store = await getStore();
   const result = await store.deleteDraft(slug, { editor, baseVersion: body.baseVersion });
   if (result.ok) {
-    // Drafts have no public page, but under `pnpm dev` the gallery lists them.
-    revalidatePath("/");
+    // Drafts have no public page, but under `pnpm dev` the gallery and the landing page list them.
+    LIST_PATHS.forEach((p) => revalidatePath(p));
     return json({ ok: true }, 200);
   }
   if (result.kind === "published") return json({ ok: false, problems: ["Only a draft can be deleted. Unpublish it first."] }, 409);

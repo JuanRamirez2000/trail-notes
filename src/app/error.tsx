@@ -22,7 +22,7 @@ export default function PageError({ error, retry }: { error: Error & { digest?: 
           <button type="button" onClick={() => retry()} className="cursor-pointer rounded-lg bg-forest px-5 py-2.5 text-lg text-paper">
             Try again
           </button>
-          <Link href="/" className="rounded-lg border border-line-strong px-5 py-2.5 text-lg text-graphite">
+          <Link href="/hikes" className="rounded-lg border border-line-strong px-5 py-2.5 text-lg text-graphite">
             All hikes
           </Link>
         </div>

@@ -55,7 +55,7 @@ scripts/
   lib/                 pure helpers shared by the scripts (unit-tested)
   make-sample-photos.ts  placeholder JPEGs with real EXIF, for trying the pipeline
 src/
-  app/(site)/          gallery (/) and hike guide (/hikes/[slug])
+  app/(site)/          landing page (/), gallery (/hikes) and hike guide (/hikes/[slug])
   app/editor/          the editor (a local owner under `pnpm dev`; Google sign-in on the live site)
   app/api/editor/      create and save endpoints (404 for anyone who isn't an editor)
   app/robots.ts, sitemap.ts, error.tsx, not-found.tsx   crawler files and error pages

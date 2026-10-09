@@ -38,7 +38,7 @@ export default async function NotFound() {
           <p className="mt-2 text-body text-graphite">
             This page isn&apos;t on any of our maps. It may have moved, or the link has a typo.
           </p>
-          <Link href="/" className="mt-5 inline-block rounded-lg bg-forest px-5 py-2.5 text-lg text-paper hover:text-paper">
+          <Link href="/hikes" className="mt-5 inline-block rounded-lg bg-forest px-5 py-2.5 text-lg text-paper hover:text-paper">
             ← Back to all hikes
           </Link>
 

@@ -65,13 +65,13 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
           <div className="relative h-[200px] border-b-[1.5px] border-line-strong sm:h-[360px]">
             {/* Decorative here: the title is right beside it. */}
             <Photo photoKey={hike.cover} alt="" priority sizes="100vw" className="absolute inset-0" />
-            <Link href="/" className="absolute left-3 top-2.5 rounded-full border border-line bg-card px-2.5 text-[15px] text-graphite sm:hidden">
+            <Link href="/hikes" className="absolute left-3 top-2.5 rounded-full border border-line bg-card px-2.5 text-[15px] text-graphite sm:hidden">
               ← All hikes
             </Link>
           </div>
           <div className="px-4 pt-3.5 sm:absolute sm:bottom-6 sm:left-8 sm:max-w-[520px] sm:rounded-lg sm:border sm:border-line sm:bg-card sm:px-5 sm:py-3">
             <div className="text-sm text-bark">
-              <Link href="/" className="hidden text-bark sm:inline">
+              <Link href="/hikes" className="hidden text-bark sm:inline">
                 ← All hikes ·{" "}
               </Link>
               {hike.region}

@@ -165,7 +165,7 @@ describe("DELETE /api/editor/[slug]", () => {
     const g = await guide("ridgeline-loop");
     expect((await del("ridgeline-loop", { baseVersion: g.version })).status).toBe(200);
     expect(await store.read("ridgeline-loop")).toBeNull();
-    expect(state.revalidated).toEqual(["/"]);
+    expect(state.revalidated).toEqual(["/", "/hikes"]);
   });
 });
 
@@ -218,7 +218,7 @@ describe("POST / DELETE /api/editor/[slug]/publish", () => {
     const res = await publish("strawberry-peak", { baseVersion: g.version });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, status: "published" });
-    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/"]);
+    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/", "/hikes"]);
     expect((await guide()).published?.mdx).toBe(g.mdx);
   });
 
@@ -228,6 +228,6 @@ describe("POST / DELETE /api/editor/[slug]/publish", () => {
     expect(res.status).toBe(200);
     const after = await guide("strawberry-peak");
     expect(after).toMatchObject({ status: "draft", published: null, mdx: g.mdx });
-    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/"]);
+    expect(state.revalidated).toEqual(["/hikes/strawberry-peak", "/", "/hikes"]);
   });
 });

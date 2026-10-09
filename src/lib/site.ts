@@ -12,3 +12,6 @@ export const SITE_URL = (
 export const SITE_NAME = "Trailnotes";
 export const SITE_DESCRIPTION = "Photo-by-photo hiking guides: every turn, viewpoint, water source and bail-out on the map.";
 export const REPO_URL = "https://github.com/JuanRamirez2000/trail-notes";
+
+/** The pages that list hikes (the landing page's latest guides, the gallery): refreshed whenever a hike appears, changes or goes. */
+export const LIST_PATHS = ["/", "/hikes"] as const;

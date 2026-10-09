@@ -2,6 +2,10 @@
 
 Newest first. Commit hashes refer to `main`.
 
+## After v0.1.0
+
+- **Landing page and footer** (2026-10-08): `/` is now a short landing page (what Trailnotes is, the latest guide, what's in a guide) and the gallery moved to `/hikes`. The footer has the wordmark, links to the gallery, the latest guides, the repo and the licence, above the "conditions change" reminder. "All hikes" links, the sitemap and the refresh after publishing follow the move; axe is clean on both pages.
+
 ## v0.1.0 (2026-10-08): the first tagged release
 
 Tagged `v0.1.0` on `main`. Planned with the owner on 2026-10-08 as twelve steps, each one verified commit: licence, app icons, dependency patches, delete a draft, Write view placeholders, the database layer on Drizzle, history and restore, draft and published copies, the elevation profile, an accessibility pass, the end-to-end suite, and retiring `e2-go-live.md`. The Fresh Green theme was added along the way. MIT for the code; guides and photos stay all rights reserved. Left out on purpose: photo uploads from the app (needs an iOS/HEIC spike), a phone layout for the editor, Write view support for images and code blocks, a Content-Security-Policy, and the refactors in [todo.md](todo.md). What the owner still has to do or check is in [todo.md](todo.md).

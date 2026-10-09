@@ -5,6 +5,7 @@ import { getEditor } from "@/lib/auth/server";
 import { getStore } from "@/lib/store/server";
 import { RESERVED_SLUGS, SLUG } from "@/lib/schemas";
 import { MAX_MDX_BYTES, MAX_WAYPOINTS_BYTES } from "@/lib/store/validate";
+import { LIST_PATHS } from "@/lib/site";
 
 /** A recorded track is the big part of a new hike: a long day out simplifies to a few hundred points. */
 const MAX_TRACK_BYTES = 1_000_000;
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
   const result = await store.create(body.slug, { mdx: body.mdx, waypoints: body.waypoints, track: body.track ?? null }, { editor });
 
   if (result.ok) {
-    revalidatePath("/");
+    LIST_PATHS.forEach((p) => revalidatePath(p));
     return json({ ok: true, slug: body.slug, version: result.version }, 201);
   }
   if (result.kind === "invalid") return json({ ok: false, problems: result.problems }, 422);

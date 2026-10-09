@@ -2,10 +2,13 @@ import { expect, test } from "@playwright/test";
 
 /** A production server with no sign-in configured: nobody is an editor. */
 
-test("the gallery and a published guide are public", async ({ page }) => {
+test("the landing page leads to the gallery and a published guide", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Know every turn before you get there." })).toBeVisible();
+  await page.getByRole("link", { name: "Browse the hikes" }).click();
+  await expect(page).toHaveURL(/\/hikes$/);
   await expect(page.getByRole("heading", { level: 1, name: "Find a hike" })).toBeVisible();
-  await page.getByRole("link", { name: /Strawberry Peak/ }).first().click();
+  await page.getByRole("main").getByRole("link", { name: /Strawberry Peak/ }).first().click();
   await expect(page).toHaveURL(/\/hikes\/strawberry-peak$/);
   await expect(page.getByRole("heading", { level: 1, name: "Strawberry Peak" })).toBeVisible();
   await expect(page.getByRole("img", { name: /^Elevation along the route/ })).toBeVisible();
@@ -13,8 +16,10 @@ test("the gallery and a published guide are public", async ({ page }) => {
 
 test("a draft has no page and isn't listed", async ({ page, request }) => {
   expect((await request.get("/hikes/granite-saddle")).status()).toBe(404);
-  await page.goto("/");
-  await expect(page.getByText("Granite Saddle")).toHaveCount(0);
+  for (const path of ["/", "/hikes"]) {
+    await page.goto(path);
+    await expect(page.getByText("Granite Saddle"), path).toHaveCount(0);
+  }
   expect(await (await request.get("/sitemap.xml")).text()).not.toContain("granite-saddle");
 });
 

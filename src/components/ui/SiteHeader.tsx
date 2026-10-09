@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "./Logo";
+import { SiteNav } from "./SiteNav";
 
 export function SiteHeader() {
   return (
@@ -7,11 +8,7 @@ export function SiteHeader() {
       <Link href="/" className="no-underline" aria-label="Trailnotes home">
         <Wordmark />
       </Link>
-      <nav className="flex gap-5 text-lg">
-        <Link href="/" className="border-b-[3px] border-ochre text-graphite hover:text-bark">
-          Hikes
-        </Link>
-      </nav>
+      <SiteNav />
     </header>
   );
 }
