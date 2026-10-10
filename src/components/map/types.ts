@@ -16,6 +16,12 @@ export type TrailMapProps = {
   terrain?: boolean;
   /** "route" fits the whole hike; "active" zooms close on the active waypoint (360° inset). */
   fit?: "route" | "active";
+  /**
+   * Where the zoom buttons go. "top-left" is for a map whose own block floats things in the other
+   * corners (the route map: expand top right, legend bottom right); the attribution then moves to
+   * the bottom left, beside the logo, to stay clear of them.
+   */
+  controls?: "top-left" | "top-right";
   /** Pin size in px (sketch only); thumbnails use small pins. */
   pinSize?: number;
   className?: string;

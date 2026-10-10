@@ -3,7 +3,7 @@
 import "mapbox-gl/dist/mapbox-gl.css";
 import { cn } from "@/lib/cn";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
+import Map, { AttributionControl, Layer, Marker, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 import { Pin } from "@/components/ui/Pin";
 import { bounds } from "@/lib/geo";
 import { routeCoords } from "@/lib/hike";
@@ -27,6 +27,7 @@ export default function MapboxTrailMap({
   interactive = true,
   terrain,
   fit = "route",
+  controls = "top-right",
   className,
   onLoad,
   onError,
@@ -79,7 +80,7 @@ export default function MapboxTrailMap({
         initialViewState={initialViewState}
         interactive={interactive}
         cooperativeGestures={interactive}
-        attributionControl={interactive}
+        attributionControl={interactive && controls === "top-right"}
         logoPosition="bottom-left"
         terrain={terrain ? { source: "mapbox-dem", exaggeration: 1.4 } : undefined}
         style={{ position: "absolute", inset: 0 }}
@@ -122,7 +123,8 @@ export default function MapboxTrailMap({
           />
         ))}
 
-        {interactive && <NavigationControl position="top-right" showCompass={!!terrain} />}
+        {interactive && controls === "top-left" && <AttributionControl position="bottom-left" compact />}
+        {interactive && <NavigationControl position={controls} showCompass={!!terrain} />}
       </Map>
     </div>
   );

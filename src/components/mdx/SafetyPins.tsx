@@ -23,12 +23,12 @@ export function SafetyPins({ height = 240 }: SafetyPinsProps) {
   const safety = waypoints.filter(isSafety);
 
   return (
-    <Frame icon={componentIcons.SafetyPins} title="Safety points" footer="Larger pins with a double halo mark water and bail-outs.">
-      <div className="grid sm:grid-cols-[230px_minmax(0,1fr)]">
-        <div className="border-b border-line sm:border-r sm:border-b-0" style={{ height }}>
+    <Frame icon={componentIcons.SafetyPins} title="Safety points" footer="Larger pins with a double halo mark water and bail-outs." bleed>
+      <div className="grid sm:grid-cols-[190px_minmax(0,1fr)]">
+        <div className="border-b border-line sm:h-auto! sm:border-r sm:border-b-0" style={{ height, minHeight: height }}>
           <TrailMap waypoints={waypoints} route={route} activeId={activeId} safety labels onSelect={(id) => select(id)} className="size-full" />
         </div>
-        <ul className="flex flex-col gap-3 p-3.5">
+        <ul className="flex flex-col gap-2.5 p-3 pt-4 sm:pt-11">
           {safety.length === 0 && <li className="text-bark">No water or bail-out points recorded for this hike.</li>}
           {safety.map((w) => (
             <li key={w.id}>

@@ -90,7 +90,8 @@ test("a block can be moved in the Write view, and the insert menu shows an icon 
   await page.goto(`/editor/${slug}`);
   // A new draft is a route map followed by a heading.
   const block = page.locator('[data-write-block="RouteMap"]');
-  await block.click({ position: { x: 24, y: 16 } });
+  // Pressing anywhere on a block selects it; the map's own corners hold its zoom and expand buttons.
+  await block.dispatchEvent("mousedown");
   const up = page.getByRole("button", { name: "↑ Move up" });
   const down = page.getByRole("button", { name: "↓ Move down" });
   await expect(up).toBeDisabled();

@@ -4,12 +4,12 @@ import "@photo-sphere-viewer/core/index.css";
 import "@photo-sphere-viewer/markers-plugin/index.css";
 import type { Viewer } from "@photo-sphere-viewer/core";
 import type { MarkerConfig, MarkersPlugin } from "@photo-sphere-viewer/markers-plugin";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 import { SketchMap } from "@/components/map/SketchMap";
 import { useNearViewport } from "@/components/map/useInView";
 import { canCreateWebGL2 } from "@/components/map/webgl";
-import { Frame } from "@/components/ui/Frame";
 import { Photo } from "@/components/ui/Photo";
+import { cn } from "@/lib/cn";
 import { bearing, compassLabel, distanceMi, normalizeHeading } from "@/lib/geo";
 import type { HikeWaypoint, RouteCoords } from "@/lib/hike";
 import { useHike, useWaypoint } from "@/lib/hike-store";
@@ -17,7 +17,6 @@ import { PIN_STYLES } from "@/lib/pins";
 import { photoUrl } from "@/lib/storage";
 import { MissingWaypoint } from "./MissingWaypoint";
 import type { ManifestProps } from "@/lib/mdx/manifest";
-import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type PanoViewerProps = ManifestProps<"PanoViewer">;
@@ -157,66 +156,103 @@ export function PanoViewer({ waypoint, markerRadiusMi = 1 }: PanoViewerProps) {
   const go = (d: number) => panos[idx + d] && setCurrentId(panos[idx + d].id);
 
   return (
-    <div data-waypoint-card={current.id}>
-      <Frame icon={componentIcons.PanoViewer}
-        title={`360° view · ${current.label}`}
-        active={isActive}
-        footer={
-          <div className="flex items-center justify-between gap-3">
-            <button type="button" disabled={idx <= 0} onClick={() => go(-1)} className="cursor-pointer disabled:cursor-default disabled:opacity-40">
-              ◀ Prev spot
-            </button>
-            <span className="hidden text-center sm:block">Cone on mini map follows where you look</span>
-            <button type="button" disabled={idx >= panos.length - 1} onClick={() => go(1)} className="cursor-pointer disabled:cursor-default disabled:opacity-40">
-              Next spot ▶
-            </button>
+    <PanoShell wp={current} waypoints={waypoints} route={route} heading={heading} active={isActive} onPointerDown={() => select(current.id)} bodyRef={nearRef}>
+      {failed ? (
+        <>
+          {/* No WebGL: show the panorama flat, centred on its heading, instead of PSV's error overlay. */}
+          <Photo photoKey={current.photo.key} alt={current.photo.alt ?? current.title} className="absolute inset-0" />
+          <div className="absolute inset-x-2 top-14 z-10 mx-auto max-w-sm rounded-lg border border-line bg-card px-3 py-2 text-center text-sm">
+            The interactive 360° view needs WebGL, which this browser isn&apos;t providing right now. Showing the flat panorama instead.
           </div>
-        }
+        </>
+      ) : (
+        <div ref={containerRef} className="absolute inset-0" />
+      )}
+      {panos.length > 1 && (
+        <>
+          <button type="button" disabled={idx <= 0} onClick={() => go(-1)} aria-label="Previous 360° spot" className={cn(spotButton, "left-2.5")}>
+            ◀
+          </button>
+          <button type="button" disabled={idx >= panos.length - 1} onClick={() => go(1)} aria-label="Next 360° spot" className={cn(spotButton, "right-2.5")}>
+            ▶
+          </button>
+        </>
+      )}
+    </PanoShell>
+  );
+}
+
+const spotButton = "absolute top-1/2 z-10 flex size-[38px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-line-strong bg-card disabled:cursor-default disabled:opacity-40";
+
+type ShellProps = {
+  wp: HikeWaypoint;
+  waypoints: HikeWaypoint[];
+  route: RouteCoords;
+  /** Where the viewer is looking, or the photo's own direction when there's nothing to look around in. */
+  heading: number | null;
+  active?: boolean;
+  onPointerDown?: () => void;
+  bodyRef?: Ref<HTMLDivElement>;
+  children: ReactNode;
+};
+
+/**
+ * What surrounds a 360° photo (design: Trailnotes Components, "360° viewer"): the photo to the
+ * block's edges, a label top left, a round map top right whose cone follows where you look, and
+ * a compass tape along the bottom.
+ */
+function PanoShell({ wp, waypoints, route, heading, active, onPointerDown, bodyRef, children }: ShellProps) {
+  return (
+    <div data-waypoint-card={wp.id} className="not-prose my-[22px]">
+      <div
+        ref={bodyRef}
+        role="group"
+        aria-label={`360° view: ${wp.label}`}
+        onPointerDown={onPointerDown}
+        className={cn("bg-stripes relative h-[240px] overflow-hidden rounded-[10px] border sm:h-[340px]", active ? "border-forest shadow-[0_0_0_1px_var(--color-forest)]" : "border-line")}
       >
-        <div ref={nearRef} className="bg-stripes relative h-[220px] sm:h-[360px]" onPointerDown={() => select(current.id)}>
-          {failed ? (
-            <>
-              {/* No WebGL: show the panorama flat, centred on its heading, instead of PSV's error overlay. */}
-              <Photo photoKey={current.photo.key} alt={current.photo.alt ?? current.title} className="absolute inset-0" />
-              <div className="absolute inset-x-2 top-12 z-10 mx-auto max-w-sm rounded-lg border border-line bg-card px-3 py-2 text-center text-sm sm:top-14">
-                The interactive 360° view needs WebGL, which this browser isn&apos;t providing right now. Showing the flat panorama instead.
-              </div>
-            </>
-          ) : (
-            <div ref={containerRef} className="absolute inset-0" />
-          )}
-          <div className="pointer-events-none absolute left-2 top-2 z-10 rounded-md border border-line bg-card px-2.5 py-0.5 font-mono text-xs font-semibold sm:left-3.5 sm:top-3.5">
-            <span className="hidden sm:inline">Facing </span>
-            {compassLabel(heading)} · {Math.round(heading)}°
-          </div>
-          <div data-hidden={failed} className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full data-[hidden=true]:hidden border border-line bg-card px-3 text-sm sm:bottom-3.5 sm:left-1/2 sm:-translate-x-1/2 sm:text-[15px]">
-            ◀ drag to look around ▶
-          </div>
-          <div className="absolute bottom-2 right-2 z-10 size-[84px] overflow-hidden rounded-lg border-2 border-forest sm:bottom-3.5 sm:right-3.5 sm:size-[130px]">
-            {/* Sketch rather than Mapbox: a live map here would cost another WebGL context. */}
-            <SketchMap waypoints={waypoints} route={route} activeId={current.id} heading={heading} fit="active" pinSize={16} className="size-full" />
-          </div>
+        {children}
+        <div className="pointer-events-none absolute top-3 left-3 z-10 rounded-full border border-line-strong bg-card px-3 py-[3px] font-mono text-xs font-semibold">360° · {wp.label}</div>
+        <div className="absolute top-3 right-3 z-10 size-[72px] overflow-hidden rounded-full border-[3px] border-white shadow-[0_0_0_1.5px_var(--color-graphite)] sm:size-[92px]">
+          {/* Sketch rather than Mapbox: a live map here would cost another WebGL context. */}
+          <SketchMap waypoints={waypoints} route={route} activeId={wp.id} heading={heading} fit="active" pinSize={14} className="size-full" />
         </div>
-      </Frame>
+        {heading != null && <CompassTape heading={heading} />}
+      </div>
     </div>
   );
 }
 
-/** Stand-in until the waypoint has a 360° photo: same frame and inset map, no viewer. */
+/** The compass around the current direction: two points either side, and the heading itself in the middle. */
+function CompassTape({ heading }: { heading: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex h-11 items-center justify-between rounded-lg border border-line-strong bg-card px-[18px] font-mono text-xs font-semibold text-bark" aria-label={`Facing ${compassLabel(heading)}, ${Math.round(heading)}°`} role="img">
+      {[-90, -45, 0, 45, 90].map((off, i) => (
+        <Fragment key={off}>
+          {i > 0 && <span aria-hidden>·</span>}
+          {off === 0 ? (
+            <span className="border-b-[3px] border-ochre px-1.5 pb-0.5 text-graphite">
+              {compassLabel(heading)} {Math.round(heading)}°
+            </span>
+          ) : (
+            <span className={cn(Math.abs(off) === 90 && "max-sm:hidden")}>{compassLabel(heading + off)}</span>
+          )}
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+/** Stand-in until the waypoint has a 360° photo: the same surroundings, no viewer. */
 function PanoPlaceholder({ wp, waypoints, route }: { wp: HikeWaypoint; waypoints: HikeWaypoint[]; route: RouteCoords }) {
   return (
-    <div data-waypoint-card={wp.id}>
-      <Frame icon={componentIcons.PanoViewer} title={`360° view · ${wp.label}`} footer={<span className="text-bark">No 360° photo for this spot yet.</span>}>
-        <div className="bg-stripes relative flex h-[220px] items-center justify-center sm:h-[360px]">
-          <div className="rounded-lg border border-dashed border-line-strong bg-card px-4 py-2 text-center">
-            <div className="font-mono text-xs tracking-[.06em] text-bark uppercase">360° photo</div>
-            <div className="text-[15px]">Coming soon</div>
-          </div>
-          <div className="absolute right-2 bottom-2 size-[84px] overflow-hidden rounded-lg border-2 border-forest sm:right-3.5 sm:bottom-3.5 sm:size-[130px]">
-            <SketchMap waypoints={waypoints} route={route} activeId={wp.id} heading={wp.heading} fit="active" pinSize={16} className="size-full" />
-          </div>
+    <PanoShell wp={wp} waypoints={waypoints} route={route} heading={wp.heading}>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="rounded-lg border border-dashed border-line-strong bg-card px-4 py-2 text-center">
+          <div className="font-mono text-xs tracking-[.06em] text-bark uppercase">360° photo</div>
+          <div className="text-[15px]">Coming soon</div>
         </div>
-      </Frame>
-    </div>
+      </div>
+    </PanoShell>
   );
 }

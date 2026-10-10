@@ -76,7 +76,7 @@ export function WaypointLinks({ title, icon, waypoints, primary = (wp) => wp.tit
 
   if (bare) return list;
   return (
-    <Frame icon={icon} title={title} meta={String(waypoints.length)} expandable={false} className="my-0 max-h-full min-h-0" bodyClassName="flex min-h-0 flex-col">
+    <Frame icon={icon} title={title} meta={String(waypoints.length)} expandable={false} className="my-0 max-h-full min-h-0" bodyClassName="flex min-h-0 flex-1 flex-col">
       {list}
     </Frame>
   );

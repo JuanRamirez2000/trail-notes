@@ -29,13 +29,14 @@ export function PhotoCard({ waypoint, caption }: PhotoCardProps) {
       <Frame icon={componentIcons.PhotoCard}
         title={waypointHeading(wp)}
         active={isActive}
+        bleed
         footer={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <span className="flex-1 text-lg leading-snug">{text}</span>
+            <span className="flex-1 text-[17px] leading-snug text-graphite">{text}</span>
             <button
               type="button"
               onClick={() => select(wp.id)}
-              className="min-h-8 cursor-pointer self-start whitespace-nowrap rounded-full border border-line px-3 text-[15px] hover:border-forest sm:self-auto"
+              className="min-h-8 cursor-pointer self-start whitespace-nowrap rounded-full border border-line bg-card px-3 text-[15px] text-graphite hover:border-forest sm:self-auto"
             >
               ◉ View on map →
             </button>
@@ -51,7 +52,7 @@ export function PhotoCard({ waypoint, caption }: PhotoCardProps) {
           ) : (
             <div className="bg-stripes absolute inset-0 flex items-center justify-center font-mono text-xs text-bark">no photo</div>
           )}
-          <Pin type={wp.type} size={26} className="pointer-events-none absolute left-2.5 top-2.5" />
+          <Pin type={wp.type} size={26} className="pointer-events-none absolute bottom-2.5 left-2.5" />
         </div>
       </Frame>
     </div>

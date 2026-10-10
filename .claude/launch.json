@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "dev", "runtimeExecutable": "pnpm", "runtimeArgs": ["dev"], "port": 3100 },
-    { "name": "dev-local-photos", "runtimeExecutable": "env", "runtimeArgs": ["CONTENT_STORE=local", "EDITOR_AUTH=", "NEXT_PUBLIC_PHOTO_STORAGE=local", "pnpm", "exec", "next", "dev", "--port", "3210", "--hostname", "127.0.0.1"], "port": 3210 },
+    { "name": "dev-fixtures", "runtimeExecutable": "env", "runtimeArgs": ["CONTENT_STORE=local", "CONTENT_DIR=.e2e/hikes", "EDITOR_AUTH=", "NEXT_PUBLIC_PHOTO_STORAGE=local", "pnpm", "exec", "next", "dev", "--port", "3210", "--hostname", "127.0.0.1"], "port": 3210 },
     { "name": "prod", "runtimeExecutable": "pnpm", "runtimeArgs": ["start", "--port", "3111", "--hostname", "127.0.0.1"], "port": 3111 }
   ]
 }

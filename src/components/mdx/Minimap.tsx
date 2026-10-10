@@ -5,12 +5,11 @@ import { SketchMap } from "@/components/map/SketchMap";
 import { TrailMap } from "@/components/map/TrailMap";
 import { SafetyList } from "@/components/sidebar/SafetyList";
 import { StepList } from "@/components/sidebar/StepList";
-import { Frame } from "@/components/ui/Frame";
+import { floatingButton } from "@/components/ui/Frame";
 import { cn } from "@/lib/cn";
 import { SIDEBAR_CARDS, type SidebarCardId } from "@/lib/schemas";
 import { useActiveWaypoint, useEffectiveHeading, useHike } from "@/lib/hike-store";
 import type { ManifestProps } from "@/lib/mdx/manifest";
-import { componentIcons } from "./icons";
 
 /** Props are defined in lib/mdx/manifest.ts. */
 export type MinimapProps = ManifestProps<"Minimap">;
@@ -27,34 +26,56 @@ function useMinimapState() {
   return { waypoints, route, steps, select, stepBy, active, heading, stepNo };
 }
 
-/** Small map that follows the current step. Pins and prev/next jump the guide to that section. */
+/**
+ * The small map that follows the current step (design: Trailnotes Components, "Minimap"): a card
+ * with the map and one line under it (previous, "3/5 Ridge junction", next), which shrinks to a
+ * round chip of the current spot when the reader wants the room. Pins and the arrows move the
+ * guide to that section.
+ */
 export function Minimap({ height = 300 }: MinimapProps) {
   const { waypoints, route, steps, select, stepBy, active, heading, stepNo } = useMinimapState();
+  const [collapsed, setCollapsed] = useState(false);
+  const where = `${stepNo ? `step ${stepNo} of ${steps.length}, ` : ""}${active?.label ?? "the route"}`;
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setCollapsed(false)}
+        aria-label={`Show the map (${where})`}
+        title="Show the map"
+        className="not-prose ml-auto block size-14 flex-none cursor-pointer overflow-hidden rounded-full border-[3px] border-white shadow-[0_0_0_1.5px_var(--color-graphite)]"
+      >
+        <SketchMap waypoints={waypoints} route={route} activeId={active?.id} fit="active" pinSize={12} className="pointer-events-none size-full" />
+      </button>
+    );
+  }
+
   return (
-    <Frame icon={componentIcons.Minimap}
-      title="Minimap"
-      actions={stepNo && <span className="text-sm">Step {stepNo} of {steps.length}</span>}
-      expandable={false}
-      className="my-0"
-      footer={
-        <div className="flex items-center justify-between gap-2">
-          <button type="button" onClick={() => stepBy(-1, { reveal: true })} className="cursor-pointer">◀ Prev</button>
-          <span className="truncate">{active?.label ?? "—"}</span>
-          <button type="button" onClick={() => stepBy(1, { reveal: true })} className="cursor-pointer">Next ▶</button>
-        </div>
-      }
-    >
-      <div style={{ height }}>
-        <TrailMap
-          route={route}
-          waypoints={waypoints}
-          activeId={active?.id}
-          heading={heading}
-          onSelect={(id) => select(id, { reveal: true })}
-          className="size-full"
-        />
+    <section aria-label="Minimap" className="not-prose overflow-hidden rounded-[10px] border border-line-strong bg-card shadow-[0_4px_14px_rgb(31_36_33/0.12)]">
+      <div className="relative" style={{ height }}>
+        <TrailMap route={route} waypoints={waypoints} activeId={active?.id} heading={heading} controls="top-left" onSelect={(id) => select(id, { reveal: true })} className="size-full" />
+        <button type="button" onClick={() => setCollapsed(true)} aria-label="Shrink the map to a chip" title="Shrink the map" className={cn(floatingButton, "absolute top-2 right-2 size-7")}>
+          ▾
+        </button>
       </div>
-    </Frame>
+      <div className="flex items-center gap-1.5 border-t border-line px-1 py-0.5 text-sm">
+        <button type="button" onClick={() => stepBy(-1, { reveal: true })} aria-label="Previous step" className="size-8 flex-none cursor-pointer text-bark hover:text-graphite">
+          ◀
+        </button>
+        <span className="min-w-0 flex-1 truncate text-center leading-tight" aria-live="polite">
+          {stepNo && (
+            <b>
+              {stepNo}/{steps.length}{" "}
+            </b>
+          )}
+          {active?.label ?? "—"}
+        </span>
+        <button type="button" onClick={() => stepBy(1, { reveal: true })} aria-label="Next step" className="size-8 flex-none cursor-pointer text-bark hover:text-graphite">
+          ▶
+        </button>
+      </div>
+    </section>
   );
 }
 
