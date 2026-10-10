@@ -10,7 +10,7 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
   - rows of `hike_revisions` saved before then (server-only, never public; 12 of 15 rows on 2026-10-08);
   - the public repo's git history (`content/hikes/*/waypoints.json` before 2026-10-07). Removing it means rewriting history and force-pushing.
 - [ ] **Backups live on one Mac.** `pnpm backup` runs daily there since 2026-10-09 ([current.md](current.md)). Photos are left out on purpose (owner, 2026-10-09: "we don't need the photos in the backup"), so the bucket is their only copy. Not covered: the Mac itself (the folder isn't off-site unless it's synced somewhere). It also only runs when the Mac is awake; `backup.log` in the folder shows the last run.
-- [ ] **Nothing watches `/api/health`.** It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
+- [ ] **Nothing watches `/api/health`** (and there's no error reporting; the owner said on 2026-10-09 that logging can wait). It answers 503 when the store can't be read, but only Vercel's daily cron calls it. Point an uptime monitor at it. There is no error reporting or analytics either.
 - [ ] **CI doesn't check the stored guides:** the `DATABASE_URL` repository secret isn't set, so that step is skipped (owner adds it in GitHub).
 - [ ] **PR preview builds fail:** Vercel's Preview environment has no `DATABASE_URL` (owner adds it). Until then only pushes to `main` build on Vercel.
 - [ ] **Photo upload: the checks only the owner can do** (shipped 2026-10-08; everything below needs the owner's sign-in or phone):
@@ -32,7 +32,7 @@ From the audit of 2026-10-06 ([changelog.md](changelog.md)). The code fixes are 
   - Phone performance (Lighthouse 76 on the gallery, 86 on a guide) is the cover photo's paint time; untuned.
 - [ ] **`pnpm e2e` stalled on the owner's Mac on the night of 2026-10-08/09.** From about 23:00 the dev server it starts (port 3210) stopped answering for minutes at a time, at a different test each run, with the machine idle; the same happened on the previous commit from a clean build, so it isn't from that night's changes. By hand the same server answered in under a second, and the network tested fine. Unexplained. Every test passed in at least one run except the last two together; The next morning the editor tests ran clean in 25 s with nothing changed, and CI passed throughout, so it was the machine that night; CI is the reference if it happens again.
 - [ ] **Removal after the 72 hours waits for an editor's visit.** If nobody opens `/editor`, a deleted hike's data stays in the database and the bucket (unpublished, so not public). A timer could only do it with an admin key on the server, which was removed on purpose; a database-side job (pg_cron) could remove the rows but not the photo files.
-- [ ] **Take a deeper look at the editor** (owner, 2026-10-09: "look deeper into changes for the editor at some point"). Starting points seen while adding block moves and icons: no drag and drop for blocks (only Move up/down, one neighbour at a time, and the buttons live in the settings column, which is a sheet on a phone); a block can't be duplicated in the Write view; the Pins view has no phone layout; the Write view steps aside for images, code blocks and footnotes; three "Coming later" entries are still listed in the insert menu.
+- [ ] **Take a deeper look at the editor** (owner, 2026-10-09: "look deeper into changes for the editor at some point"). Starting points seen while adding block moves and icons: no drag and drop for blocks (only Move up/down, one neighbour at a time, and the buttons live in the settings column, which is a sheet on a phone); a block can't be duplicated in the Write view; the Pins view has no phone layout; the Write view steps aside for images, code blocks and footnotes; two "Coming later" entries are listed in the insert menu (sun and shade, viewshed map).
 - [ ] **An orphaned `pnpm start` on port 3101** (started 2026-09-29) was still running on the owner's Mac on 2026-10-07.
 
 ## Refactors worth doing soon (from the same audit)
@@ -78,7 +78,7 @@ None changes behaviour; each needs the tests named first.
 - [ ] E5 leftovers:
   - Replace a hike's track from the app (today: `pnpm gpx --slug <slug> --guides postgres`).
   - The new-hike form doesn't share code with the Details form.
-- [ ] Phone layout for the editor: design 3a is desktop-only (three columns, fixed 290px settings column), and live-site editing is meant to work from the phone.
+- [ ] Phone layout for the editor: **not needed** (owner, 2026-10-09: "editing on the phone isn't necessary"). Kept here so it isn't proposed again; the editor stays a desktop tool.
 
 ## Left over from V1 (unscheduled; pick up after V2 or between milestones)
 
@@ -95,7 +95,7 @@ None changes behaviour; each needs the tests named first.
 
 - [ ] Auto node placement from a bulk photo upload, with a duplicate-view check ([backlog.md](backlog.md)).
 - [ ] Several photos for one point, e.g. at a trail fork ([backlog.md](backlog.md)).
-- [ ] Real 360° photos (the `PanoViewer` is built and shows a placeholder), video clips (Strawberry Peak has two short ones), sun/shade simulator, viewshed map.
+- [ ] Real 360° photos (the `PanoViewer` is built and shows a placeholder) and video clips in a guide (Strawberry Peak has two short ones). Sun and shade, the viewshed map, video overlays for the owner's own videos, and accounts and navigation are written up in [backlog.md](backlog.md).
 
 ## Known issues (not blocking)
 

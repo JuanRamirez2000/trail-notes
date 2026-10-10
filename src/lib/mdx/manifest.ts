@@ -163,7 +163,7 @@ export const isComponentName = (name: string): name is ComponentName => Object.h
 export type ManifestProps<K extends ComponentName> = z.input<(typeof manifest)[K]["props"]>;
 
 /** Shown greyed-out in the editor's insert menu. */
-export const COMING_LATER = ["Video overlay", "Sun / shade simulator", "Viewshed map"];
+export const COMING_LATER = ["Sun and shade", "Viewshed map"];
 
 // ── Editor-facing description of a component's props ───────────────────────
 

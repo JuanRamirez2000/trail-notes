@@ -16,7 +16,7 @@ Trailnotes is a photo-by-photo hiking guide site. Each hike is an MDX guide whos
 
 ## Where guides live, and the test fixture
 
-**Real guides are in the database and nowhere else** (owner, 2026-10-09: "this doesn't need to be stored in the repo"). `content/hikes` left the repo that day; it had been the original home of the guides and had drifted from the database. On 2026-10-09 the database held Strawberry Peak (the first real guide: a Garmin recording from 2026-04-19, 7.31 mi, six pins with a photo each) and `red-rock-canyon-whiting-ranch`, written in the live editor. The originals of Strawberry Peak's photos and GPX are on the owner's Mac (`~/Downloads/straberry/`, `~/Downloads/activity_22587017513.gpx`), never committed. Until 2026-10-09 the repo's git history has the old copies.
+**Real guides are in the database and nowhere else** (owner, 2026-10-09: "this doesn't need to be stored in the repo"). `content/hikes` left the repo that day; it had been the original home of the guides and had drifted from the database. On 2026-10-09 both guides were given more from what was already there, saved as unpublished changes for the owner to review ([changelog.md](changelog.md)). On 2026-10-09 the database held Strawberry Peak (the first real guide: a Garmin recording from 2026-04-19, 7.31 mi, six pins with a photo each) and `red-rock-canyon-whiting-ranch`, written in the live editor. The originals of Strawberry Peak's photos and GPX are on the owner's Mac (`~/Downloads/straberry/`, `~/Downloads/activity_22587017513.gpx`), never committed. Until 2026-10-09 the repo's git history has the old copies.
 
 **The tests run on `fixtures/`, which is all invented:**
 
