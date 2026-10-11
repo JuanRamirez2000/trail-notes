@@ -34,5 +34,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/editor/:path*", "/api/editor/:path*", "/sign-in", "/auth/:path*"],
+  // /api/session is what public pages ask "who's signed in"; it needs a fresh session to answer.
+  matcher: ["/editor/:path*", "/api/editor/:path*", "/api/session", "/sign-in", "/auth/:path*"],
 };

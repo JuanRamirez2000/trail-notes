@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXContent } from "@/components/mdx/MDXContent";
 import { GuideScrollSync } from "@/components/hike/GuideScrollSync";
+import { EditGuideLink } from "@/components/hike/EditGuideLink";
 import { PhotoLightbox } from "@/components/hike/PhotoLightbox";
 import { MinimapBar } from "@/components/mdx/Minimap";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
@@ -79,6 +80,10 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
   const page = await getHikePage(slug);
   if (!page) notFound();
   const { hike, waypoints, route, profile, body } = page;
+  const all = await getHikeSummaries();
+  const at = all.findIndex((h) => h.slug === slug);
+  const newer = at > 0 ? all[at - 1] : undefined;
+  const older = at >= 0 ? all[at + 1] : undefined;
 
   const stats = [
     { k: "Distance", v: formatMiles(hike.distanceMi) },
@@ -111,6 +116,7 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
               {hike.region}
             </div>
             <h1 className="font-display text-[30px] leading-[1.1] font-bold sm:text-[38px]">{hike.title}</h1>
+            <EditGuideLink slug={slug} className="my-1 inline-block rounded-lg border border-forest bg-highlight px-3 py-0.5 text-[15px] text-graphite no-underline" />
             <p className="mt-1 sm:mt-0 sm:text-[17px]">{hike.summary}</p>
           </div>
         </div>
@@ -172,6 +178,26 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
           </div>
           <GuideSidebar cards={hike.sidebar} />
         </div>
+
+        {/* The other guides either side of this one, newest first, as in the gallery. */}
+        {(newer || older) && (
+          <nav aria-label="More guides" className="mx-auto grid w-full max-w-[1200px] gap-3 border-t border-line px-4 py-8 sm:grid-cols-2 sm:px-8">
+            {newer ? (
+              <Link href={`/hikes/${newer.slug}`} className="rounded-[10px] border border-line bg-card px-4 py-3 text-graphite no-underline hover:border-forest">
+                <span className="block text-caption tracking-[.06em] text-bark uppercase">← Newer guide</span>
+                <span className="font-display text-xl font-bold">{newer.title}</span>
+              </Link>
+            ) : (
+              <span />
+            )}
+            {older && (
+              <Link href={`/hikes/${older.slug}`} className="rounded-[10px] border border-line bg-card px-4 py-3 text-graphite no-underline hover:border-forest sm:text-right">
+                <span className="block text-caption tracking-[.06em] text-bark uppercase">Older guide →</span>
+                <span className="font-display text-xl font-bold">{older.title}</span>
+              </Link>
+            )}
+          </nav>
+        )}
       </article>
     </HikeProvider>
   );

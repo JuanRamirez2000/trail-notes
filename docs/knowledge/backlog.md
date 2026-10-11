@@ -72,21 +72,30 @@ Feature ideas that aren't scheduled yet. Each entry says why it matters and how 
 
 **Open questions:** which editor it has to import into (that decides the format); whether the overlay should follow the real recording's timing (the app keeps no timestamps, so that would mean reading the GPX on the owner's Mac at export time) or an even pace; resolution and frame rate.
 
-## Accounts, sign-in and getting around
+## Guests: people who can write guides for certain hikes
 
-**Status:** to plan with the owner (2026-10-09: the "fully featured" list should cover "auth, user account, buttons to go between navigations"). Stage A needs no decisions; B and C do.
+**Status:** decided in outline with the owner on 2026-10-10; details below need answers before building. (Stage A of the earlier accounts plan, the sign-in link, "Editor", "Edit this guide" and guide-to-guide links, shipped that day: [changelog.md](changelog.md).)
 
-**Where things are today:** only editors can sign in (Google, through Supabase Auth; sign-ups are closed and the Google consent screen is in Testing with listed test users). There is no link to sign in anywhere: you have to know `/sign-in` or `/editor`. A signed-in editor looking at a guide has no way to get to its editor, and the public header shows nothing about being signed in. Guides link back to the gallery but not to each other.
+**Decided:** visitors don't get accounts. There are **guests**: people the owner lets write the guide for particular hikes.
 
-**Stage A: the buttons (no new kind of account).**
+**Where things are today:** one list, `editors` (`user_id`, `role`: owner or editor), and everyone on it can do everything to every hike. `can(editor, action, slug)` in `src/lib/auth/can.ts` already receives the action and the hike, and every route calls it, so the rule changes in one place.
 
-- Header: a quiet "Sign in" link; for a signed-in editor, "Editor" and an account menu (name, sign out) instead. Public pages are static and cached, so the header can't know who's looking at render time: a small client component asks a new endpoint (`/api/session`: signed in or not, name, role) after the page loads, and the pages stay cached.
-- Guide page: "Edit this guide" for editors; previous and next guide at the bottom; the existing "← All hikes".
-- Editor: "View site" in the hike list (each hike already has "View page").
-- Sign-in page: say what signing in is for, and where you land afterwards (back where you came from).
+**What it takes:**
 
-**Stage B: accounts for visitors.** The question to answer first is what a signed-in visitor can do that a signed-out one can't. Candidates, from least to most work: save hikes to a list; mark a hike as done; report a condition ("creek dry on 10/3") for the owner to review; comment. Each needs sign-ups opened (so: the Google consent screen out of Testing, a privacy note, and a `profiles` table with its own access rules, since today's tables are closed to every browser role), and each makes the site hold other people's data.
+1. **Data.** A third role, `guest`, and which hikes each guest has: a table `hike_guests (slug, user_id)` (a hike can have several guests; a guest several hikes). `getEditor()` loads the guest's hikes with the role.
+2. **The rule** (`can()`): a guest may list, read, save and add photos on their hikes, and nothing on any other. The editor's hike list shows a guest only theirs. Open: publish, create and delete (questions below).
+3. **Photos.** Today's bucket policy lets anyone on the editors list write anywhere in the bucket, checked by `is_editor()`. A guest must be held to their hikes' folders, so the policy has to check the first folder of the path against the guest's hikes (a `can_edit_hike(slug)` function beside `is_editor()`). Without this a guest could delete another hike's photos by calling Supabase directly.
+4. **Letting someone in.** Two gates exist, and both are manual today:
+   - *Google:* the OAuth consent screen is in **Testing**, where only people listed as test users can sign in at all (up to 100). Publishing it to "In production" removes the list; with only the basic scopes this site asks for (name and email) Google doesn't require a review. This is a setting in Google Cloud Console, the owner's to change.
+   - *Supabase:* sign-ups are closed, so a new person's first sign-in is refused unless sign-ups are opened for a moment, or the owner creates the user in the dashboard first. The current steps are in [current.md](current.md) (Live setup, step 3).
+   - Then the app's own list: `pnpm editors add <email> --role guest --hike <slug>`. Later, a "People" page in the editor for the owner.
+   - An invite link by email would be smoother, but needs an admin key on the server (removed on purpose) or an email service; not worth it for a handful of guests.
+5. **What a guest sees.** The same editor, on their hikes only; History shows who saved what (it already records the saver).
 
-**Stage C: roles for writers.** Today a person on the editors list can do everything. If others write guides: a contributor who can create and edit their own drafts while only the owner publishes. `can()` in `src/lib/auth/can.ts` was written to take the action and the hike for exactly this, so it's a change in one place plus an owner column on hikes.
+**Questions for the owner:**
 
-**Open questions:** does the site need visitor accounts at all for a couple of guides, or only stage A; if yes, which of the candidates; whether anyone but the owner will write guides.
+- Can a guest **publish**, or do they write and you publish? (Suggested: you publish. The badge already separates "saved" from "live", and it keeps one person answerable for what's public.)
+- Can a guest **create** a hike, or do you create it and assign it? (Suggested: you create and assign.)
+- Can a guest **delete** their hike? (Suggested: no.)
+- Should guests be named on the guide ("Guide by …")?
+

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { can } from "@/lib/auth/can";
+import { cookies } from "next/headers";
 import { authMode, getEditor, sessionClient } from "@/lib/auth/server";
+import { hintCookie, NEXT_COOKIE, safeNext, SESSION_HINT } from "@/lib/auth/session-hint";
 
 /**
  * Where Google sends the browser back. Swaps the one-time code for a session, then checks the
@@ -22,5 +24,9 @@ export async function GET(request: Request) {
     await supabase.auth.signOut();
     return to("/sign-in?error=not-an-editor");
   }
-  return to("/editor");
+  // Back to where sign-in was started from, if it was a page of ours; the editor otherwise.
+  const res = to(safeNext((await cookies()).get(NEXT_COOKIE)?.value) ?? "/editor");
+  res.cookies.delete(NEXT_COOKIE);
+  res.cookies.set(SESSION_HINT, "1", hintCookie);
+  return res;
 }

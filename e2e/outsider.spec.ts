@@ -51,6 +51,19 @@ test("a guide comes with a GPX file, a JPEG card image and structured data", asy
   expect(await page.locator("img:not([alt]), img[alt='']").count()).toBe(0);
 });
 
+test("a visitor sees no editor links, and the page never asks who they are", async ({ page, request }) => {
+  const asked: string[] = [];
+  page.on("request", (r) => r.url().includes("/api/session") && asked.push(r.url()));
+  await page.goto("/hikes/cedar-ridge");
+  await expect(page.getByRole("heading", { level: 1, name: "Cedar Ridge" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Editor" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Edit this guide/ })).toHaveCount(0);
+  // This server has no sign-in at all, so there's no link to it either.
+  await expect(page.getByRole("link", { name: "Sign in" })).toHaveCount(0);
+  expect(asked).toEqual([]);
+  expect(await (await request.get("/api/session?slug=cedar-ridge")).json()).toEqual({ editor: null, canEdit: false, canSignOut: false });
+});
+
 test("a draft has no page and isn't listed", async ({ page, request }) => {
   expect((await request.get("/hikes/granite-saddle")).status()).toBe(404);
   expect((await request.get("/hikes/granite-saddle/route.gpx")).status()).toBe(404);

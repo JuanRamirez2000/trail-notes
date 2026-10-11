@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "./Logo";
+import { authMode } from "@/lib/auth/server";
+import { SiteAccount } from "./SiteAccount";
 import { SiteNav } from "./SiteNav";
 
 export function SiteHeader() {
@@ -9,6 +11,8 @@ export function SiteHeader() {
         <Wordmark />
       </Link>
       <SiteNav />
+      {/* Whether this site has sign-in is fixed at build time; who is signed in is asked by the browser. */}
+      <SiteAccount signIn={authMode() === "supabase"} />
     </header>
   );
 }

@@ -86,6 +86,17 @@ test("a second tab with an older copy gets the conflict banner and saves nothing
   await expect(summary(page)).toHaveValue("The first tab got there first.");
 });
 
+test("an editor gets from a guide's page to its editor, and from the site to the hike list", async ({ page }) => {
+  await page.goto(`/hikes/${slug}`);
+  await page.getByRole("link", { name: /Edit this guide/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/editor/${slug}$`));
+  await page.goto("/");
+  await page.getByRole("banner").getByRole("link", { name: "Editor" }).click();
+  await expect(page).toHaveURL(/\/editor$/);
+  await page.getByRole("link", { name: "View site" }).click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test("a block can be moved in the Write view, and the insert menu shows an icon per block", async ({ page }) => {
   await page.goto(`/editor/${slug}`);
   // A new draft is a route map followed by a heading.

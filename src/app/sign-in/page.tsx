@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Wordmark } from "@/components/ui/Logo";
 import { can } from "@/lib/auth/can";
 import { authMode, getEditor } from "@/lib/auth/server";
+import { safeNext } from "@/lib/auth/session-hint";
 
 export const metadata: Metadata = { title: "Sign in", robots: { index: false } };
 // Who may see this is decided per request, never baked into a build.
@@ -17,8 +18,10 @@ const ERRORS: Record<string, string> = {
 
 export default async function SignIn({ searchParams }: PageProps<"/sign-in">) {
   if (authMode() !== "supabase") notFound();
-  if (can(await getEditor(), "list")) redirect("/editor");
-  const error = (await searchParams).error;
+  const params = await searchParams;
+  const next = safeNext(params.next);
+  if (can(await getEditor(), "list")) redirect(next ?? "/editor");
+  const error = params.error;
   // Own keys only: `?error=constructor` must not find Object's.
   const message = typeof error === "string" && Object.hasOwn(ERRORS, error) ? ERRORS[error] : undefined;
 
@@ -26,15 +29,21 @@ export default async function SignIn({ searchParams }: PageProps<"/sign-in">) {
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6 py-10">
       <Wordmark />
       <h1 className="mt-8 font-display text-h2 font-bold text-forest">Sign in to edit</h1>
-      <p className="mt-2 text-bark">For editors of this site. Reading the guides needs no account.</p>
+      <p className="mt-2 text-bark">For the people who write these guides. Reading them needs no account, and there&rsquo;s nothing to sign up for.</p>
       {message && (
         <p role="alert" className="mt-4 rounded-lg border border-pin-bailout bg-card px-3 py-2 text-pin-bailout">
           {message}
         </p>
       )}
-      <a href="/auth/sign-in" className="mt-6 flex min-h-11 items-center justify-center rounded-[10px] bg-forest px-4 py-2.5 text-lg text-paper hover:text-paper">
+      <a href={next ? `/auth/sign-in?next=${encodeURIComponent(next)}` : "/auth/sign-in"} className="mt-6 flex min-h-11 items-center justify-center rounded-[10px] bg-forest px-4 py-2.5 text-lg text-paper hover:text-paper">
         Continue with Google
       </a>
+      <p className="mt-3 text-sm text-bark">
+        {next ? "You'll come back to the page you were on." : "You'll land in the editor."}{" "}
+        <a href={next ?? "/"} className="underline underline-offset-2">
+          Back to the site
+        </a>
+      </p>
     </main>
   );
 }
