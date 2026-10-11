@@ -29,7 +29,13 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  await supabase.auth.getUser(); // refreshes the tokens if they're close to expiring
+  const { data } = await supabase.auth.getUser(); // refreshes the tokens if they're close to expiring
+  // The readable "signed in once" hint the public header goes by (lib/auth/session-hint.ts, whose
+  // name and options are repeated here for the same reason as above). The sign-in callback sets
+  // it; this covers a session that began before the hint existed, or whose hint expired first.
+  if (data.user && !request.cookies.has("tn_signed_in")) {
+    response.cookies.set("tn_signed_in", "1", { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 60 });
+  }
   return response;
 }
 
