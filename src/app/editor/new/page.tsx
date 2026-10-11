@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { NewHikeForm } from "@/components/editor/NewHikeForm";
 import { Wordmark } from "@/components/ui/Logo";
 import { can } from "@/lib/auth/can";
-import { getEditor } from "@/lib/auth/server";
+import { authMode, getEditor } from "@/lib/auth/server";
 import { getStore } from "@/lib/store/server";
 
 export const metadata: Metadata = { title: "New hike", robots: { index: false } };
@@ -12,7 +12,8 @@ export const metadata: Metadata = { title: "New hike", robots: { index: false } 
 export const dynamic = "force-dynamic";
 
 export default async function NewHike() {
-  if (!can(await getEditor(), "create")) notFound();
+  const editor = await getEditor();
+  if (!can(editor, "create")) notFound();
   // So the form can say an address is taken before anything is sent.
   const taken = (await (await getStore()).list()).map((h) => h.slug);
   return (
@@ -25,7 +26,8 @@ export default async function NewHike() {
       </div>
       <h1 className="mt-8 font-display text-h2 font-bold text-forest">New hike</h1>
       <p className="mt-2 text-bark">This creates a draft: nothing is public until you publish it. Everything here can be changed later under Details.</p>
-      <NewHikeForm taken={taken} />
+      {/* The guide is signed with its writer's name (changeable under Details). The local dev owner isn't a person. */}
+      <NewHikeForm taken={taken} author={authMode() === "supabase" ? editor.name : undefined} />
     </main>
   );
 }

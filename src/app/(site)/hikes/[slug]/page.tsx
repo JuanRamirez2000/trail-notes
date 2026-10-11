@@ -48,6 +48,7 @@ function jsonLd(page: HikePageData) {
     url,
     mainEntityOfPage: url,
     ...(hike.cover ? { image: [`${SITE_URL}${ogImagePath(hike.slug)}`] } : {}),
+    ...(hike.author ? { author: { "@type": "Person", name: hike.author } } : {}),
     publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
     about: {
       "@type": "Place",
@@ -118,6 +119,11 @@ export default async function HikePage({ params }: PageProps<"/hikes/[slug]">) {
             <h1 className="font-display text-[30px] leading-[1.1] font-bold sm:text-[38px]">{hike.title}</h1>
             <EditGuideLink slug={slug} className="my-1 inline-block rounded-lg border border-forest bg-highlight px-3 py-0.5 text-[15px] text-graphite no-underline" />
             <p className="mt-1 sm:mt-0 sm:text-[17px]">{hike.summary}</p>
+            {/* Who wrote it and when it was walked: a trail changes, so the date is part of the guide. */}
+            <p className="mt-1.5 text-sm text-bark">
+              {hike.author && <>Guide by {hike.author} · </>}
+              Hiked {new Date(`${hike.date}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", day: "numeric", year: "numeric" })}
+            </p>
           </div>
         </div>
 

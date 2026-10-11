@@ -56,6 +56,7 @@ test("a visitor sees no editor links, and the page never asks who they are", asy
   page.on("request", (r) => r.url().includes("/api/session") && asked.push(r.url()));
   await page.goto("/hikes/cedar-ridge");
   await expect(page.getByRole("heading", { level: 1, name: "Cedar Ridge" })).toBeVisible();
+  await expect(page.getByText("Guide by Fixture Author · Hiked April 19, 2026")).toBeVisible();
   await expect(page.getByRole("link", { name: "Editor" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Edit this guide/ })).toHaveCount(0);
   // This server has no sign-in at all, so there's no link to it either.

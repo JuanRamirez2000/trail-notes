@@ -66,6 +66,7 @@ estTime: about 4 h
 bestSeason: spring
 cover: ${SLUG}/03-img-8958
 date: 2026-04-19
+author: Fixture Author
 trailhead:
   lat: ${waypoints[0].lat}
   lng: ${waypoints[0].lng}

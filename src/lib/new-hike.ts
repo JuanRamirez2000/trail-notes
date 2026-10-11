@@ -15,6 +15,8 @@ export type NewHikeForm = {
   difficulty: Difficulty;
   /** YYYY-MM-DD */
   date: string;
+  /** Who is writing it, for the "Guide by" line. */
+  author?: string;
   /** Used only without a track. */
   distanceMi?: number;
   elevationGainFt?: number;
@@ -46,6 +48,8 @@ export function buildNewHike(form: NewHikeForm, track: Track | null): { slug: st
     difficulty: form.difficulty,
     trailhead: start,
     date: form.date,
+    // An absent key, not an empty one: YAML would otherwise write `author: null`.
+    ...(form.author?.trim() ? { author: form.author.trim() } : {}),
   };
   // The summary isn't repeated in the body: the page shows it under the title, and as body text
   // it would have to be valid MDX (a `{` or `<` in it would refuse the whole hike).

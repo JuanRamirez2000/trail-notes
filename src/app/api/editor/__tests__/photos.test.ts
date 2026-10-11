@@ -219,3 +219,37 @@ describe("removing deleted hikes for good", () => {
     expect(await purgeExpiredHikes()).toEqual(["granite-saddle"]);
   });
 });
+
+describe("a guest and photos", () => {
+  const GUEST: Editor = { id: "guest-1", name: "Guest", role: "guest", hikes: ["zz-guest-photos"] };
+
+  it("can't list, add or delete another hike's photos", async () => {
+    state.editor = GUEST;
+    expect((await call(GET, "GET", "cedar-ridge")).status).toBe(404);
+    expect((await call(POST, "POST", "cedar-ridge", { files: [file("a.jpg")] })).status).toBe(404);
+    expect((await call(DELETE, "DELETE", "cedar-ridge", { key: "cedar-ridge/07-img-8957" })).status).toBe(404);
+    expect(state.signed).toEqual([]);
+    expect(state.files.size).toBe(14);
+  });
+
+  it("can add photos to their own hike", async () => {
+    state.editor = GUEST;
+    const base = (await store.read("cedar-ridge"))!;
+    expect(await store.create("zz-guest-photos", { mdx: base.mdx.replace("slug: cedar-ridge", "slug: zz-guest-photos"), waypoints: base.waypoints }, { editor: GUEST })).toMatchObject({ ok: true });
+    const res = await call(POST, "POST", "zz-guest-photos", { files: [file("a.jpg")] });
+    expect(res.status).toBe(200);
+    expect(state.signed).toHaveLength(2);
+    expect(state.signed.every((o) => o.startsWith("zz-guest-photos/"))).toBe(true);
+    await store.remove("zz-guest-photos");
+  });
+
+  it("only finishes deleting their own hikes when they open the editor", async () => {
+    const DAY = 24 * 3_600_000;
+    const g = (await store.read("cedar-ridge"))!;
+    await store.scheduleDelete("cedar-ridge", { editor: OWNER, baseVersion: g.version, now: new Date(Date.now() - 4 * DAY) });
+    const { can } = await import("@/lib/auth/can");
+    expect(await purgeExpiredHikes((slug) => can(GUEST, "delete", slug))).toEqual([]);
+    expect(await store.read("cedar-ridge")).not.toBeNull();
+    await store.cancelDelete("cedar-ridge");
+  });
+});

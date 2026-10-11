@@ -9,8 +9,9 @@ import type { Frontmatter, Track } from "../schemas";
  */
 
 /** Who is making a change. Recorded with every save; null for scripts (seeding, ingest). */
-export type Editor = { id: string; name: string; email?: string; role: EditorRole };
-export type EditorRole = "owner" | "editor";
+/** `hikes` is set for a guest: the only hikes they may open. Owners and editors may open all of them. */
+export type Editor = { id: string; name: string; email?: string; role: EditorRole; hikes?: string[] };
+export type EditorRole = "owner" | "editor" | "guest";
 
 /**
  * Every guide has a working copy, which the editor saves to, and may have a published copy, which

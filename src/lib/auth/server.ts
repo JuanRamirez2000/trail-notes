@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { cache } from "react";
-import { editors } from "../../db/schema";
+import { editors, hikeGuests } from "../../db/schema";
 import { getDatabase } from "../store/server";
 import type { Editor } from "../store/types";
 
@@ -13,7 +13,8 @@ import type { Editor } from "../store/types";
  *
  * EDITOR_AUTH picks the mode:
  *   supabase → Supabase Auth (Google sign-in). A signed-in person is an editor only if they're in
- *              the `editors` table; anyone else is treated exactly like a signed-out visitor.
+ *              the `editors` table (as owner, editor or guest); anyone else is treated exactly
+ *              like a signed-out visitor.
  *   (unset)  → under `pnpm dev`: a fixed local owner, no sign-in. Anywhere else: nobody, so the
  *              editor is a 404.
  *   off      → nobody, even in dev (for testing the signed-out behaviour).
@@ -70,6 +71,9 @@ export const getEditor = cache(async (): Promise<Editor | null> => {
   const [row] = await getDatabase().select({ role: editors.role }).from(editors).where(eq(editors.userId, user.id));
   if (!row) return null;
 
+  // A guest's hikes come with them, so can() can answer without another query.
+  const hikes = row.role === "guest" ? (await getDatabase().select({ slug: hikeGuests.slug }).from(hikeGuests).where(eq(hikeGuests.userId, user.id))).map((h) => h.slug) : undefined;
+
   const meta = user.user_metadata as { full_name?: string; name?: string };
-  return { id: user.id, email: user.email, name: meta.full_name ?? meta.name ?? user.email ?? "Editor", role: row.role };
+  return { id: user.id, email: user.email, name: meta.full_name ?? meta.name ?? user.email ?? "Editor", role: row.role, hikes };
 });

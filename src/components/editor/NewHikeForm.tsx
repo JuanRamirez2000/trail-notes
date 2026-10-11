@@ -13,7 +13,7 @@ const input = "w-full rounded-md border border-line-strong bg-card px-2 py-1.5 t
  * route's positions and elevations are kept and sent, so timestamps, heart rate and device data
  * never leave the device. With a recording, distance, climbing and the trailhead come from it.
  */
-export function NewHikeForm({ taken }: { taken: string[] }) {
+export function NewHikeForm({ taken, author }: { taken: string[]; author?: string }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [slugEdited, setSlugEdited] = useState<string | null>(null);
@@ -46,11 +46,12 @@ export function NewHikeForm({ taken }: { taken: string[] }) {
       summary,
       difficulty,
       date,
+      author,
       distanceMi: num(distance),
       elevationGainFt: num(gain),
       trailhead: num(lat) !== undefined && num(lng) !== undefined ? { lat: num(lat)!, lng: num(lng)! } : undefined,
     }),
-    [title, slug, region, summary, difficulty, date, distance, gain, lat, lng],
+    [title, slug, region, summary, difficulty, date, author, distance, gain, lat, lng],
   );
 
   const missing = [

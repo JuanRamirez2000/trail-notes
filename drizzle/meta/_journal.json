@@ -36,6 +36,20 @@
       "when": 1791563651916,
       "tag": "0004_scheduled_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791695978812,
+      "tag": "0005_guests",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791695979288,
+      "tag": "0006_guest_photo_policies",
+      "breakpoints": true
     }
   ]
 }

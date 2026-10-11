@@ -33,6 +33,14 @@ describe("buildNewHike", () => {
     expect(hike.mdx).not.toMatch(/^draft:/m); // a new hike is a draft because nothing is published yet
   });
 
+  it("signs the guide with its writer's name when one is given, and leaves the line out otherwise", async () => {
+    const signed = buildNewHike({ ...FORM, author: "  Ada Lovelace " }, TRACK);
+    const v = await validateHike(signed.slug, signed.mdx, signed.waypoints);
+    expect(v.ok && v.details.author).toBe("Ada Lovelace");
+    expect(buildNewHike(FORM, TRACK).mdx).not.toMatch(/^author:/m);
+    expect(buildNewHike({ ...FORM, author: "  " }, TRACK).mdx).not.toMatch(/^author:/m);
+  });
+
   it("accepts a summary with characters that mean something in MDX", async () => {
     const hike = buildNewHike({ ...FORM, summary: "{steep} <b>and</b> exposed" }, TRACK);
     const v = await validateHike(hike.slug, hike.mdx, hike.waypoints);

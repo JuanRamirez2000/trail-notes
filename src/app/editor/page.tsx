@@ -18,9 +18,10 @@ export default async function EditorIndex() {
   if (!can(editor, "list")) notFound();
   // Hikes deleted more than 72 hours ago are removed for good here: see src/lib/purge.ts for why
   // it happens on an editor's visit and not on a timer.
-  await purgeExpiredHikes();
+  await purgeExpiredHikes((slug) => can(editor, "delete", slug));
   const store = await getStore();
-  const hikes = await store.list();
+  // A guest sees their own hikes; everyone else on the list sees all of them.
+  const hikes = (await store.list()).filter((h) => can(editor, "read", h.slug));
 
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-10">
@@ -69,7 +70,7 @@ export default async function EditorIndex() {
             </Link>
           </li>
         ))}
-        {hikes.length === 0 && <li className="px-4 py-3 text-bark">No hikes yet.</li>}
+        {hikes.length === 0 && <li className="px-4 py-3 text-bark">{editor.role === "guest" ? "You don't have any hikes yet. Start one with New hike." : "No hikes yet."}</li>}
       </ul>
     </main>
   );

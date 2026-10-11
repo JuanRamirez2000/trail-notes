@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, foreignKey, index, integer, json, jsonb, pgPolicy, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, check, foreignKey, index, integer, json, jsonb, pgPolicy, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { anonRole, authenticatedRole, authUsers } from "drizzle-orm/supabase";
 import type { Frontmatter, Track } from "../lib/schemas";
 
@@ -73,17 +73,38 @@ export const hikeRevisions = pgTable(
   (t) => [unique("hike_revisions_slug_version_key").on(t.slug, t.version), index("hike_revisions_slug_idx").on(t.slug, t.version.desc().nullsFirst()), serverOnly()],
 ).enableRLS();
 
-/** People allowed to use the editor. Being signed in is not enough: the app looks you up here. */
+/**
+ * People allowed to use the editor. Being signed in is not enough: the app looks you up here.
+ * An owner or editor may edit every hike; a guest only the hikes listed for them in `hike_guests`.
+ */
 export const editors = pgTable(
   "editors",
   {
     userId: uuid("user_id").primaryKey(),
-    role: text().$type<"owner" | "editor">().notNull(),
+    role: text().$type<"owner" | "editor" | "guest">().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     foreignKey({ name: "editors_user_id_fkey", columns: [t.userId], foreignColumns: [authUsers.id] }).onDelete("cascade"),
-    check("editors_role_check", sql`${t.role} = ANY (ARRAY['owner'::text, 'editor'::text])`),
+    check("editors_role_check", sql`${t.role} = ANY (ARRAY['owner'::text, 'editor'::text, 'guest'::text])`),
     serverOnly(),
   ],
+).enableRLS();
+
+/**
+ * Which hikes a guest may edit: the ones they created, and any the owner gave them. A row goes
+ * when its hike or its person does. Owners and editors need no rows here.
+ */
+export const hikeGuests = pgTable(
+  "hike_guests",
+  {
+    slug: text()
+      .notNull()
+      .references(() => hikes.slug, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => editors.userId, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.slug, t.userId] }), serverOnly()],
 ).enableRLS();

@@ -13,9 +13,10 @@ import { getStore } from "./store/server";
  * A hike whose photos can't be removed right now is left for the next visit, so photo files
  * never outlive the guide that knew about them.
  */
-export async function purgeExpiredHikes(now = new Date()): Promise<string[]> {
+export async function purgeExpiredHikes(mine: (slug: string) => boolean = () => true, now = new Date()): Promise<string[]> {
   const store = await getStore();
-  const expired = (await store.list()).filter((h) => h.deleteAfter && new Date(h.deleteAfter) <= now);
+  // `mine`: a guest's visit only finishes off their own hikes; they couldn't remove anyone else's photos.
+  const expired = (await store.list()).filter((h) => h.deleteAfter && new Date(h.deleteAfter) <= now && mine(h.slug));
   const removed: string[] = [];
   for (const { slug } of expired) {
     try {

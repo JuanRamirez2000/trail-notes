@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/lib/auth/can";
 import { rateLimiter, sameOrigin } from "@/lib/auth/request";
+import { grantHike } from "@/lib/auth/guests";
 import { getEditor } from "@/lib/auth/server";
 import { getStore } from "@/lib/store/server";
 import { RESERVED_SLUGS, SLUG } from "@/lib/schemas";
@@ -49,6 +50,8 @@ export async function POST(req: Request) {
   const result = await store.create(body.slug, { mdx: body.mdx, waypoints: body.waypoints, track: body.track ?? null }, { editor });
 
   if (result.ok) {
+    // A guest's new hike is theirs: without this they couldn't open what they just made.
+    await grantHike(editor, body.slug);
     LIST_PATHS.forEach((p) => revalidatePath(p));
     return json({ ok: true, slug: body.slug, version: result.version }, 201);
   }

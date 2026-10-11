@@ -15,12 +15,14 @@ cpSync("fixtures/hikes", root, { recursive: true });
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 const OWNER: Editor = { id: "owner-1", name: "Owner", role: "owner" };
-const state = vi.hoisted(() => ({ editor: null as unknown, revalidated: [] as string[] }));
+const state = vi.hoisted(() => ({ editor: null as unknown, revalidated: [] as string[], granted: [] as string[] }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/server", () => ({ after: () => undefined }));
 vi.mock("next/cache", () => ({ revalidatePath: (p: string) => void state.revalidated.push(p) }));
 vi.mock("@/lib/auth/server", () => ({ getEditor: async () => state.editor }));
+// Recording a guest's new hike as theirs is a database write; here it's just noted.
+vi.mock("@/lib/auth/guests", () => ({ grantHike: async (editor: Editor, slug: string) => void (editor.role === "guest" && state.granted.push(`${editor.id}:${slug}`)) }));
 vi.mock("@/lib/store/server", () => ({ getStore: async () => createStore(localBackend(root)) }));
 
 const { PUT, DELETE, GET: getOne } = await import("../[slug]/route");
@@ -48,6 +50,7 @@ const del = (slug: string, body: unknown, headers?: Record<string, string>) => D
 beforeEach(() => {
   state.editor = OWNER;
   state.revalidated = [];
+  state.granted = [];
 });
 
 describe("PUT /api/editor/[slug]", () => {
@@ -249,5 +252,50 @@ describe("POST / DELETE /api/editor/[slug]/publish", () => {
     const after = await guide("cedar-ridge");
     expect(after).toMatchObject({ status: "draft", published: null, mdx: g.mdx });
     expect(state.revalidated).toEqual(["/hikes/cedar-ridge", "/hikes/cedar-ridge/route.gpx", "/hikes/cedar-ridge/og.jpg", "/", "/hikes"]);
+  });
+});
+
+describe("a guest", () => {
+  const GUEST: Editor = { id: "guest-1", name: "Guest", role: "guest", hikes: ["granite-saddle"] };
+  const ctx = (slug: string) => ({ params: Promise.resolve({ slug }) });
+
+  it("can't read, save, publish, delete or restore a hike that isn't theirs: it's a 404, like for an outsider", async () => {
+    state.editor = GUEST;
+    const g = await guide();
+    const body = { baseVersion: g.version };
+    expect((await put("cedar-ridge", { mdx: g.mdx.replace("7.3 miles", "9 miles"), waypoints: g.waypoints, baseVersion: g.version })).status).toBe(404);
+    expect((await publishRoute(request("POST", "/api/editor/cedar-ridge/publish", body), ctx("cedar-ridge"))).status).toBe(404);
+    expect((await unpublishRoute(request("DELETE", "/api/editor/cedar-ridge/publish", body), ctx("cedar-ridge"))).status).toBe(404);
+    expect((await del("cedar-ridge", body)).status).toBe(404);
+    expect((await restoreRoute(request("POST", "/api/editor/cedar-ridge/restore", {}), ctx("cedar-ridge"))).status).toBe(404);
+    expect((await getHistory(new Request(`${ORIGIN}/api/editor/cedar-ridge/history`), ctx("cedar-ridge"))).status).toBe(404);
+    // Nothing about it changed.
+    expect(await guide()).toMatchObject({ mdx: g.mdx, status: g.status, deleteAfter: g.deleteAfter, version: g.version });
+  });
+
+  it("can save and publish their own hike", async () => {
+    state.editor = GUEST;
+    const g = await guide("granite-saddle");
+    const saved = await put("granite-saddle", { mdx: g.mdx, waypoints: g.waypoints, baseVersion: g.version });
+    expect(saved.status).toBe(200);
+    const { version } = (await saved.json()) as { version: string };
+    expect((await publishRoute(request("POST", "/api/editor/granite-saddle/publish", { baseVersion: version }), ctx("granite-saddle"))).status).toBe(200);
+    expect((await guide("granite-saddle")).status).toBe("published");
+  });
+
+  it("can create a hike, which becomes theirs", async () => {
+    state.editor = GUEST;
+    const g = await guide("granite-saddle");
+    const res = await post({ slug: "zz-guest-hike", mdx: g.mdx.replace("slug: granite-saddle", "slug: zz-guest-hike"), waypoints: g.waypoints });
+    expect(res.status).toBe(201);
+    expect(state.granted).toEqual(["guest-1:zz-guest-hike"]);
+    await store.remove("zz-guest-hike");
+  });
+
+  it("isn't recorded for an owner's new hike: they can open everything already", async () => {
+    const g = await guide("granite-saddle");
+    expect((await post({ slug: "zz-owner-hike", mdx: g.mdx.replace("slug: granite-saddle", "slug: zz-owner-hike"), waypoints: g.waypoints })).status).toBe(201);
+    expect(state.granted).toEqual([]);
+    await store.remove("zz-owner-hike");
   });
 });

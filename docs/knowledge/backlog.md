@@ -72,30 +72,13 @@ Feature ideas that aren't scheduled yet. Each entry says why it matters and how 
 
 **Open questions:** which editor it has to import into (that decides the format); whether the overlay should follow the real recording's timing (the app keeps no timestamps, so that would mean reading the GPX on the owner's Mac at export time) or an even pace; resolution and frame rate.
 
-## Guests: people who can write guides for certain hikes
+## Guests: what's left
 
-**Status:** decided in outline with the owner on 2026-10-10; details below need answers before building. (Stage A of the earlier accounts plan, the sign-in link, "Editor", "Edit this guide" and guide-to-guide links, shipped that day: [changelog.md](changelog.md).)
+**Status:** the role, the per-hike rule, the storage policies, the byline and the command line shipped on 2026-10-10 ([current.md](current.md), [changelog.md](changelog.md)). The owner's answers that day: a guest can publish, create and delete their own hikes, and the guide says who wrote it.
 
-**Decided:** visitors don't get accounts. There are **guests**: people the owner lets write the guide for particular hikes.
+**Left to do:**
 
-**Where things are today:** one list, `editors` (`user_id`, `role`: owner or editor), and everyone on it can do everything to every hike. `can(editor, action, slug)` in `src/lib/auth/can.ts` already receives the action and the hike, and every route calls it, so the rule changes in one place.
-
-**What it takes:**
-
-1. **Data.** A third role, `guest`, and which hikes each guest has: a table `hike_guests (slug, user_id)` (a hike can have several guests; a guest several hikes). `getEditor()` loads the guest's hikes with the role.
-2. **The rule** (`can()`): a guest may list, read, save and add photos on their hikes, and nothing on any other. The editor's hike list shows a guest only theirs. Open: publish, create and delete (questions below).
-3. **Photos.** Today's bucket policy lets anyone on the editors list write anywhere in the bucket, checked by `is_editor()`. A guest must be held to their hikes' folders, so the policy has to check the first folder of the path against the guest's hikes (a `can_edit_hike(slug)` function beside `is_editor()`). Without this a guest could delete another hike's photos by calling Supabase directly.
-4. **Letting someone in.** Two gates exist, and both are manual today:
-   - *Google:* the OAuth consent screen is in **Testing**, where only people listed as test users can sign in at all (up to 100). Publishing it to "In production" removes the list; with only the basic scopes this site asks for (name and email) Google doesn't require a review. This is a setting in Google Cloud Console, the owner's to change.
-   - *Supabase:* sign-ups are closed, so a new person's first sign-in is refused unless sign-ups are opened for a moment, or the owner creates the user in the dashboard first. The current steps are in [current.md](current.md) (Live setup, step 3).
-   - Then the app's own list: `pnpm editors add <email> --role guest --hike <slug>`. Later, a "People" page in the editor for the owner.
-   - An invite link by email would be smoother, but needs an admin key on the server (removed on purpose) or an email service; not worth it for a handful of guests.
-5. **What a guest sees.** The same editor, on their hikes only; History shows who saved what (it already records the saver).
-
-**Questions for the owner:**
-
-- Can a guest **publish**, or do they write and you publish? (Suggested: you publish. The badge already separates "saved" from "live", and it keeps one person answerable for what's public.)
-- Can a guest **create** a hike, or do you create it and assign it? (Suggested: you create and assign.)
-- Can a guest **delete** their hike? (Suggested: no.)
-- Should guests be named on the guide ("Guide by …")?
-
+- **Letting someone in is still manual, at two gates.** *Google:* the OAuth consent screen is in Testing, where only listed test users can sign in at all (up to 100). Publishing it to "In production" removes the list; for the basic name-and-email access this site asks for, Google shouldn't need a review, but confirm that in the console. *Supabase:* sign-ups are closed, so a new person's first sign-in is refused unless sign-ups are opened for a moment or the owner creates the user in the dashboard first. Then `pnpm editors add <email> --role guest`.
+- **A "People" page** in the editor for the owner: who's on the list, their role, their hikes, add and remove. Today it's the command line.
+- **An invite link by email** would be smoother than the steps above, but needs an admin key on the server (removed on purpose) or an email service. Not worth it for a handful of guests.
+- **A real guest hasn't signed in yet.** Worth a run-through with a second Google account: create a hike, add a photo, publish, and check that another hike's editor address is a 404 for them.

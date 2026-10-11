@@ -110,6 +110,8 @@ export const frontmatterSchema = z.object({
   cover: photoKey.optional().describe("Cover photo"),
   trailhead: lngLatSchema.describe("Trailhead"),
   date: z.iso.date().describe("Date hiked"),
+  /** Who wrote the guide, shown on the page as "Guide by …". Filled in with the creator's name for a new hike. */
+  author: z.string().min(1).max(80).optional().describe("Written by"),
   essentials: essentialsSchema.optional().describe("Before you go"),
   /** Sidebar cards for this guide, top to bottom (also the mobile bar's sections). Default: all, in SIDEBAR_CARDS order. */
   sidebar: sidebarSchema.optional().describe("Sidebar"),

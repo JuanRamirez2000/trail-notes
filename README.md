@@ -30,7 +30,7 @@ CI (`.github/workflows/ci.yml`) runs all of these, plus `pnpm content check`, on
 
 ## Writing a guide in the editor
 
-Open `/editor`. Under `pnpm dev` you're a local owner. On the live site the editor is behind Google sign-in and only people on the editors list can open it; everyone else gets a 404.
+Open `/editor`. Under `pnpm dev` you're a local owner. On the live site the editor is behind Google sign-in and only people on the editors list can open it; everyone else gets a 404. There are three roles: an **owner** or **editor** can edit every hike, and a **guest** can create hikes and edit, publish and delete their own. Visitors have no accounts.
 
 1. **＋ New hike.** Fill in the form and, if you recorded the hike (Garmin, Strava, Gaia…), choose its GPX file. The file is read in your browser and only latitude, longitude and elevation are sent, so times and heart rate never leave your device. This creates a draft.
 2. **Pins → Add photos** (or drop the files anywhere on the Pins view). Each photo is resized in your browser, uploaded, and becomes a pin where it was taken:
@@ -184,7 +184,8 @@ pnpm content check [--store postgres]        # every guide passes the save check
 pnpm content seed [slug] [--force]           # copy guides: files → database
 pnpm content pull [slug]                     # copy guides: database → files
 pnpm photos check | push [slug] | pull [slug]   # published guides' photos exist / upload local photos / download for offline dev
-pnpm editors list | add <email> | remove <email>   # who may use the editor on the live site
+pnpm editors list | add <email> [--role guest] [--hike <slug>] | grant|revoke <email> --hike <slug> | remove <email>
+                                             # who may use the editor on the live site, and which hikes a guest has
 pnpm backup [--to <folder>]                  # dated copy of every guide, saved version and the editors list (no photos)
 pnpm backup schedule | unschedule            # run it daily on this Mac (macOS) / stop
 pnpm sample:photos [slug]                    # placeholder JPEGs with real EXIF, for trying the pipeline
